@@ -1,0 +1,70 @@
+name: q_ai_mob_testt
+description: QuantSpace.Ai Mobile Test Hub
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # --- Networking & API ---
+  dio: ^5.4.3+1
+  http: ^1.2.0
+  web_socket_channel: ^3.0.1 # For real-time AI streaming responses
+
+  # --- State Management & Persistence ---
+  flutter_riverpod: ^2.5.1
+  shared_preferences: ^2.2.3 # For User Memory & Preferences
+  flutter_secure_storage: ^9.2.4 # Secure storage for JWT/Auth tokens
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # --- UI / Aesthetics / Animations ---
+  google_fonts: ^6.2.1 # Essential for Orbitron, Inter, and JetBrains Mono
+  flutter_markdown: ^0.6.20 # Rendering AI responses
+  flutter_markdown_plus: ^1.0.7
+  fl_chart: ^1.0.0 # For analytics/charting views
+  shimmer: ^3.0.0
+  animate_do: ^3.3.4 # For the "Waterfall" and "Zoom" splash effects
+  lottie: ^3.1.2
+
+  # --- Vision, Hardware & Permissions ---
+  image_picker: ^1.0.7 # For "Search by Image"
+  mobile_scanner: ^4.0.1 # For "Scan QR Code"
+  permission_handler: ^11.3.1 # Camera/Gallery access
+  speech_to_text: ^7.3.0
+
+  # --- Utilities ---
+  intl: ^0.19.0 # Formatting dates/currency
+  uuid: ^4.4.0 # Unique session IDs
+  jwt_decoder: ^2.0.1 # Decoding auth tokens
+  path_provider: ^2.1.3 # Local cache management
+
+  # --- Firebase & Auth ---
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.2
+  google_sign_in: ^6.3.0
+  flutter_facebook_auth: ^7.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.13
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  # Recommended: If you add Lottie files or custom images for the
+  # DashboardTab/SplashScreen, uncomment the lines below:
+  # assets:
+  #   - assets/animations/
+  #   - assets/images/
