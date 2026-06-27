@@ -234,8 +234,8 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
               text: "[ Gone Incognito ]",
               style: GoogleFonts.tinos(
                 color: const Color(0xFFE8E8E8),
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+                fontSize: 45,
+                fontWeight: FontWeight.w900,
               ),
               typingSpeed: const Duration(milliseconds: 50),
             ),
