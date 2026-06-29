@@ -1,13 +1,17 @@
 // lib/screens/chat_screen.dart
+//
+// QuantMessage Chat Screen — Supabase-authenticated
+//
 
 import 'dart:async';
-import 'dart:io';                      // ← FIX: added this missing import
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_theme.dart';
 import '../core/chat_message.dart';
@@ -21,7 +25,7 @@ import 'widgets/attachment_thumbnail.dart';
 import 'widgets/attachment_picker_sheet.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  Fade-in animation (unchanged)
+//  Fade-in animation
 // ═══════════════════════════════════════════════════════════════════════════
 
 class FadeInAnimation extends StatefulWidget {
@@ -74,7 +78,7 @@ class _FadeInAnimationState extends State<FadeInAnimation>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  Typing text animation (unchanged)
+//  Typing text animation
 // ═══════════════════════════════════════════════════════════════════════════
 
 class TypingText extends StatefulWidget {
@@ -183,6 +187,13 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen>
     with TickerProviderStateMixin {
+  // ← NEW: Current Supabase user
+  User? get _currentUser => Supabase.instance.client.auth.currentUser;
+  String? get _userEmail => _currentUser?.email;
+  String? get _userName =>
+      _currentUser?.userMetadata?['full_name'] as String? ??
+          _currentUser?.email?.split('@').first;
+
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final QuantSpaceApi _api = QuantSpaceApi();
@@ -221,7 +232,8 @@ class _ChatScreenState extends State<ChatScreen>
     super.initState();
     _inputFocusCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 260));
-    _inputGlow = CurvedAnimation(parent: _inputFocusCtrl, curve: Curves.easeOut);
+    _inputGlow =
+        CurvedAnimation(parent: _inputFocusCtrl, curve: Curves.easeOut);
     _inputFocus.addListener(() {
       _inputFocus.hasFocus ? _inputFocusCtrl.forward() : _inputFocusCtrl.reverse();
     });
@@ -253,12 +265,30 @@ class _ChatScreenState extends State<ChatScreen>
     super.dispose();
   }
 
+  // ── NEW: Sign-out handler ────────────────────────────────────────────────
+  Future<void> _handleSignOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (!mounted) return;
+      // Navigate back to sign-in screen
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/signin',
+            (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sign out failed: $e'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    }
+  }
+
   // ── Attachment handlers ──────────────────────────────────────────────────
   Future<void> _onAttachmentButtonPressed() async {
-    await AttachmentPickerSheet.show(
-      context,
-      onSelected: _addAttachment,
-    );
+    await AttachmentPickerSheet.show(context, onSelected: _addAttachment);
   }
 
   void _addAttachment(File file, String mimeType) {
@@ -344,7 +374,6 @@ class _ChatScreenState extends State<ChatScreen>
     try {
       _ensureConversationId();
 
-      // Upload any pending local files
       final uploaded = <Attachment>[];
       for (final att in pendingSnapshot) {
         if (att.isReady) {
@@ -355,9 +384,7 @@ class _ChatScreenState extends State<ChatScreen>
       }
 
       final response = await _uploader.sendMessageWithAttachments(
-        message: text.isEmpty
-            ? 'Please analyze the attached file(s).'
-            : text,
+        message: text.isEmpty ? 'Please analyze the attached file(s).' : text,
         attachments: uploaded,
         conversationId: _activeConversationId,
       );
@@ -464,6 +491,7 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildGreeting() {
+    final userName = _userName ?? 'there';  // ← CHANGED
     return Column(
       children: [
         Row(
@@ -481,7 +509,7 @@ class _ChatScreenState extends State<ChatScreen>
             const SizedBox(width: 16),
             Flexible(
               child: Text(
-                "< Welcome Back >",
+                "< Welcome $userName >",  // ← CHANGED
                 style: GoogleFonts.outfit(
                   color: const Color(0xFFE8E8E8),
                   fontSize: 56,
@@ -504,6 +532,16 @@ class _ChatScreenState extends State<ChatScreen>
             fontWeight: FontWeight.w300,
           ),
         ),
+        if (_userEmail != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            "Signed in as $_userEmail",
+            style: GoogleFonts.outfit(
+              color: Colors.white24,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -647,6 +685,12 @@ class _ChatScreenState extends State<ChatScreen>
                       child: ScaleTransition(
                           scale: _sendBtnScale,
                           child: _AnimatedHoverSendButton()),
+                    ),
+                    // ← NEW: Sign-out icon
+                    const SizedBox(width: 8),
+                    _AnimatedHoverIcon(
+                      icon: Icons.logout_rounded,
+                      onTap: _handleSignOut,
                     ),
                   ],
                 ),

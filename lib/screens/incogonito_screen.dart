@@ -1,14 +1,19 @@
 // lib/screens/incognito_screen.dart
+//
+// QuantMessage — Ghost Mode (ephemeral, no DB persistence)
+// Now Supabase-aware
+//
 
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:flutter/gestures.dart';        // ← FIX: added this
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';   // ← ADDED
 
 import '../core/app_theme.dart';
 import '../core/chat_message.dart';
@@ -19,19 +24,18 @@ import 'widgets/attachment_preview.dart';
 import 'widgets/attachment_thumbnail.dart';
 import 'widgets/attachment_picker_sheet.dart';
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  Main Screen
-// ═══════════════════════════════════════════════════════════════════════════
-
 class IncognitoScreen extends StatefulWidget {
   const IncognitoScreen({super.key});
-
   @override
   State<IncognitoScreen> createState() => _IncognitoScreenState();
 }
 
 class _IncognitoScreenState extends State<IncognitoScreen>
     with TickerProviderStateMixin {
+  // ← NEW: Get current Supabase user
+  User? get _currentUser => Supabase.instance.client.auth.currentUser;
+  String? get _userEmail => _currentUser?.email;
+
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final QuantSpaceApi _api = QuantSpaceApi();
@@ -100,7 +104,11 @@ class _IncognitoScreenState extends State<IncognitoScreen>
     super.dispose();
   }
 
-  // ── Attachment handlers ──────────────────────────────────────────────────
+  // ← NEW: Exit incognito (just navigate back, keep user signed in)
+  void _exitIncognito() {
+    Navigator.of(context).pop();
+  }
+
   Future<void> _onAttachmentButtonPressed() async {
     await AttachmentPickerSheet.show(
       context,
@@ -223,7 +231,6 @@ class _IncognitoScreenState extends State<IncognitoScreen>
       body: Stack(
         children: [
           const _ParticleBackground(count: 25),
-
           if (_messages.isEmpty)
             Center(
               child: SingleChildScrollView(
@@ -300,6 +307,13 @@ class _IncognitoScreenState extends State<IncognitoScreen>
             ),
             centerTitle: true,
             actions: [
+              // ← NEW: Exit incognito button (back to chat)
+              IconButton(
+                icon: const Icon(Icons.exit_to_app_rounded,
+                    color: Colors.white38),
+                tooltip: "Exit Incognito",
+                onPressed: _exitIncognito,
+              ),
               IconButton(
                 icon: const Icon(Icons.delete_sweep_rounded,
                     color: Colors.white38),
@@ -371,6 +385,23 @@ class _IncognitoScreenState extends State<IncognitoScreen>
             delayBeforeStart: const Duration(milliseconds: 900),
           ),
         ),
+        // ← NEW: Show logged-in user
+        if (_userEmail != null) ...[
+          const SizedBox(height: 12),
+          FadeInAnimation(
+            duration: const Duration(milliseconds: 1000),
+            delay: const Duration(milliseconds: 1500),
+            child: Text(
+              "Ghost session · $_userEmail",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.tinos(
+                color: Colors.white24,
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -426,10 +457,8 @@ class _IncognitoScreenState extends State<IncognitoScreen>
                       letterSpacing: 1.2),
                 ),
                 const SizedBox(height: 8),
-
                 if (hasAttachments)
                   AttachmentList(attachments: msg.attachments),
-
                 if (hasText)
                   MarkdownBody(
                     data: msg.text,
@@ -519,7 +548,6 @@ class _IncognitoScreenState extends State<IncognitoScreen>
                 attachments: _pendingAttachments,
                 onRemove: _removePendingAttachment,
               ),
-
             TextField(
               controller: _controller,
               focusNode: _inputFocus,
@@ -615,7 +643,7 @@ class _IncognitoScreenState extends State<IncognitoScreen>
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  Suggestion Pill (unchanged)
+//  Support widgets (unchanged from your file)
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _SuggestionPill extends StatefulWidget {
@@ -692,10 +720,6 @@ class _AnimatedHoverIconState extends State<_AnimatedHoverIcon> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  Support widgets
-// ═══════════════════════════════════════════════════════════════════════════
-
 class _ParticleBackground extends StatelessWidget {
   final int count;
   const _ParticleBackground({required this.count});
@@ -755,7 +779,6 @@ class _ButtonBulgeState extends State<ButtonBulge> {
   bool _hovered = false;
   bool _clicked = false;
 
-  // ← Now these types resolve correctly thanks to the gestures import
   void _onEnter(PointerEnterEvent _) => setState(() => _hovered = true);
   void _onExit(PointerExitEvent _) => setState(() => _hovered = false);
 
