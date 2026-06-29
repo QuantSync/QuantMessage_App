@@ -1,12 +1,18 @@
 // lib/screens/widgets/attachment_thumbnail.dart
 
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+
 import '../../core/chat_message.dart';
 import '../../core/attachment_model.dart';
 
-/// Renders a list of attachments inline within a chat message bubble.
+// ═══════════════════════════════════════════════════════════════════════════
+//  AttachmentList — public entry point used inside chat bubbles
+// ═══════════════════════════════════════════════════════════════════════════
+
 class AttachmentList extends StatelessWidget {
   final List<Attachment> attachments;
 
@@ -27,60 +33,123 @@ class AttachmentList extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  Tile widget
+// ═══════════════════════════════════════════════════════════════════════════
+
 class _AttachmentTile extends StatelessWidget {
   final Attachment attachment;
   const _AttachmentTile({required this.attachment});
 
   @override
   Widget build(BuildContext context) {
-    if (attachment.isImage) return _buildImageTile(context);
-    if (attachment.isPdf) return _buildPdfTile(context);
-    return _buildGenericTile(context);
+    if (attachment.isImage) return _ImageTile(attachment: attachment);
+    if (attachment.isPdf) return _PdfTile(attachment: attachment);
+    return _GenericTile(attachment: attachment);
   }
+}
 
-  Widget _buildImageTile(BuildContext context) {
+// ═══════════════════════════════════════════════════════════════════════════
+//  Image tile — FIX 1: explicit double casting
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _ImageTile extends StatelessWidget {
+  final Attachment attachment;
+  const _ImageTile({required this.attachment});
+
+  @override
+  Widget build(BuildContext context) {
     final url = attachment.remoteUrl ?? attachment.thumbnailUrl;
+    final localFile = attachment.localFile;
+
+    final hasNetwork = url != null && url.isNotEmpty;
+    final hasLocal = localFile != null && localFile.existsSync();
+
+    if (!hasNetwork && !hasLocal) {
+      return _ErrorTile(
+        icon: Icons.broken_image_outlined,
+        label: 'Image unavailable',
+      );
+    }
+
     return GestureDetector(
-      onTap: () {
-        if (url != null) _showFullImage(context, url);
-      },
+      onTap: () => _openFullScreen(context, url, localFile),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Container(
-          constraints: const BoxConstraints(
-            maxWidth: 260,
-            maxHeight: 260,
-          ),
-          child: url != null
-              ? CachedNetworkImage(
-            imageUrl: url,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => _loadingBox(),
-            errorWidget: (_, __, ___) =>
-                _errorBox(Icons.broken_image_outlined),
-          )
-              : (attachment.localFile != null
-              ? Image.file(attachment.localFile!, fit: BoxFit.cover)
-              : _errorBox(Icons.broken_image_outlined)),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // ← FIX: explicit double conversion
+            final double maxW = constraints.maxWidth.isFinite
+                ? (constraints.maxWidth as double).clamp(0.0, 260.0)
+                : 260.0;
+
+            return Container(
+              constraints: BoxConstraints(
+                maxWidth: maxW,
+                maxHeight: maxW,
+              ),
+              child: hasNetwork
+                  ? CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.cover,
+                memCacheWidth: 800,
+                placeholder: (_, __) => const _LoadingTile(),
+                errorWidget: (_, __, ___) =>
+                    _ErrorTile(icon: Icons.broken_image_outlined),
+              )
+                  : Image.file(
+                localFile!,
+                fit: BoxFit.cover,
+                cacheWidth: 800,
+                errorBuilder: (_, __, ___) =>
+                    _ErrorTile(icon: Icons.broken_image_outlined),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildPdfTile(BuildContext context) {
+  void _openFullScreen(
+      BuildContext context, String? url, File? localFile) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black87,
+        transitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, __, ___) => FullImageViewer(
+          url: url,
+          localFile: localFile,
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PDF tile
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _PdfTile extends StatelessWidget {
+  final Attachment attachment;
+  const _PdfTile({required this.attachment});
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if (attachment.remoteUrl != null) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              fullscreenDialog: true,
-              builder: (_) => _PdfViewerPage(
-                url: attachment.remoteUrl!,
-                filename: attachment.filename,
-              ),
+        final url = attachment.remoteUrl;
+        if (url == null || url.isEmpty) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => PdfViewerScreen(
+              url: url,
+              filename: attachment.filename,
             ),
-          );
-        }
+          ),
+        );
       },
       child: Container(
         width: 240,
@@ -122,22 +191,36 @@ class _AttachmentTile extends StatelessWidget {
                   Text(
                     attachment.sizeFormatted,
                     style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 11),
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.visibility_outlined,
-                color: Colors.white.withOpacity(0.6), size: 18),
+            Icon(
+              Icons.visibility_outlined,
+              color: Colors.white.withOpacity(0.6),
+              size: 18,
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildGenericTile(BuildContext context) {
+// ═══════════════════════════════════════════════════════════════════════════
+//  Generic file tile
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _GenericTile extends StatelessWidget {
+  final Attachment attachment;
+  const _GenericTile({required this.attachment});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -150,77 +233,213 @@ class _AttachmentTile extends StatelessWidget {
           const Icon(Icons.insert_drive_file_outlined,
               color: Colors.white70, size: 16),
           const SizedBox(width: 6),
-          Text(attachment.filename,
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Flexible(
+            child: Text(
+              attachment.filename,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ),
         ],
       ),
     );
   }
+}
 
-  void _showFullImage(BuildContext context, String url) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.black87,
-        pageBuilder: (_, __, ___) => _FullImageView(url: url),
+// ═══════════════════════════════════════════════════════════════════════════
+//  Shared mini widgets
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _LoadingTile extends StatelessWidget {
+  const _LoadingTile();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AttachmentColors.tileBg,
+      child: const Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
       ),
     );
   }
-
-  Widget _loadingBox() => Container(
-    color: AttachmentColors.tileBg,
-    child: const Center(
-      child: SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-    ),
-  );
-
-  Widget _errorBox(IconData icon) => Container(
-    color: AttachmentColors.tileBg,
-    child: Icon(icon, color: Colors.white54),
-  );
 }
 
-class _FullImageView extends StatelessWidget {
-  final String url;
-  const _FullImageView({required this.url});
+class _ErrorTile extends StatelessWidget {
+  final IconData icon;
+  final String? label;
+  const _ErrorTile({required this.icon, this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AttachmentColors.tileBg,
+      width: 120,
+      height: 120,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white54, size: 24),
+            if (label != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                label!,
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Full-screen image viewer
+// ═══════════════════════════════════════════════════════════════════════════
+
+class FullImageViewer extends StatefulWidget {
+  final String? url;
+  final File? localFile;
+
+  const FullImageViewer({
+    super.key,
+    this.url,
+    this.localFile,
+  }) : assert(url != null || localFile != null,
+  'Provide either url or localFile');
+
+  @override
+  State<FullImageViewer> createState() => _FullImageViewerState();
+}
+
+class _FullImageViewerState extends State<FullImageViewer> {
+  late final TransformationController _transformCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _transformCtrl = TransformationController();
+  }
+
+  @override
+  void dispose() {
+    _transformCtrl.dispose();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          InteractiveViewer(
-            child: Center(
-              child: CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.contain,
-                placeholder: (_, __) => const CircularProgressIndicator(),
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                transformationController: _transformCtrl,
+                minScale: 1.0,
+                maxScale: 5.0,
+                child: Center(
+                  child: _buildImage(),
+                ),
               ),
             ),
-          ),
-          Positioned(
-            top: 40,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    if (widget.url != null && widget.url!.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: widget.url!,
+        fit: BoxFit.contain,
+        memCacheWidth: 2048,
+        placeholder: (_, __) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+        errorWidget: (_, __, ___) => const Center(
+          child: Icon(Icons.broken_image_outlined,
+              color: Colors.white54, size: 64),
+        ),
+      );
+    }
+    return Image.file(
+      widget.localFile!,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Center(
+        child: Icon(Icons.broken_image_outlined,
+            color: Colors.white54, size: 64),
       ),
     );
   }
 }
 
-class _PdfViewerPage extends StatelessWidget {
+// ═══════════════════════════════════════════════════════════════════════════
+//  Full-screen PDF viewer — FIX 2: works with ALL syncfusion versions
+// ═══════════════════════════════════════════════════════════════════════════
+
+class PdfViewerScreen extends StatefulWidget {
   final String url;
   final String filename;
-  const _PdfViewerPage({required this.url, required this.filename});
+
+  const PdfViewerScreen({
+    super.key,
+    required this.url,
+    required this.filename,
+  });
+
+  @override
+  State<PdfViewerScreen> createState() => _PdfViewerScreenState();
+}
+
+class _PdfViewerScreenState extends State<PdfViewerScreen> {
+  final GlobalKey<SfPdfViewerState> _pdfKey = GlobalKey();
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -229,12 +448,56 @@ class _PdfViewerPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1A1A),
         elevation: 0,
-        title: Text(filename,
-            style: const TextStyle(color: Colors.white, fontSize: 15),
-            overflow: TextOverflow.ellipsis),
+        title: Text(
+          widget.filename,
+          style: const TextStyle(color: Colors.white, fontSize: 15),
+          overflow: TextOverflow.ellipsis,
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SfPdfViewer.network(url),
+      body: Stack(
+        children: [
+          // ← FIX: removed `zoomLevel:` parameter entirely
+          // SfPdfViewer works without explicit zoom — user pinch-to-zooms
+          SfPdfViewer.network(
+            widget.url,
+            key: _pdfKey,
+            canShowScrollHead: true,
+            canShowScrollStatus: true,
+            canShowPaginationDialog: true,
+            onDocumentLoaded: (_) {
+              if (mounted) setState(() => _loading = false);
+            },
+            onDocumentLoadFailed: (details) {
+              if (mounted) setState(() => _loading = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to load PDF: ${details.error}')),
+              );
+            },
+          ),
+          if (_loading)
+            const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading document...',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

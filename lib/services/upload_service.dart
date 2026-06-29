@@ -3,85 +3,134 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+// ← FIX: explicitly hide MultipartFile (and FormData) from http
+import 'package:http/http.dart' as http show Client, Response, Request;
+
+// ← FIX: hide MultipartFile from Supabase's re-export of http
+import 'package:supabase_flutter/supabase_flutter.dart' hide MultipartFile;
+
+// ← dio's MultipartFile will be the only one in scope now
+import 'package:dio/dio.dart';
+
 import '../core/chat_message.dart';
 
-/// Talks to the FastAPI backend for file uploads + multimodal messages.
+/// Handles file uploads + multimodal chat messages against the FastAPI backend.
 class UploadService {
-  /// ⚠️ Change this to your Railway URL once deployed.
-  static const String _baseUrl =
-      'https://your-app.up.railway.app/api/v1';
+  static const String _baseUrl = 'https://your-app.up.railway.app/api/v1';
 
   final SupabaseClient _supabase;
-  final http.Client _client;
+  final Dio _dio;
+  final http.Client _fallbackClient;
 
-  UploadService({SupabaseClient? supabase, http.Client? client})
-      : _supabase = supabase ?? Supabase.instance.client,
-        _client = client ?? http.Client();
+  UploadService({
+    SupabaseClient? supabase,
+    Dio? dio,
+    http.Client? fallbackClient,
+  })  : _supabase = supabase ?? Supabase.instance.client,
+        _dio = dio ??
+            Dio(BaseOptions(
+              connectTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 60),
+              sendTimeout: const Duration(seconds: 60),
+            )),
+        _fallbackClient = fallbackClient ?? http.Client();
 
-  Map<String, String> _authHeaders() {
+  // ── Auth helpers ──────────────────────────────────────────────────────────
+
+  String _accessToken() {
     final session = _supabase.auth.currentSession;
     if (session == null) {
       throw Exception('Not authenticated. Please sign in again.');
     }
+    return session.accessToken;
+  }
+
+  Map<String, String> _jsonHeaders() {
     return {
-      'Authorization': 'Bearer ${session.accessToken}',
+      'Authorization': 'Bearer ${_accessToken()}',
+      'Content-Type': 'application/json',
     };
   }
 
-  /// Upload a single file. Returns the [Attachment] in its completed state.
+  // ── UPLOAD (with real progress) ───────────────────────────────────────────
+
   Future<Attachment> uploadFile({
     required File file,
     required String conversationId,
     void Function(double progress)? onProgress,
+    CancelToken? cancelToken,
+    int maxRetries = 2,
   }) async {
     final filename = file.path.split('/').last;
+    final mimeType = _guessMime(filename);
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$_baseUrl/chat/upload'),
-    );
-    request.headers.addAll(_authHeaders());
-    request.fields['conversation_id'] = conversationId;
-    request.files.add(
-      await http.MultipartFile.fromPath('file', file.path,
-          filename: filename),
-    );
+    onProgress?.call(0.0);
 
-    onProgress?.call(0.1);
-    final streamed = await _client.send(request);
+    // ✓ This now unambiguously refers to dio's MultipartFile
+    final FormData formData = FormData.fromMap({
+      'conversation_id': conversationId,
+      'file': await MultipartFile.fromFile(
+        file.path,
+        filename: filename,
+      ),
+    });
 
-    // Best-effort progress simulation for now — http package doesn't expose
-    // true streaming progress for multipart; backend reports completion.
-    onProgress?.call(0.5);
+    int attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        final response = await _dio.post(
+          '$_baseUrl/chat/upload',
+          data: formData,
+          options: Options(
+            headers: {'Authorization': 'Bearer ${_accessToken()}'},
+            contentType: 'multipart/form-data',
+          ),
+          cancelToken: cancelToken,
+          onSendProgress: (sent, total) {
+            if (total > 0 && onProgress != null) {
+              onProgress(sent / total);
+            }
+          },
+        );
 
-    final response = await http.Response.fromStream(streamed);
+        if (response.statusCode != null && response.statusCode! >= 400) {
+          throw Exception(
+            'Upload failed (${response.statusCode}): ${response.data}',
+          );
+        }
 
-    if (response.statusCode >= 400) {
-      throw Exception(
-          'Upload failed (${response.statusCode}): ${response.body}');
+        onProgress?.call(1.0);
+
+        final body = response.data as Map<String, dynamic>;
+        return _parseAttachment(
+          body: body,
+          fallbackFilename: filename,
+          fallbackMime: mimeType,
+        );
+      } on DioException catch (e) {
+        if (CancelToken.isCancel(e)) rethrow;
+
+        if (e.response?.statusCode != null &&
+            e.response!.statusCode! < 500) {
+          throw Exception(
+              'Upload failed: ${e.response?.data ?? e.message}');
+        }
+
+        if (attempt > maxRetries) {
+          throw Exception(
+              'Upload failed after $maxRetries retries: ${e.message}');
+        }
+
+        await Future.delayed(
+            Duration(milliseconds: 500 * (1 << (attempt - 1))));
+      }
     }
-
-    onProgress?.call(1.0);
-
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-
-    return Attachment(
-      id: body['attachment_id'] as String?,
-      filename: body['filename'] as String? ?? filename,
-      type: _parseType(body['file_type'] as String?),
-      mimeType: body['mime_type'] as String? ?? 'application/octet-stream',
-      sizeBytes: body['file_size_bytes'] as int? ?? 0,
-      remoteUrl: body['public_url'] as String?,
-      thumbnailUrl: body['thumbnail_url'] as String?,
-      extractedText: body['extracted_text'] as String?,
-      status: UploadStatus.completed,
-      progress: 1.0,
-    );
   }
 
-  /// Send a chat message that references one or more uploaded attachments.
+  // ── CHAT MESSAGE (with attachments) ───────────────────────────────────────
+
   Future<Map<String, dynamic>> sendMessageWithAttachments({
     required String message,
     required List<Attachment> attachments,
@@ -89,12 +138,9 @@ class UploadService {
     bool isIncognito = false,
     String? agentOverride,
   }) async {
-    final response = await _client.post(
+    final response = await _fallbackClient.post(
       Uri.parse('$_baseUrl/chat/'),
-      headers: {
-        ..._authHeaders(),
-        'Content-Type': 'application/json',
-      },
+      headers: _jsonHeaders(),
       body: jsonEncode({
         'message': message,
         'conversation_id': conversationId,
@@ -118,6 +164,185 @@ class UploadService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  // ── Streaming chat ────────────────────────────────────────────────────────
+
+  Stream<Map<String, dynamic>> streamMessageWithAttachments({
+    required String message,
+    required List<Attachment> attachments,
+    String? conversationId,
+    bool isIncognito = false,
+    String? agentOverride,
+  }) async* {
+    final response = await _fallbackClient.post(
+      Uri.parse('$_baseUrl/chat/stream'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({
+        'message': message,
+        'conversation_id': conversationId,
+        'is_incognito': isIncognito,
+        if (agentOverride != null) 'agent_override': agentOverride,
+        'attachments': attachments
+            .where((a) => a.id != null)
+            .map((a) => {
+          'id': a.id,
+          'type': a.type.name,
+          'filename': a.filename,
+        })
+            .toList(),
+      }),
+    );
+
+    if (response.statusCode >= 400) {
+      throw Exception(
+          'Stream API error (${response.statusCode}): ${response.body}');
+    }
+
+    final lines = const LineSplitter().convert(response.body);
+    for (final line in lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          final json = jsonDecode(line.substring(6));
+          if (json is Map<String, dynamic>) yield json;
+        } catch (_) {
+          // Skip malformed lines
+        }
+      }
+    }
+  }
+
+  // ── Voice transcription ────────────────────────────────────────────────────
+
+  Future<String> transcribeAudio(File audioFile) async {
+    final filename = audioFile.path.split('/').last;
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(audioFile.path,
+          filename: filename),
+    });
+
+    final response = await _dio.post(
+      '$_baseUrl/voice/transcribe',
+      data: formData,
+      options: Options(
+        headers: {'Authorization': 'Bearer ${_accessToken()}'},
+        contentType: 'multipart/form-data',
+      ),
+    );
+
+    if (response.statusCode != null && response.statusCode! >= 400) {
+      throw Exception('Transcription failed: ${response.data}');
+    }
+
+    final body = response.data as Map<String, dynamic>;
+    return body['text'] as String? ?? '';
+  }
+
+  // ── Conversational helpers ────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getHistory({int limit = 50}) async {
+    final response = await _fallbackClient.get(
+      Uri.parse('$_baseUrl/conversations/?limit=$limit'),
+      headers: _jsonHeaders(),
+    );
+    if (response.statusCode >= 400) {
+      throw Exception('History fetch failed: ${response.body}');
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return List<Map<String, dynamic>>.from(body['conversations'] ?? []);
+  }
+
+  Future<Map<String, dynamic>> getConversation(String conversationId) async {
+    final response = await _fallbackClient.get(
+      Uri.parse('$_baseUrl/conversations/$conversationId'),
+      headers: _jsonHeaders(),
+    );
+    if (response.statusCode >= 400) {
+      throw Exception('Conversation fetch failed: ${response.body}');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  Future<void> deleteConversation(String conversationId) async {
+    final response = await _fallbackClient.delete(
+      Uri.parse('$_baseUrl/conversations/$conversationId'),
+      headers: _jsonHeaders(),
+    );
+    if (response.statusCode >= 400) {
+      throw Exception('Delete failed: ${response.body}');
+    }
+  }
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getSettings() async {
+    final response = await _fallbackClient.get(
+      Uri.parse('$_baseUrl/settings/'),
+      headers: _jsonHeaders(),
+    );
+    if (response.statusCode >= 400) {
+      throw Exception('Settings fetch failed: ${response.body}');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateSettings(
+      Map<String, dynamic> settings) async {
+    final response = await _fallbackClient.put(
+      Uri.parse('$_baseUrl/settings/'),
+      headers: _jsonHeaders(),
+      body: jsonEncode(settings),
+    );
+    if (response.statusCode >= 400) {
+      throw Exception('Settings update failed: ${response.body}');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  // ── Agent registry ────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> listAgents() async {
+    final response = await _fallbackClient.get(
+      Uri.parse('$_baseUrl/agents/'),
+      headers: _jsonHeaders(),
+    );
+    if (response.statusCode >= 400) {
+      throw Exception('Agents fetch failed: ${response.body}');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  // ── Health ─────────────────────────────────────────────────────────────────
+
+  Future<bool> healthCheck() async {
+    try {
+      final response =
+      await _fallbackClient.get(Uri.parse('$_baseUrl/health'));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  Attachment _parseAttachment({
+    required Map<String, dynamic> body,
+    required String fallbackFilename,
+    required String fallbackMime,
+  }) {
+    return Attachment(
+      id: body['attachment_id'] as String?,
+      filename: body['filename'] as String? ?? fallbackFilename,
+      type: _parseType(body['file_type'] as String?),
+      mimeType: body['mime_type'] as String? ?? fallbackMime,
+      sizeBytes: body['file_size_bytes'] as int? ?? 0,
+      remoteUrl: body['public_url'] as String?,
+      thumbnailUrl: body['thumbnail_url'] as String?,
+      extractedText: body['extracted_text'] as String?,
+      status: UploadStatus.completed,
+      progress: 1.0,
+    );
+  }
+
   AttachmentType _parseType(String? t) {
     switch (t) {
       case 'pdf':
@@ -129,5 +354,28 @@ class UploadService {
       default:
         return AttachmentType.unknown;
     }
+  }
+
+  String _guessMime(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    return {
+      'pdf': 'application/pdf',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'webp': 'image/webp',
+      'gif': 'image/gif',
+      'txt': 'text/plain',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'm4a': 'audio/mp4',
+      'ogg': 'audio/ogg',
+    }[ext] ??
+        'application/octet-stream';
+  }
+
+  void dispose() {
+    _fallbackClient.close();
+    _dio.close();
   }
 }
