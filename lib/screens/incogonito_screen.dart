@@ -5,16 +5,16 @@
 //
 
 import 'dart:async';
-import 'dart:io' show File;             // ← Only import File
+import 'dart:io' show File;
 import 'dart:math' as math;
-import 'dart:typed_data';                // ← NEW: for Uint8List
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:path_provider/path_provider.dart';   // ← NEW
+import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_theme.dart';
@@ -25,6 +25,8 @@ import '../services/upload_service.dart';
 import 'widgets/attachment_preview.dart';
 import 'widgets/attachment_thumbnail.dart';
 import 'widgets/attachment_picker_sheet.dart';
+// ─── NEW IMPORT ───
+import 'animations/animation_effects/infinity_animation_incogonito.dart';
 
 class IncognitoScreen extends StatefulWidget {
   const IncognitoScreen({super.key});
@@ -113,7 +115,6 @@ class _IncognitoScreenState extends State<IncognitoScreen>
 
   // ── Attachment handlers (cross-platform) ──────────────────────────────────
 
-  /// Called by [AttachmentPickerSheet]. Works on web + mobile.
   void _addAttachment(Uint8List bytes, String filename, String mimeType) {
     final attachment = Attachment(
       filename: filename,
@@ -125,7 +126,6 @@ class _IncognitoScreenState extends State<IncognitoScreen>
 
     setState(() => _pendingAttachments.add(attachment));
 
-    // Save to temp file on mobile so upload_service can stream it
     _writeTempFile(bytes, filename).then((file) {
       if (!mounted || file == null) return;
       setState(() {
@@ -175,7 +175,6 @@ class _IncognitoScreenState extends State<IncognitoScreen>
       }
     });
 
-    // Wait briefly for temp file (mobile only)
     if (att.localFile == null) {
       for (int i = 0; i < 20; i++) {
         await Future.delayed(const Duration(milliseconds: 100));
@@ -338,29 +337,7 @@ class _IncognitoScreenState extends State<IncognitoScreen>
         children: [
           const _ParticleBackground(count: 25),
           if (_messages.isEmpty)
-            Center(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 40),
-                child: FadeTransition(
-                  opacity: _emptyOpacity,
-                  child: ScaleTransition(
-                    scale: _emptyScale,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildEmptyStateGreeting(),
-                        const SizedBox(height: 40),
-                        _buildInputBox(),
-                        const SizedBox(height: 16),
-                        _buildSuggestionPills(),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            )
+            _buildEmptyStateResponsive() // 👈 RESPONSIVE EMPTY STATE
           else
             Column(
               children: [
@@ -379,6 +356,160 @@ class _IncognitoScreenState extends State<IncognitoScreen>
               ],
             ),
         ],
+      ),
+    );
+  }
+
+  // ─── NEW: Responsive Empty State Wrapper ───
+  Widget _buildEmptyStateResponsive() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          // Ensures content is centered vertically even if taller than viewport
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Top spacer (flexible)
+                  const Spacer(flex: 2),
+
+                  // ─── CONTENT COLUMN (Centered) ───
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 1. SECURE SESSION BADGE
+                        FadeInAnimation(
+                          duration: const Duration(milliseconds: 600),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white10),
+                            ),
+                            child: Text("Secure Session",
+                                style: GoogleFonts.tinos(
+                                    color: Colors.white54,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // 2. INFINITY ANIMATION (Grey/Silver) — CENTERPIECE
+                        FadeInAnimation(
+                          duration: const Duration(milliseconds: 1000),
+                          delay: const Duration(milliseconds: 200),
+                          child: _buildInfinityAnimation(constraints),
+                        ),
+                        const SizedBox(height: 24), // Gap above title
+
+                        // 3. "GONE INCOGNITO" TITLE ROW
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            FadeInAnimation(
+                              duration: const Duration(milliseconds: 800),
+                              child: const Icon(Icons.security,
+                                  color: Color(0xFF6B7280), size: 36),
+                            ),
+                            const SizedBox(width: 12),
+                            Flexible( // Prevents overflow on narrow screens
+                              child: TypingText(
+                                text: "< Gone Incognito >",
+                                style: GoogleFonts.tinos(
+                                  color: const Color(0xFFE8E8E8),
+                                  fontSize: 54, // Slightly responsive default
+                                  fontWeight: FontWeight.w900,
+                                ),
+                                typingSpeed: const Duration(milliseconds: 50),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 4. DESCRIPTION TEXT
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 360),
+                          child: TypingText(
+                            text:
+                            "      Ephemeral mode active. Conversations and uploads are end-to-end encrypted and will be purged upon exit.",
+                            style: GoogleFonts.tinos(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              height: 1.6,
+                            ),
+                            typingSpeed: const Duration(milliseconds: 25),
+                            delayBeforeStart: const Duration(milliseconds: 900),
+                          ),
+                        ),
+                        if (_userEmail != null) ...[
+                          const SizedBox(height: 12),
+                          FadeInAnimation(
+                            duration: const Duration(milliseconds: 1000),
+                            delay: const Duration(milliseconds: 1500),
+                            child: Text(
+                              "Ghost session · $_userEmail",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.tinos(
+                                color: Colors.white24,
+                                fontSize: 11,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 40),
+
+                        // 5. INPUT BOX
+                        FadeInAnimation(
+                          duration: const Duration(milliseconds: 600),
+                          delay: const Duration(milliseconds: 1200),
+                          child: _buildInputBox(),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 6. SUGGESTION PILLS
+                        FadeInAnimation(
+                          duration: const Duration(milliseconds: 800),
+                          delay: const Duration(milliseconds: 1400),
+                          child: _buildSuggestionPills(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Bottom spacer (flexible) - pushes content to center
+                  const Spacer(flex: 3),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ─── NEW: Responsive Animation Wrapper ───
+  Widget _buildInfinityAnimation(BoxConstraints constraints) {
+    // Responsive sizing: 120dp default, max 60% of screen width, min 80dp
+    final double screenWidth = constraints.maxWidth;
+    final double animSize = (screenWidth * 0.6).clamp(80.0, 140.0);
+
+    return SizedBox(
+      width: animSize,
+      height: animSize / 2, // Animation internal aspect ratio is 2:1 (W:H)
+      child: const InfinityAnimationIncognito(
+        // Uses defaults: ribbonColor #C8C8C8 (Silver), spineColor #F0F0F0 (Near-White)
+        // duration: 6s
       ),
     );
   }
@@ -433,82 +564,9 @@ class _IncognitoScreenState extends State<IncognitoScreen>
     );
   }
 
-  Widget _buildEmptyStateGreeting() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        FadeInAnimation(
-          duration: const Duration(milliseconds: 600),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: Text("Secure Session",
-                style: GoogleFonts.tinos(
-                    color: Colors.white54,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold)),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FadeInAnimation(
-              duration: const Duration(milliseconds: 800),
-              child: const Icon(Icons.security,
-                  color: Color(0xFF6B7280), size: 36),
-            ),
-            const SizedBox(width: 12),
-            TypingText(
-              text: "< Gone Incognito >",
-              style: GoogleFonts.tinos(
-                color: const Color(0xFFE8E8E8),
-                fontSize: 55,
-                fontWeight: FontWeight.w900,
-              ),
-              typingSpeed: const Duration(milliseconds: 50),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          constraints: const BoxConstraints(maxWidth: 320),
-          child: TypingText(
-            text:
-            "Ephemeral mode active. Conversations and uploads are end-to-end encrypted and will be purged upon exit.",
-            style: GoogleFonts.tinos(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              height: 1.6,
-            ),
-            typingSpeed: const Duration(milliseconds: 25),
-            delayBeforeStart: const Duration(milliseconds: 900),
-          ),
-        ),
-        if (_userEmail != null) ...[
-          const SizedBox(height: 12),
-          FadeInAnimation(
-            duration: const Duration(milliseconds: 1000),
-            delay: const Duration(milliseconds: 1500),
-            child: Text(
-              "Ghost session · $_userEmail",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.tinos(
-                color: Colors.white24,
-                fontSize: 11,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  Chat Thread & Message Builders (Unchanged Logic)
+  // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildChatThread() {
     return ListView.builder(
@@ -730,25 +788,21 @@ class _IncognitoScreenState extends State<IncognitoScreen>
   }
 
   Widget _buildSuggestionPills() {
-    return FadeInAnimation(
-      duration: const Duration(milliseconds: 800),
-      delay: const Duration(milliseconds: 300),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        alignment: WrapAlignment.center,
-        children: [
-          _SuggestionPill(Icons.history_toggle_off, "Auto-burn"),
-          _SuggestionPill(Icons.shield_outlined, "Trace bypass"),
-          _SuggestionPill(Icons.fingerprint, "Ghost IP"),
-        ],
-      ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        _SuggestionPill(Icons.history_toggle_off, "Auto-burn"),
+        _SuggestionPill(Icons.shield_outlined, "Trace bypass"),
+        _SuggestionPill(Icons.fingerprint, "Ghost IP"),
+      ],
     );
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  Support widgets (unchanged)
+//  Support Widgets (Unchanged)
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _SuggestionPill extends StatefulWidget {

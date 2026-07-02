@@ -251,7 +251,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       'id': 'openrouter/anthropic/claude-3.5-sonnet',
       'icon': '🎭'
     },
-    {'name': 'QuantCore 1.0', 'id': 'groq/llama-3.1-70b-versatile', 'icon': '⚡'},
+    {'name': 'QuantSync v1.0', 'id': 'groq/llama-3.1-70b-versatile', 'icon': '⚡'},
     {'name': 'Llama 3.1 8B', 'id': 'groq/llama-3.1-8b-instant', 'icon': '🚀'},
     {'name': 'Mixtral 8x7B', 'id': 'groq/mixtral-8x7b-32768', 'icon': '🔥'},
     {'name': 'DeepSeek Chat', 'id': 'openrouter/deepseek/deepseek-chat', 'icon': '🤖'},
