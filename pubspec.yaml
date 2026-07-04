@@ -12,48 +12,65 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
 
-  # Environment variables
-  flutter_dotenv: ^5.2.1
+  # ──────────────────────────────────────────────────────────────
+  # 🔐 SECURITY & CONFIG (Essential for API Keys)
+  # ──────────────────────────────────────────────────────────────
+  flutter_dotenv: ^5.2.1 # Used to store Flowise URL and API Key securely
 
-  # Networking & API
-  dio: ^5.4.3+1
+  # ──────────────────────────────────────────────────────────────
+  # 🌐 NETWORKING & AI INTEGRATION
+  # ──────────────────────────────────────────────────────────────
+  dio: ^5.4.3+1             # Primary for Flowise API calls
   http: ^1.2.0
-  web_socket_channel: ^3.0.1
+  web_socket_channel: ^3.0.1 # For streaming AI responses (word-by-word)
 
-  # Supabase & Auth (PRIMARY)
+  # ──────────────────────────────────────────────────────────────
+  # ☁️ SUPABASE & AUTH
+  # ──────────────────────────────────────────────────────────────
   supabase_flutter: ^2.10.0
 
-  # State Management & Persistence
-  flutter_riverpod: ^2.5.1
+  # ──────────────────────────────────────────────────────────────
+  # 🧠 STATE MANAGEMENT & PERSISTENCE
+  # ──────────────────────────────────────────────────────────────
+  flutter_riverpod: ^2.5.1   # Managing AI loading states and chat history
   shared_preferences: ^2.2.3
   flutter_secure_storage: ^9.2.4
   hive: ^2.2.3
   hive_flutter: ^1.1.0
 
-  # UI / Animations
+  # ──────────────────────────────────────────────────────────────
+  # 📱 RESPONSIVE UI & ANIMATIONS
+  # ──────────────────────────────────────────────────────────────
+  flutter_screenutil: ^5.9.3 # ADDED: Makes UI adapt to any screen size (Mobile/Web/Tablet)
   google_fonts: ^6.2.1
-  flutter_markdown: ^0.7.4
-  fl_chart: ^1.0.0
-  shimmer: ^3.0.0
+  flutter_markdown: ^0.7.4    # Essential for rendering AI code blocks and bold text
+  fl_chart: ^1.0.0           # For Quant financial charts
+  shimmer: ^3.0.0            # For "Loading" skeletons
   animate_do: ^3.3.4
   lottie: ^3.1.2
   cached_network_image: ^3.4.1
 
-  # File / Image / PDF
+  # ──────────────────────────────────────────────────────────────
+  # 📄 MULTIMODAL (PDF / Image / Files)
+  # ──────────────────────────────────────────────────────────────
   image_picker: ^1.1.2
   image_picker_for_web: ^3.0.0
   file_picker: ^8.1.4
   syncfusion_flutter_pdfviewer: ^27.1.48
   mime: ^1.0.6
 
-  # Hardware & Voice (mobile‑only)
+  # ──────────────────────────────────────────────────────────────
+  # 🎙️ HARDWARE & VOICE
+  # ──────────────────────────────────────────────────────────────
   mobile_scanner: ^4.0.1
   permission_handler: ^11.3.1
   record: ^5.1.2
   just_audio: ^0.9.40
   speech_to_text: ^7.3.0
 
-  # Utilities
+  # ──────────────────────────────────────────────────────────────
+  # 🛠️ UTILITIES
+  # ──────────────────────────────────────────────────────────────
   intl: ^0.19.0
   uuid: ^4.4.0
   jwt_decoder: ^2.0.1
@@ -62,16 +79,16 @@ dependencies:
   file_selector: ^1.0.3
 
   # ──────────────────────────────────────────────────────────────
-  # 🔧 AUTH DEPENDENCIES (Explicit versions — compatible set)
+  # 🔑 AUTH DEPENDENCIES
   # ──────────────────────────────────────────────────────────────
   google_sign_in: ^6.2.1
   flutter_facebook_auth: ^7.1.0
 
   # ──────────────────────────────────────────────────────────────
-  # 🌐 FIREBASE WEB DELEGATES (Required for Web compilation)
+  # 🌐 FIREBASE WEB DELEGATES
   # ──────────────────────────────────────────────────────────────
   firebase_core_web: ^2.15.0
-  firebase_auth_web: ^5.8.0`
+  firebase_auth_web: ^5.8.0
   google_sign_in_web: ^0.12.4
   flutter_facebook_auth_web: ^6.1.0
 
@@ -87,4 +104,4 @@ flutter:
   generate: true
 
   assets:
-    - .env
+    - .env  # This is where you will put your Flowise URL and API Key
