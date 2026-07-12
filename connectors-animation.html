@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connectors Animation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle at 10% 20%, #141420 0%, #08080C 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .animation-container {
+            position: relative;
+            width: 820px;
+            height: 440px;
+            border-radius: 18px;
+            overflow: hidden;
+            background: radial-gradient(circle at -20% -30%, #141420 0%, #08080C 100%);
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                inset 0 0 40px rgba(34, 197, 94, 0.1);
+        }
+
+        /* Dotted Grid Background */
+        .grid-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .grid-dot {
+            position: absolute;
+            width: 1.1px;
+            height: 1.1px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+        }
+
+        .grid-dot.bright {
+            background: rgba(96, 165, 250, 0.10);
+            width: 1.6px;
+            height: 1.6px;
+        }
+
+        /* Connectors */
+        .connector {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .connector-line {
+            position: absolute;
+            transform-origin: center;
+        }
+
+        .connector-glow {
+            stroke: rgba(232, 93, 158, 0.22);
+            stroke-width: 7;
+            filter: blur(5px);
+            stroke-linecap: round;
+        }
+
+        .connector-core {
+            stroke: rgba(232, 93, 158, 0.55);
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        /* Port markers */
+        .port {
+            position: absolute;
+            width: 5px;
+            height: 14px;
+            background: rgba(232, 93, 158, 0.5);
+            filter: blur(4px);
+            border-radius: 3px;
+        }
+
+        .port-core {
+            background: #E85D9E;
+        }
+
+        /* Particle animation */
+        .particle {
+            position: absolute;
+            width: 3.2px;
+            height: 3.2px;
+            background: #A855F7;
+            border-radius: 50%;
+            animation: travel 3s linear infinite;
+        }
+
+        .particle.outer {
+            width: 7px;
+            height: 7px;
+            background: rgba(168, 85, 247, 0.5);
+            filter: blur(6px);
+            animation-duration: 3s;
+        }
+
+        @keyframes travel {
+            0%, 100% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Nodes */
+        .node {
+            position: absolute;
+            border-radius: 16px;
+            box-shadow: 
+                0 8px 14px rgba(0, 0, 0, 0.45),
+                0 0 20px rgba(34, 197, 94, 0.35);
+        }
+
+        .start-node {
+            background: linear-gradient(135deg, #1C6B3D, #0E3A20);
+            border-radius: 16px;
+            width: 150px;
+            height: 68px;
+            left: 28px;
+            top: 195px;
+        }
+
+        .detect-node {
+            background: linear-gradient(135deg, #4A1628, #28091A);
+            border-radius: 18px;
+            width: 270px;
+            height: 130px;
+            left: 205px;
+            top: 165px;
+        }
+
+        .agent-card {
+            background: linear-gradient(135deg, #12393B, #06201F);
+            border-radius: 16px;
+            box-shadow: 
+                0 8px 12px rgba(0, 0, 0, 0.45),
+                0 0 18px rgba(34, 211, 238, 0.18);
+        }
+
+        .technical-agent {
+            width: 280px;
+            height: 95px;
+            left: 520px;
+            top: 45px;
+            border: 1.6px solid rgba(34, 211, 238, 0);
+        }
+
+        .agent1 {
+            width: 280px;
+            height: 130px;
+            left: 520px;
+            top: 163px;
+        }
+
+        .agent2 {
+            width: 280px;
+            height: 95px;
+            left: 520px;
+            top: 308px;
+            border: 1.6px solid #22D3EE;
+        }
+
+        /* Active node glow */
+        .agent2::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(34, 211, 238, 0.35);
+            animation: pulse 3s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.35; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Avatar badges */
+        .avatar {
+            position: absolute;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            color: white;
+        }
+
+        .start-avatar {
+            background: linear-gradient(135deg, #4ADE80, #16A34A);
+            left: 17px;
+            top: 17px;
+            box-shadow: 0 2px 8px rgba(70, 166, 138, 0.5);
+        }
+
+        .detect-avatar {
+            background: linear-gradient(135deg, #F472B6, #DB2777);
+            width: 36px;
+            height: 36px;
+            left: 17px;
+            top: 17px;
+            box-shadow: 0 2px 8px rgba(244, 114, 182, 0.5);
+        }
+
+        .agent-avatar {
+            background: linear-gradient(135deg, #67E8F9, #0EA5B7);
+            left: 17px;
+            top: 17px;
+            box-shadow: 0 2px 8px rgba(103, 232, 249, 0.5);
+        }
+
+        /* Check badges */
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            animation: pop 2s ease-in-out infinite;
+        }
+
+        .check-badge {
+            background: #22C55E;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        }
+
+        .spinner-badge {
+            background: #F59E0B;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes pop {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Node content */
+        .node-title {
+            position: absolute;
+            left: 60px;
+            top: 20px;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 0.2px;
+            z-index: 1;
+        }
+
+        .detect-title {
+            left: 60px;
+            top: 20px;
+            width: 180px;
+        }
+
+        .agent-title {
+            left: 60px;
+            top: 20px;
+            font-size: 15px;
+        }
+
+        .divider {
+            position: absolute;
+            left: 60px;
+            top: 36px;
+            width: 160px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .detect-divider {
+            top: 36px;
+        }
+
+        /* Pills */
+        .pill {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 11px;
+            color: #808080;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pill-icon {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 9px;
+            color: white;
+        }
+
+        .technical-pill .pill-icon { background: #60A5FA; opacity: 0.25; }
+        .agent1-pill1 .pill-icon { background: #F59E0B; opacity: 0.25; }
+        .agent1-pill2 .pill-icon { background: #60A5FA; opacity: 0.25; }
+        .agent2-pill .pill-icon { background: #A78BFA; opacity: 0.25; }
+
+        /* Responsive design */
+        @media (max-width: 900px) {
+            .animation-container {
+                width: 100%;
+                height: 400px;
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .animation-container {
+                width: 100%;
+                height: 350px;
+                max-width: 100%;
+            }
+            
+            .start-node, .detect-node, .agent-card {
+                transform: scale(0.85);
+            }
+        }
+
+        @media (max-width: 400px) {
+            .animation-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animation-container">
+        <!-- Dotted Grid Background -->
+        <div class="grid-container" id="grid"></div>
+        
+        <!-- Connectors -->
+        <svg class="connector" viewBox="0 0 820 440" preserveAspectRatio="xMidYMid meet">
+            <!-- Connectors with animated particles -->
+            <path class="connector-line" d="M178 228 C 378 228, 432 226, 475 226">
+                <circle class="particle outer" cx="178" cy="228" r="3.1"/>
+                <circle class="particle outer" cx="178" cy="228" r="3.1" style="animation-delay: -0.75s"/>
+                <circle class="particle outer" cx="178" cy="228" r="3.1" style="animation-delay: -0.5s"/>
+                <circle class="particle outer" cx="178" cy="228" r="3.1" style="animation-delay: -0.25s"/>
+                <circle class="particle" cx="178" cy="228" r="1.6"/>
+                <circle class="particle" cx="178" cy="228" r="1.6" style="animation-delay: -0.75s"/>
+                <circle class="particle" cx="178" cy="228" r="1.6" style="animation-delay: -0.5s"/>
+                <circle class="particle" cx="178" cy="228" r="1.6" style="animation-delay: -0.25s"/>
+            </path>
+            
+            <path class="connector-line" d="M340 295 C 450 310, 485 310, 515 310">
+                <circle class="particle outer" cx="340" cy="295" r="3.1"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.75s"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.5s"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.25s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.75s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.5s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.25s"/>
+            </path>
+            
+            <path class="connector-line" d="M340 295 C 450 310, 485 310, 515 310">
+                <circle class="particle outer" cx="340" cy="295" r="3.1"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.75s"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.5s"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.25s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.75s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.5s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.25s"/>
+            </path>
+            
+            <path class="connector-line" d="M340 295 C 450 310, 485 310, 515 310">
+                <circle class="particle outer" cx="340" cy="295" r="3.1"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.75s"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.5s"/>
+                <circle class="particle outer" cx="340" cy="295" r="3.1" style="animation-delay: -0.25s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.75s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.5s"/>
+                <circle class="particle" cx="340" cy="295" r="1.6" style="animation-delay: -0.25s"/>
+            </path>
+            
+            <!-- Connector paths with glow effect -->
+            <path class="connector-glow" d="M178 228 C 378 228, 432 226, 475 226"/>
+            <path class="connector-core" d="M178 228 C 378 228, 432 226, 475 226"/>
+            
+            <path class="connector-glow" d="M340 295 C 450 310, 485 310, 515 310"/>
+            <path class="connector-core" d="M340 295 C 450 310, 485 310, 515 310"/>
+            
+            <path class="connector-glow" d="M340 295 C 450 310, 485 310, 515 310"/>
+            <path class="connector-core" d="M340 295 C 450 310, 485 310, 515 310"/>
+            
+            <path class="connector-glow" d="M340 295 C 450 310, 485 310, 515 310"/>
+            <path class="connector-core" d="M340 295 C 450 310, 485 310, 515 310"/>
+            
+            <!-- Port markers -->
+            <div class="port" style="left: 475px; top: 228px;"></div>
+            <div class="port port-core" style="left: 473px; top: 226px;"></div>
+            <div class="port" style="left: 515px; top: 310px;"></div>
+            <div class="port port-core" style="left: 513px; top: 308px;"></div>
+        </svg>
+        
+        <!-- Nodes -->
+        <div class="node start-node">
+            <div class="avatar start-avatar">▶</div>
+            <div class="node-title">Start</div>
+            <div class="badge check-badge">✓</div>
+        </div>
+        
+        <div class="node detect-node">
+            <div class="avatar detect-avatar">⇢</div>
+            <div class="node-title detect-title">Detect User Intention</div>
+            <div class="divider detect-divider"></div>
+            <div class="pill technical-pill">
+                <span class="pill-icon">g</span>
+                <span>gpt-4.1</span>
+            </div>
+            <div class="badge check-badge">✓</div>
+        </div>
+        
+        <div class="agent-card technical-agent">
+            <div class="agent-avatar">🤖</div>
+            <div class="node-title agent-title">Technical Agent</div>
+            <div class="pill technical-pill">
+                <span class="pill-icon">g</span>
+                <span>gemini-2.0-flash</span>
+            </div>
+            <div class="badge check-badge">✓</div>
+        </div>
+        
+        <div class="agent-card agent1">
+            <div class="agent-avatar">⚙</div>
+            <div class="node-title agent-title">Agent 1</div>
+            <div class="pill agent1-pill1">
+                <span class="pill-icon">c</span>
+                <span>claude-3-7-sonnet</span>
+            </div>
+            <div class="pill agent1-pill2">
+                <span class="pill-icon">g</span>
+            </div>
+        </div>
+        
+        <div class="agent-card agent2">
+            <div class="agent-avatar">★</div>
+            <div class="node-title agent-title">Agent 2</div>
+            <div class="pill agent2-pill">
+                <span class="pill-icon">g</span>
+                <span>gpt-4o-mini</span>
+            </div>
+            <div class="badge spinner-badge">⟳</div>
+        </div>
+    </div>
+
+    <script>
+        // Generate dotted grid
+        const gridContainer = document.getElementById('grid');
+        const width = 820;
+        const height = 440;
+        const spacing = 18;
+        
+        for (let y = 8; y < height; y += spacing) {
+            for (let x = 8; x < width; x += spacing) {
+                const row = Math.floor(y / spacing);
+                const col = Math.floor(x / spacing);
+                const isBright = (row % 5 === 0) && (col % 5 === 0);
+                
+                const dot = document.createElement('div');
+                dot.className = isBright ? 'grid-dot bright' : 'grid-dot';
+                dot.style.left = x + 'px';
+                dot.style.top = y + 'px';
+                gridContainer.appendChild(dot);
+            }
+        }
+    </script>
+</body>
+</html>
