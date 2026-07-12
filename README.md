@@ -448,10 +448,10 @@ This project builds upon the excellent work of:
 
 ## 📞 Support & Contact
 
-- **Documentation**: [Wiki](https://github.com/YOUR_USERNAME/YOUR_REPO/wiki)
-- **Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/YOUR_REPO/issues)
-- **Email**: support@quantmessage.ai
-- **Twitter**: [@QuantMessageAI](https://twitter.com/QuantMessageAI)
+- **Documentation**: [Wiki](https://github.com/QuantSync/YOUR_REPO/wiki)
+- **Issues**: [GitHub Issues](https://github.com/QuantSync/YOUR_REPO/issues)
+- **Email**: quantsyncofficial@gmail.com
+- **Twitter**: [@QuantMessage](https://twitter.com/QuantMessage)
 
 ## 📄 License
 
@@ -512,4 +512,4 @@ This repository includes the following animation files for documentation and dem
 
 ⭐️ **If you find QuantMessage useful, please give it a star!**
 
-📌 **License**: MIT License | © 2024 QuantMessage Team
+📌 **License**: MIT License | © 2025 QuantSync Team
