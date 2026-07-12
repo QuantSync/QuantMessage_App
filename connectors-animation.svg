@@ -1,0 +1,107 @@
+ <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 440" width="820" height="440" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="20%" r="120%">
+      <stop offset="0%" stop-color="#141420"/>
+      <stop offset="100%" stop-color="#08080C"/>
+    </radialGradient>
+    <linearGradient id="gStart" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1C6B3D"/><stop offset="100%" stop-color="#0E3A20"/>
+    </linearGradient>
+    <linearGradient id="gDetect" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4A1628"/><stop offset="100%" stop-color="#28091A"/>
+    </linearGradient>
+    <linearGradient id="gAgent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12393B"/><stop offset="100%" stop-color="#06201F"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="dots" width="18" height="18" patternUnits="userSpaceOnUse">
+      <circle cx="8" cy="8" r="1.1" fill="#ffffff" opacity="0.05"/>
+      <circle cx="8" cy="8" r="1.6" fill="#60A5FA" opacity="0.10"/>
+    </pattern>
+  </defs>
+
+  <style>
+    .pulse { animation: pulse 2s ease-in-out infinite; transform-origin: center; }
+    .spin  { animation: spin 1.5s linear infinite; transform-origin: 792px 300px; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+    @keyframes spin  { to { transform: rotate(360deg); } }
+  </style>
+
+  <!-- Canvas -->
+  <rect width="820" height="440" rx="18" fill="url(#bg)"/>
+  <rect width="820" height="440" rx="18" fill="url(#dots)"/>
+
+  <!-- Connectors -->
+  <g fill="none" stroke="#E85D9E" stroke-linecap="round">
+    <path d="M178,229 C198,229 185,230 205,230" stroke-opacity="0.22" stroke-width="7" filter="url(#glow)"/>
+    <path d="M178,229 C198,229 185,230 205,230" stroke-opacity="0.55" stroke-width="2"/>
+    <path d="M475,185 C495,185 500,92 520,92" stroke-opacity="0.22" stroke-width="7" filter="url(#glow)"/>
+    <path d="M475,185 C495,185 500,92 520,92" stroke-opacity="0.55" stroke-width="2"/>
+    <path d="M475,230 C495,230 500,228 520,228" stroke-opacity="0.22" stroke-width="7" filter="url(#glow)"/>
+    <path d="M475,230 C495,230 500,228 520,228" stroke-opacity="0.55" stroke-width="2"/>
+    <path d="M475,275 C495,275 500,355 520,355" stroke-opacity="0.22" stroke-width="7" filter="url(#glow)"/>
+    <path d="M475,275 C495,275 500,355 520,355" stroke-opacity="0.55" stroke-width="2"/>
+  </g>
+
+  <!-- Port plugs -->
+  <g fill="#E85D9E">
+    <rect x="175.5" y="222" width="5" height="14" rx="2"/>
+    <rect x="202.5" y="223" width="5" height="14" rx="2"/>
+    <rect x="472.5" y="178" width="5" height="14" rx="2"/>
+    <rect x="517.5" y="85"  width="5" height="14" rx="2"/>
+    <rect x="472.5" y="223" width="5" height="14" rx="2"/>
+    <rect x="517.5" y="221" width="5" height="14" rx="2"/>
+    <rect x="472.5" y="268" width="5" height="14" rx="2"/>
+    <rect x="517.5" y="348" width="5" height="14" rx="2"/>
+  </g>
+
+  <!-- START NODE -->
+  <g filter="url(#glow)">
+    <rect x="28" y="195" width="150" height="68" rx="16" fill="url(#gStart)"/>
+    <text x="108" y="234" fill="#fff" font-size="16" font-weight="700" text-anchor="middle">Start</text>
+    <g class="pulse"><circle cx="170" cy="187" r="11" fill="#22C55E"/></g>
+  </g>
+
+  <!-- DETECT NODE -->
+  <g filter="url(#glow)">
+    <rect x="205" y="165" width="270" height="130" rx="18" fill="url(#gDetect)"/>
+    <text x="340" y="210" fill="#fff" font-size="16" font-weight="700" text-anchor="middle">Detect User Intention</text>
+    <text x="340" y="240" fill="#34D399" font-size="11" text-anchor="middle">gpt-4.1</text>
+    <g class="pulse"><circle cx="467" cy="157" r="11" fill="#22C55E"/></g>
+  </g>
+
+  <!-- TECHNICAL AGENT -->
+  <g filter="url(#glow)">
+    <rect x="520" y="45" width="280" height="95" rx="16" fill="url(#gAgent)"/>
+    <text x="660" y="85" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">Technical Agent</text>
+    <text x="660" y="110" fill="#60A5FA" font-size="11" text-anchor="middle">gemini-2.0-flash</text>
+    <circle cx="792" cy="37" r="11" fill="#22C55E"/>
+  </g>
+
+  <!-- AGENT 1 -->
+  <g filter="url(#glow)">
+    <rect x="520" y="163" width="280" height="130" rx="16" fill="url(#gAgent)"/>
+    <text x="660" y="205" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">Agent 1</text>
+    <text x="660" y="230" fill="#F59E0B" font-size="11" text-anchor="middle">claude-3-7-sonnet-latest</text>
+  </g>
+
+  <!-- AGENT 2 (active) -->
+  <g filter="url(#glow)">
+    <rect x="520" y="308" width="280" height="95" rx="16" fill="url(#gAgent)" stroke="#22D3EE" stroke-width="1.6"/>
+    <text x="660" y="348" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">Agent 2</text>
+    <text x="660" y="373" fill="#A78BFA" font-size="11" text-anchor="middle">gpt-4o-mini</text>
+    <g class="spin">
+      <circle cx="792" cy="300" r="11" fill="#F59E0B"/>
+      <path d="M792,295 v10 M787,300 h10" stroke="#fff" stroke-width="2"/>
+    </g>
+  </g>
+
+  <!-- Traveling dots -->
+  <circle r="4" fill="#E85D9E"><animateMotion dur="3s" repeatCount="indefinite" path="M178,229 C198,229 185,230 205,230"/></circle>
+  <circle r="4" fill="#A855F7"><animateMotion dur="3s" begin="0.45s" repeatCount="indefinite" path="M475,185 C495,185 500,92 520,92"/></circle>
+  <circle r="4" fill="#E85D9E"><animateMotion dur="3s" begin="1.05s" repeatCount="indefinite" path="M475,230 C495,230 500,228 520,228"/></circle>
+  <circle r="4" fill="#A855F7"><animateMotion dur="3s" begin="1.65s" repeatCount="indefinite" path="M475,275 C495,275 500,355 520,355"/></circle>
+</svg>
