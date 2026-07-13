@@ -1,61 +1,41 @@
-// lib/screens/animations/animation_effects/connectors_animation.dart
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 /// ============================================================
-/// ConnectorsAnimation
+/// ConnectorsAnimation - Quantum Hub Variant (Square/1:1)
 /// ============================================================
-/// Recreates a workflow / agent-graph style diagram:
-///   Start -> Detect User Intention -> (Technical Agent,
-///                                       Agent 1,
-///                                       Agent 2)
-/// on a dark dotted-grid canvas with glowing neon-style
-/// connectors, gradient node cards with colored glow shadows,
-/// a rotating loader badge, and pulsing check badges - designed
-/// to look lively and eye-catching.
+/// Designed to be placed inside a Circular Clip (ClipOval/ClipPath)
+/// provided by the parent screen (SignUp/SignIn).
 ///
-/// HOW TO USE ON ANOTHER SCREEN:
-/// -----------------------------------------------------------
-/// 1. Copy this file into your project (e.g. lib/widgets/).
-/// 2. Import it wherever you want to show the diagram:+-
-///
-///      import 'connectors_animation.dart';
-///
-/// 3. Drop it into your widget tree. It automatically scales
-///    to fill the width available to it while keeping its
-///    aspect ratio, so it works inside a Column, a Card, a
-///    full screen body, etc:
-///
-///      SizedBox(
-///        height: 320,
-///        child: ConnectorsAnimation(),
-///      )
-///
-///    or simply:
-///
-///      Expanded(child: ConnectorsAnimation())
+/// Layout (Logical 400x400):
+///   [Agent 1]     [Agent 2]     [Agent 3]
+///        \          |          /
+///         \         |         /
+///          [ CENTRAL HUB - "Quantum Core" ]
+///                 |
+///             [ START NODE ]
 /// ============================================================
 
 class ConnectorsAnimation extends StatefulWidget {
-  const ConnectorsAnimation({Key? key}) : super(key: key);
+  const ConnectorsAnimation({super.key});
 
   @override
   State<ConnectorsAnimation> createState() => _ConnectorsAnimationState();
 }
 
-class _ConnectorsAnimationState extends State<ConnectorsAnimation>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _ConnectorsAnimationState extends State<ConnectorsAnimation> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
 
-  static const double _designWidth = 820;
-  static const double _designHeight = 440;
+  // Logical Design Size (Square)
+  static const double _designSize = 400.0;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 4), // Slower, more hypnotic
     )..repeat();
   }
 
@@ -67,600 +47,358 @@ class _ConnectorsAnimationState extends State<ConnectorsAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: AspectRatio(
-        aspectRatio: _designWidth / _designHeight,
-        child: FittedBox(
-          fit: BoxFit.contain,
-          child: SizedBox(
-            width: _designWidth,
-            height: _designHeight,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(-0.2, -0.3),
-                    radius: 1.2,
-                    colors: [Color(0xFF141420), Color(0xFF08080C)],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    const Positioned.fill(
-                      child: CustomPaint(painter: _DotGridPainter()),
-                    ),
-                    Positioned.fill(
-                      child: AnimatedBuilder(
-                        animation: _controller,
-                        builder: (context, _) => CustomPaint(
-                          painter: _ConnectorPainter(_controller.value),
-                        ),
-                      ),
-                    ),
-                    _startNode(),
-                    _detectNode(),
-                    _agentCard(
-                      rect: _Layout.technical,
-                      title: 'Technical Agent',
-                      pills: const [
-                        _Pill(label: 'gemini-2.0-flash', icon: Icons.auto_awesome, tint: Color(0xFF60A5FA)),
-                      ],
-                      glowColor: const Color(0xFF22D3EE),
-                      badge: _checkBadge(),
-                    ),
-                    _agentCard(
-                      rect: _Layout.agent1,
-                      title: 'Agent 1',
-                      pills: const [
-                        _Pill(label: 'claude-3-7-sonnet-latest', icon: Icons.change_history, tint: Color(0xFFF59E0B)),
-                        _Pill(label: '', icon: Icons.public, tint: Color(0xFF60A5FA)),
-                      ],
-                      glowColor: const Color(0xFF22D3EE),
-                    ),
-                    _agentCard(
-                      rect: _Layout.agent2,
-                      title: 'Agent 2',
-                      pills: const [
-                        _Pill(label: 'gpt-4o-mini', icon: Icons.blur_circular, tint: Color(0xFFA78BFA)),
-                      ],
-                      borderColor: const Color(0xFF22D3EE),
-                      glowColor: const Color(0xFF22D3EE),
-                      isActive: true,
-                      badge: _spinnerBadge(),
-                    ),
-                  ],
-                ),
-              ),
+    // We use a Stack sized to designSize. Parent handles scaling via FittedBox/AspectRatio.
+    return SizedBox(
+      width: _designSize,
+      height: _designSize,
+      child: Stack(
+        children: [
+          // 1. Background Grid (CustomPaint - Static)
+          CustomPaint(
+            size: const Size(_designSize, _designSize),
+            painter: _QuantumGridPainter(),
+          ),
+
+          // 2. Animated Connections & Particles (CustomPaint - Dynamic)
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) => CustomPaint(
+              size: const Size(_designSize, _designSize),
+              painter: _QuantumConnectorPainter(_controller.value),
             ),
           ),
+
+          // 3. Nodes (Widgets - Interactive/Accessible)
+          _buildStartNode(),
+          _buildCentralHub(),
+          _buildAgentNode(const _AgentData(
+            id: 'agent_1',
+            pos: Offset(60, 60), // Top-Left
+            title: 'Intent\nAnalyzer',
+            model: 'gemini-1.5-pro',
+            accent: Color(0xFF22D3EE), // Cyan
+            icon: Icons.psychology_rounded,
+          )),
+          _buildAgentNode(const _AgentData(
+            id: 'agent_2',
+            pos: Offset(200, 30), // Top-Center
+            title: 'Code\nGenerator',
+            model: 'claude-3-opus',
+            accent: Color(0xFFF59E0B), // Amber
+            icon: Icons.code_rounded,
+          )),
+          _buildAgentNode(const _AgentData(
+            id: 'agent_3',
+            pos: Offset(340, 60), // Top-Right
+            title: 'Security\nAuditor',
+            model: 'gpt-4o',
+            accent: Color(0xFFA78BFA), // Violet
+            icon: Icons.shield_rounded,
+          )),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Node Widgets
+  // ──────────────────────────────────────────────────────────────────────────
+
+  Widget _buildStartNode() {
+    const pos = Offset(200, 330); // Bottom Center
+    const size = Size(100, 50);
+    return Positioned(
+      left: pos.dx - size.width / 2,
+      top: pos.dy - size.height / 2,
+      width: size.width,
+      height: size.height,
+      child: _PulseNode(
+        controller: _controller,
+        color: const Color(0xFF22C55E), // Green
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF166534), Color(0xFF14532D)]),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF22C55E).withOpacity(0.5)),
+            boxShadow: [BoxShadow(color: const Color(0xFF22C55E).withOpacity(0.4), blurRadius: 20, spreadRadius: 2)],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.play_arrow_rounded, color: Color(0xFF4ADE80), size: 18),
+            const SizedBox(width: 6),
+            Text('INITIATE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.0)),
+          ]),
         ),
       ),
     );
   }
 
-  // -----------------------------------------------------------
-  // Nodes
-  // -----------------------------------------------------------
-
-  Widget _startNode() {
-    final r = _Layout.start;
+  Widget _buildCentralHub() {
+    const pos = Offset(200, 200); // Exact Center
+    const size = 110.0;
     return Positioned(
-      left: r.left,
-      top: r.top,
-      width: r.width,
-      height: r.height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1C6B3D), Color(0xFF0E3A20)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF22C55E).withOpacity(0.35),
-                  blurRadius: 22,
-                  spreadRadius: 1,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: [
-                _iconAvatar(
-                  icon: Icons.play_arrow,
-                  colors: const [Color(0xFF4ADE80), Color(0xFF16A34A)],
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Start',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(top: -8, right: -8, child: _checkBadge()),
-        ],
-      ),
-    );
-  }
-
-  Widget _detectNode() {
-    final r = _Layout.detect;
-    return Positioned(
-      left: r.left,
-      top: r.top,
-      width: r.width,
-      height: r.height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF4A1628), Color(0xFF28091A)],
-              ),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFEC4899).withOpacity(0.28),
-                  blurRadius: 26,
-                  spreadRadius: 1,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _iconAvatar(
-                  icon: Icons.alt_route,
-                  colors: const [Color(0xFFF472B6), Color(0xFFDB2777)],
-                  size: 36,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Detect User Intention',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(height: 1, color: Colors.white.withOpacity(0.08)),
-                      const SizedBox(height: 8),
-                      _pillWidget(const _Pill(label: 'gpt-4.1', icon: Icons.change_history, tint: Color(0xFF34D399))),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(top: -8, right: -8, child: _checkBadge()),
-        ],
-      ),
-    );
-  }
-
-  Widget _agentCard({
-    required Rect rect,
-    required String title,
-    required List<_Pill> pills,
-    Color borderColor = Colors.transparent,
-    Color glowColor = const Color(0xFF22D3EE),
-    bool isActive = false,
-    Widget? badge,
-  }) {
-    return Positioned(
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isActive)
-            AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) {
-                final pulse = 0.35 + 0.25 * math.sin(_controller.value * 2 * math.pi);
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: glowColor.withOpacity(pulse),
-                        blurRadius: 30,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF12393B), Color(0xFF06201F)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: borderColor,
-                width: borderColor == Colors.transparent ? 0 : 1.6,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: glowColor.withOpacity(0.18),
-                  blurRadius: 18,
-                  spreadRadius: 0,
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.45),
-                  blurRadius: 12,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _iconAvatar(
-                  icon: Icons.smart_toy,
-                  colors: const [Color(0xFF67E8F9), Color(0xFF0EA5B7)],
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ...pills.map(
-                            (p) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: _pillWidget(p),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (badge != null) Positioned(top: -8, right: -8, child: badge),
-        ],
-      ),
-    );
-  }
-
-  // -----------------------------------------------------------
-  // Small reusable pieces
-  // -----------------------------------------------------------
-
-  Widget _iconAvatar({required IconData icon, required List<Color> colors, double size = 34}) {
-    return Container(
+      left: pos.dx - size / 2,
+      top: pos.dy - size / 2,
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors,
+      child: _PulseNode(
+        controller: _controller,
+        color: const Color(0xFF06B6D4), // Cyan
+        intensity: 1.5,
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(colors: [
+              const Color(0xFF0E7490).withOpacity(0.8),
+              const Color(0xFF083344)
+            ]),
+            border: Border.all(color: const Color(0xFF22D3EE), width: 1.5),
+            boxShadow: [
+              BoxShadow(color: const Color(0xFF22D3EE).withOpacity(0.3), blurRadius: 30, spreadRadius: 5),
+              BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, offset: const Offset(0, 10)),
+            ],
+          ),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.hub_rounded, color: Colors.white.withOpacity(0.9), size: 28),
+            const SizedBox(height: 4),
+            Text('QUANTUM\nCORE', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: 0.5, height: 1.1)),
+          ]),
         ),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(color: colors.last.withOpacity(0.5), blurRadius: 8, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Icon(icon, color: Colors.white, size: size * 0.55),
-    );
-  }
-
-  Widget _pillWidget(_Pill p) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.35),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(color: p.tint.withOpacity(0.25), shape: BoxShape.circle),
-            child: Icon(p.icon, size: 9, color: p.tint),
-          ),
-          if (p.label.isNotEmpty) ...[
-            const SizedBox(width: 6),
-            Text(p.label, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-          ],
-        ],
       ),
     );
   }
 
-  Widget _checkBadge() {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final pulse = 1.0 + 0.1 * math.sin(_controller.value * 2 * math.pi);
-        return Transform.scale(
-          scale: pulse,
-          child: Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: const Color(0xFF22C55E),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: const Color(0xFF22C55E).withOpacity(0.6), blurRadius: 8, spreadRadius: 1),
-              ],
+  Widget _buildAgentNode(_AgentData data) {
+    const nodeWidth = 110.0;
+    const nodeHeight = 70.0;
+    return Positioned(
+      left: data.pos.dx - nodeWidth / 2,
+      top: data.pos.dy - nodeHeight / 2,
+      width: nodeWidth,
+      height: nodeHeight,
+      child: _PulseNode(
+        controller: _controller,
+        color: data.accent,
+        phaseOffset: data.id.hashCode.toDouble() * 0.1, // Stagger pulse
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [data.accent.withOpacity(0.15), Colors.black.withOpacity(0.6)],
             ),
-            child: const Icon(Icons.check, size: 14, color: Colors.white),
+            border: Border.all(color: data.accent.withOpacity(0.4), width: 1),
+            boxShadow: [
+              BoxShadow(color: data.accent.withOpacity(0.2), blurRadius: 15, spreadRadius: 1),
+              BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5)),
+            ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _spinnerBadge() {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return Transform.rotate(
-          angle: _controller.value * 2 * math.pi * 4,
-          child: Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF59E0B),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.6), blurRadius: 8, spreadRadius: 1),
-              ],
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(color: data.accent.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                child: Icon(data.icon, color: data.accent, size: 14),
+              ),
+              const SizedBox(width: 6),
+              Flexible(child: Text(data.title, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, height: 1.1))),
+            ]),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), borderRadius: BorderRadius.circular(4), border: Border.all(color: data.accent.withOpacity(0.2))),
+              child: Text(data.model, style: TextStyle(color: data.accent.withOpacity(0.8), fontSize: 8, fontFamily: 'monospace', fontWeight: FontWeight.w500)),
             ),
-            child: const Icon(Icons.autorenew, size: 14, color: Colors.white),
-          ),
-        );
-      },
+          ]),
+        ),
+      ),
     );
   }
 }
 
-/// A small model/tool badge shown inside a node card, e.g. the
-/// model name pill ("gpt-4.1") or a bare icon pill.
-class _Pill {
-  final String label;
+// ──────────────────────────────────────────────────────────────────────────
+// Helper Models & Widgets
+// ──────────────────────────────────────────────────────────────────────────
+
+class _AgentData {
+  final String id;
+  final Offset pos;
+  final String title;
+  final String model;
+  final Color accent;
   final IconData icon;
-  final Color tint;
-
-  const _Pill({required this.label, this.icon = Icons.circle, this.tint = Colors.white});
+  const _AgentData({required this.id, required this.pos, required this.title, required this.model, required this.accent, required this.icon});
 }
 
-/// Fixed design-space coordinates for every node, shared between
-/// the node widgets and the connector painter so lines always
-/// line up with the cards exactly.
-class _Layout {
-  static final Rect start = Rect.fromLTWH(28, 195, 150, 68);
-  static final Rect detect = Rect.fromLTWH(205, 165, 270, 130);
-  static final Rect technical = Rect.fromLTWH(520, 45, 280, 95);
-  static final Rect agent1 = Rect.fromLTWH(520, 163, 280, 130);
-  static final Rect agent2 = Rect.fromLTWH(520, 308, 280, 95);
+/// Wrapper that adds a subtle scale pulse animation to any node.
+class _PulseNode extends StatelessWidget {
+  final AnimationController controller;
+  final Color color;
+  final double intensity;
+  final double phaseOffset;
+  final Widget child;
+  const _PulseNode({required this.controller, required this.color, required this.child, this.intensity = 1.0, this.phaseOffset = 0.0});
 
-  static Offset rightMid(Rect r) => Offset(r.right, r.center.dy);
-  static Offset leftMid(Rect r) => Offset(r.left, r.center.dy);
-
-  static Offset detectPort(int index) {
-    switch (index) {
-      case 0:
-        return Offset(detect.right, detect.top + 20);
-      case 1:
-        return Offset(detect.right, detect.center.dy);
-      default:
-        return Offset(detect.right, detect.bottom - 20);
-    }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final val = (controller.value + phaseOffset) % 1.0;
+        // Sin wave: 1.0 -> 1.03 (subtle breath)
+        final scale = 1.0 + 0.025 * intensity * math.sin(val * 2 * math.pi);
+        return Transform.scale(scale: scale, child: child);
+      },
+    );
   }
 }
 
-/// Draws the dotted background grid with a subtle circuit-board feel:
-/// most dots are faint, every few dots along the grid are brighter.
-class _DotGridPainter extends CustomPainter {
-  const _DotGridPainter();
+// ──────────────────────────────────────────────────────────────────────────
+// Custom Painters
+// ──────────────────────────────────────────────────────────────────────────
 
+/// Static Dotted Grid with "Circuit" highlights
+class _QuantumGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final faint = Paint()..color = Colors.white.withOpacity(0.05);
-    final bright = Paint()..color = const Color(0xFF60A5FA).withOpacity(0.10);
-    const spacing = 18.0;
-    int row = 0;
-    for (double y = 8; y < size.height; y += spacing) {
-      int col = 0;
-      for (double x = 8; x < size.width; x += spacing) {
-        final isBright = (row % 5 == 0) && (col % 5 == 0);
-        canvas.drawCircle(Offset(x, y), isBright ? 1.6 : 1.1, isBright ? bright : faint);
-        col++;
+    final paint = Paint()..style = PaintingStyle.fill;
+    const spacing = 20.0;
+    const radius = 1.0;
+
+    // Faint dots
+    paint.color = Colors.white.withOpacity(0.03);
+    for (double y = 0; y < size.height; y += spacing) {
+      for (double x = 0; x < size.width; x += spacing) {
+        canvas.drawCircle(Offset(x, y), radius, paint);
       }
-      row++;
+    }
+
+    // Major Grid Lines (Subtle)
+    final linePaint = Paint()
+      ..color = const Color(0xFF06B6D4).withOpacity(0.02)
+      ..strokeWidth = 0.5;
+    for (double y = 0; y < size.height; y += 100) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
+    }
+    for (double x = 0; x < size.width; x += 100) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), linePaint);
     }
   }
 
-  @override
-  bool shouldRepaint(covariant _DotGridPainter oldDelegate) => false;
+  @override bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Draws the curved connectors between nodes as glowing neon-style
-/// lines: a soft blurred glow pass plus a crisp core line, small
-/// plug-style port markers at each end, branch index labels, and a
-/// stream of glowing dots that continuously travels along each
-/// connector to give the diagram a "live" running look.
-class _ConnectorPainter extends CustomPainter {
-  final double progress;
+/// Animated Connections & Flowing Particles
+class _QuantumConnectorPainter extends CustomPainter {
+  final double progress; // 0.0 - 1.0
+  _QuantumConnectorPainter(this.progress);
 
-  const _ConnectorPainter(this.progress);
+  // Node Logical Positions (Must match Stack Positioned logic)
+  static const Offset startPos = Offset(200, 330);
+  static const Offset hubPos = Offset(200, 200);
+  static const Offset agent1Pos = Offset(60, 60);
+  static const Offset agent2Pos = Offset(200, 30);
+  static const Offset agent3Pos = Offset(340, 60);
 
-  static const Color lineColor = Color(0xFFE85D9E);
-  static const Color lineColor2 = Color(0xFFA855F7);
+  // Colors
+  static const Color lineBase = Color(0xFF06B6D4); // Cyan
+  static const Color particleColor1 = Color(0xFF22D3EE);
+  static const Color particleColor2 = Color(0xFFA78BFA);
+  static const Color particleColor3 = Color(0xFFF59E0B);
 
   @override
   void paint(Canvas canvas, Size size) {
-    _drawConnector(
-      canvas,
-      _Layout.rightMid(_Layout.start),
-      _Layout.leftMid(_Layout.detect),
-      phase: 0.0,
-    );
-    _drawConnector(
-      canvas,
-      _Layout.detectPort(0),
-      _Layout.leftMid(_Layout.technical),
-      phase: 0.15,
-      label: '0',
-    );
-    _drawConnector(
-      canvas,
-      _Layout.detectPort(1),
-      _Layout.leftMid(_Layout.agent1),
-      phase: 0.35,
-      label: '1',
-    );
-    _drawConnector(
-      canvas,
-      _Layout.detectPort(2),
-      _Layout.leftMid(_Layout.agent2),
-      phase: 0.55,
-      label: '2',
-    );
+    // 1. Draw Bezier Paths (Glow + Core)
+    _drawBezier(canvas, startPos, hubPos, lineBase, 0.0);
+    _drawBezier(canvas, hubPos, agent1Pos, particleColor1, 0.0);
+    _drawBezier(canvas, hubPos, agent2Pos, particleColor2, 0.2);
+    _drawBezier(canvas, hubPos, agent3Pos, particleColor3, 0.4);
+
+    // 2. Draw Flowing Particles on Paths
+    _drawParticles(canvas, startPos, hubPos, lineBase, progress, 0.0, 5);
+    _drawParticles(canvas, hubPos, agent1Pos, particleColor1, progress, 0.1, 4);
+    _drawParticles(canvas, hubPos, agent2Pos, particleColor2, progress, 0.3, 4);
+    _drawParticles(canvas, hubPos, agent3Pos, particleColor3, progress, 0.5, 4);
   }
 
-  void _drawConnector(
-      Canvas canvas,
-      Offset from,
-      Offset to, {
-        double phase = 0,
-        String? label,
-      }) {
-    final dx = (to.dx - from.dx).abs().clamp(40, 400).toDouble();
-    final path = Path()
-      ..moveTo(from.dx, from.dy)
-      ..cubicTo(
-        from.dx + dx * 0.5,
-        from.dy,
-        to.dx - dx * 0.5,
-        to.dy,
-        to.dx,
-        to.dy,
-      );
+  void _drawBezier(Canvas canvas, Offset from, Offset to, Color color, double phase) {
+    final dx = (to.dx - from.dx).abs();
+    final dy = (to.dy - from.dy).abs();
+    // Control points pull towards center horizontally, then vertical
+    final cp1 = Offset(from.dx + (to.dx - from.dx) * 0.3, from.dy);
+    final cp2 = Offset(to.dx - (to.dx - from.dx) * 0.3, to.dy);
 
+    // Adjust for vertical flow
+    if (from.dy > to.dy) { // Flowing Up
+      final midY = (from.dy + to.dy) / 2;
+      final path = Path()
+        ..moveTo(from.dx, from.dy)
+        ..cubicTo(from.dx, midY, to.dx, midY, to.dx, to.dy);
+      _strokePath(canvas, path, color);
+    } else { // Flowing Down (Start -> Hub)
+      final midY = (from.dy + to.dy) / 2;
+      final path = Path()
+        ..moveTo(from.dx, from.dy)
+        ..cubicTo(from.dx, midY, to.dx, midY, to.dx, to.dy);
+      _strokePath(canvas, path, color);
+    }
+  }
+
+  void _strokePath(Canvas canvas, Path path, Color color) {
+    // Glow Pass
     final glowPaint = Paint()
-      ..color = lineColor.withOpacity(0.22)
+      ..color = color.withOpacity(0.15)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 7
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+      ..strokeWidth = 6
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
     canvas.drawPath(path, glowPaint);
 
+    // Core Pass
     final corePaint = Paint()
-      ..color = lineColor.withOpacity(0.55)
+      ..color = color.withOpacity(0.6)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
     canvas.drawPath(path, corePaint);
+  }
 
-    _drawPort(canvas, from);
-    _drawPort(canvas, to);
+  void _drawParticles(Canvas canvas, Offset from, Offset to, Color color, double progress, double phaseOffset, int count) {
+    final dx = (to.dx - from.dx).abs();
+    final dy = (from.dy - to.dy).abs(); // Usually positive (up)
 
-    if (label != null) {
-      _drawLabel(canvas, label, Offset(from.dx - 16, from.dy - 8));
-    }
+    // Recreate path for metric calculation
+    final midY = (from.dy + to.dy) / 2;
+    final path = Path()
+      ..moveTo(from.dx, from.dy)
+      ..cubicTo(from.dx, midY, to.dx, midY, to.dx, to.dy);
 
     final metrics = path.computeMetrics().toList();
     if (metrics.isEmpty) return;
     final metric = metrics.first;
     final length = metric.length;
 
-    for (int i = 0; i < 4; i++) {
-      final t = ((progress + phase - i * 0.07) % 1.0 + 1.0) % 1.0;
+    for (int i = 0; i < count; i++) {
+      // Staggered progress
+      final t = ((progress + phaseOffset - i * (1.0 / count)) % 1.0 + 1.0) % 1.0;
       final tangent = metric.getTangentForOffset(length * t);
       if (tangent == null) continue;
+
       final pos = tangent.position;
-      final opacity = (1.0 - i * 0.22).clamp(0.0, 1.0);
-      final dotColor = Color.lerp(lineColor, lineColor2, i / 4)!;
+      final opacity = (math.sin(t * math.pi) * 0.5 + 0.5).clamp(0.2, 1.0); // Fade in/out at ends
 
-      final outerGlow = Paint()
-        ..color = dotColor.withOpacity(opacity * 0.5)
+      // Outer Glow
+      final glowPaint = Paint()
+        ..color = color.withOpacity(opacity * 0.4)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-      canvas.drawCircle(pos, 7 - i * 0.8, outerGlow);
+      canvas.drawCircle(pos, 5.0, glowPaint);
 
-      final core = Paint()..color = dotColor.withOpacity(opacity);
-      canvas.drawCircle(pos, 3.2 - i * 0.4, core);
+      // Core
+      final corePaint = Paint()..color = color.withOpacity(opacity);
+      canvas.drawCircle(pos, 2.5, corePaint);
     }
   }
 
-  void _drawPort(Canvas canvas, Offset point) {
-    final rect = Rect.fromCenter(center: point, width: 5, height: 14);
-    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
-
-    final glow = Paint()
-      ..color = lineColor.withOpacity(0.5)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawRRect(rrect, glow);
-
-    final paint = Paint()..color = lineColor;
-    canvas.drawRRect(rrect, paint);
-  }
-
-  void _drawLabel(Canvas canvas, String text, Offset position) {
-    final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(color: lineColor, fontSize: 11, fontWeight: FontWeight.w700),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    tp.layout();
-    tp.paint(canvas, position);
-  }
-
   @override
-  bool shouldRepaint(covariant _ConnectorPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _QuantumConnectorPainter oldDelegate) => oldDelegate.progress != progress;
 }
