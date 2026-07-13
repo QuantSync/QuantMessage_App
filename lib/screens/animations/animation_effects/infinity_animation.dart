@@ -1,4 +1,4 @@
-// lib/screens/animations/animated_effects/infinity_animation.dart
+// lib/screens/animations/animation_effects/infinity_animation.dart
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -11,7 +11,7 @@ class InfinityAnimation extends StatefulWidget {
   const InfinityAnimation({
     super.key,
     this.size = 100.0,
-    this.color = Colors.greenAccent,
+    this.color = const Color(0xFF22C55E), // green
     this.duration = const Duration(seconds: 6),
   });
 
@@ -127,7 +127,7 @@ class _HypnoticInfinityPainter extends CustomPainter {
         phase,
         particleCount: 3,
         speedMultiplier: 1.35,
-        baseColor: Colors.cyanAccent.withOpacity(0.6));
+        baseColor: Colors.lightGreenAccent.withOpacity(0.6));
 
     canvas.restore();
   }

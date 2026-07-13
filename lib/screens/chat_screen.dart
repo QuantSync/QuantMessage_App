@@ -1,7 +1,4 @@
 // lib/screens/chat_screen.dart
-// QuantMessage Chat Screen
-// Integrated with Flowise AI, Supabase Auth, Storage, and History Persistence
-
 import 'dart:async';
 import 'dart:io' show File;
 import 'dart:math' as math;
@@ -18,7 +15,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/app_theme.dart';
 import '../core/chat_message.dart';
 import '../core/attachment_model.dart';
-import '../core/config.dart' as app_config; // FIXED: Added alias 'app_config' to solve the Config name conflict
+import '../core/config.dart' as app_config;
 import '../services/quant_space_api.dart';
 import '../services/upload_service.dart';
 import 'animations/animation_effects/infinity_animation.dart';
@@ -144,7 +141,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final List<Attachment> _pendingAttachments = [];
   String _currentConversationId = "";
 
-  // FIXED: Using app_config alias to avoid conflict with google_fonts
   String _selectedModelName = app_config.Config.models[0].name;
   String _selectedModelId = app_config.Config.models[0].id;
 
@@ -195,12 +191,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // ATTACHMENT LOGIC
-  // ──────────────────────────────────────────────────────────────────────────
-
   void _addAttachment(Uint8List bytes, String filename, String mimeType) {
-    // FIXED: Using AttachmentX.fromBytes (Extension method) to resolve a l la "method not defined" error
     final attachment = AttachmentX.fromBytes(bytes, filename, mimeType);
     setState(() => _pendingAttachments.add(attachment));
     _writeTempFile(bytes, filename).then((file) {
@@ -229,10 +220,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     setState(() => _pendingAttachments.removeAt(index));
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // CORE SEND LOGIC (Synchronized with ChatMessage required parameters)
-  // ──────────────────────────────────────────────────────────────────────────
-
   Future<void> _handleSend() async {
     final text = _controller.text.trim();
     final hasAttachments = _pendingAttachments.isNotEmpty;
@@ -243,7 +230,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _emptyCtrl.reset();
     final pendingSnapshot = List<Attachment>.from(_pendingAttachments);
 
-    // FIXED: Provide conversationId, senderId, and createdAt to avoid ChatMessage errors
     final userMsg = ChatMessage(
       text: text,
       isUser: true,
@@ -264,25 +250,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     try {
       String finalPrompt = text;
-
       for (final att in pendingSnapshot) {
         if (att.localFile != null) {
           final uploaded = await _uploadService.uploadFile(
             file: att.localFile!,
             conversationId: _currentConversationId,
           );
-          // Use the promptFragment getter from attachment_model.dart
           finalPrompt += uploaded.promptFragment;
         }
       }
-
-      // Save User Message to DB
       await _supabase.from('chat_messages').insert(userMsg.toMap());
-
-      // AI Response
       final response = await _api.getAIResponse(finalPrompt, userId);
 
-      // FIXED: Provide all required fields for the AI ChatMessage
       final aiMsg = ChatMessage(
         text: response,
         isUser: false,
@@ -292,13 +271,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         modelName: _selectedModelName,
       );
 
-      // Save AI Response to DB
       await _supabase.from('chat_messages').insert(aiMsg.toMap());
 
       if (!mounted) return;
-      setState(() {
-        _messages.add(aiMsg);
-      });
+      setState(() { _messages.add(aiMsg); });
     } catch (e) {
       if (!mounted) return;
       setState(() => _messages.add(ChatMessage(
@@ -326,56 +302,95 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
-      body: Row(
+      body: Stack(
         children: [
-          LeftSidebar(
-            onNewChat: () {
-              setState(() {
-                _messages.clear();
-                _pendingAttachments.clear();
-                _generateConversationId();
-                _emptyCtrl.forward(from: 0.0);
-              });
-            },
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                const _ParticleBackground(count: 22),
-                if (_messages.isEmpty)
-                  Center(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                      child: FadeTransition(
-                        opacity: _emptyOpacity,
-                        child: ScaleTransition(
-                          scale: _emptyScale,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildGreeting(),
-                              const SizedBox(height: 40),
-                              _buildInputBox(),
-                              const SizedBox(height: 16),
-                              _buildSuggestionPills(),
-                            ],
+          // INTEGRATED: The "Deep Space" Blurred Background from Auth screens
+          _buildBlurredBackground(),
+          Row(
+            children: [
+              LeftSidebar(
+                onNewChat: () {
+                  setState(() {
+                    _messages.clear();
+                    _pendingAttachments.clear();
+                    _generateConversationId();
+                    _emptyCtrl.forward(from: 0.0);
+                  });
+                },
+              ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    const _ParticleBackground(count: 22),
+                    if (_messages.isEmpty)
+                      Center(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                          child: FadeTransition(
+                            opacity: _emptyOpacity,
+                            child: ScaleTransition(
+                              scale: _emptyScale,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildGreeting(),
+                                  const SizedBox(height: 40),
+                                  _buildInputBox(),
+                                  const SizedBox(height: 16),
+                                  _buildSuggestionPills(),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
+                      )
+                    else
+                      Column(
+                        children: [
+                          Expanded(child: _buildChatThread()),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+                            child: Align(alignment: Alignment.bottomCenter, child: _buildInputBox()),
+                          ),
+                        ],
                       ),
-                    ),
-                  )
-                else
-                  Column(
-                    children: [
-                      Expanded(child: _buildChatThread()),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
-                        child: Align(alignment: Alignment.bottomCenter, child: _buildInputBox()),
-                      ),
-                    ],
-                  ),
-              ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // INTEGRATED: Syncing depth with Signup/Signin screens
+  Widget _buildBlurredBackground() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(-0.5, -0.5),
+          radius: 1.5,
+          colors: [Color(0xFF1A0A0A), AppTheme.backgroundBlack],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.3,
+              child: Image.network(
+                'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1500&q=80',
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => Container(color: AppTheme.backgroundBlack),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(color: Colors.black.withOpacity(0.6)),
             ),
           ),
         ],
@@ -386,19 +401,47 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Widget _buildGreeting() {
     final userName = _userName ?? 'there';
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // FIXED: Using Wrap and constrained SizedBox to prevent Pixel Overflow
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            SizedBox(width: 90, height: 46, child: InfinityAnimation(size: 90, color: const Color(0xFFE27457), duration: const Duration(seconds: 5))),
+            SizedBox(
+              width: 100,
+              height: 50,
+              // INTEGRATED: infinity_animation.dart now runs in its green
+              // variant here, matching the app's green accent (Start
+              // button, check badges, etc.) instead of the old red tint.
+              child: InfinityAnimation(
+                size: 100,
+                color: const Color(0xFF22C55E), // green
+                duration: const Duration(seconds: 5),
+              ),
+            ),
             const SizedBox(width: 16),
             Flexible(
-              child: Text("< Welcome $userName >", style: GoogleFonts.outfit(color: const Color(0xFFE8E8E8), fontSize: 56, fontWeight: FontWeight.w900, letterSpacing: -0.5), textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
+              child: Text(
+                "< Welcome $userName >",
+                style: GoogleFonts.outfit(
+                    color: const Color(0xFFE8E8E8),
+                    fontSize: 48,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Text("< How May You be Helped >", textAlign: TextAlign.center, style: GoogleFonts.outfit(color: AppTheme.textSecondary.withOpacity(0.5), fontSize: 18, fontWeight: FontWeight.w300)),
+        Text(
+            "< How May You be Helped >",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(color: AppTheme.textSecondary.withOpacity(0.5), fontSize: 18, fontWeight: FontWeight.w300)
+        ),
         if (_userEmail != null) ...[
           const SizedBox(height: 8),
           Text("Signed in as $_userEmail", style: GoogleFonts.outfit(color: Colors.white24, fontSize: 12)),
@@ -447,10 +490,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       builder: (_, child) => Container(
         constraints: const BoxConstraints(maxWidth: 800),
         decoration: BoxDecoration(
-          color: const Color(0xFF2F2F2F),
+          color: const Color(0xFF2F2F2F).withOpacity(0.8),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Color.lerp(Colors.white10, Colors.white24, _inputGlow.value)!, width: 1.0),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))],
+          border: Border.all(
+              color: Color.lerp(Colors.white10, AppTheme.primaryRed.withOpacity(0.5), _inputGlow.value)!,
+              width: 1.0 + (_inputGlow.value * 0.5)
+          ),
+          boxShadow: [
+            BoxShadow(
+                color: AppTheme.primaryRed.withOpacity(_inputGlow.value * 0.2),
+                blurRadius: 15,
+                offset: const Offset(0, 8)
+            )
+          ],
         ),
         child: child,
       ),
@@ -535,9 +587,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// MESSAGE ROW & AI CONTENT
-// ──────────────────────────────────────────────────────────────────────────
+// ... [Keep _AnimatedMessageRow and all UI helpers exactly as they were] ...
+
 class _AnimatedMessageRow extends StatefulWidget {
   final ChatMessage message;
   const _AnimatedMessageRow({required this.message});
@@ -604,7 +655,6 @@ class _AnimatedMessageRowState extends State<_AnimatedMessageRow> {
   }
 }
 
-// --- UI Helpers (Retained from Original) ---
 class _SuggestionPill extends StatelessWidget {
   final IconData icon;
   final String label;

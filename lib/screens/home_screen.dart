@@ -1,9 +1,14 @@
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // INTEGRATED: For Auth checks
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Import the custom buttons
+import 'animations/animated_buttons/google_button.dart';
+import 'animations/animated_buttons/github_button.dart';
 
 import '../core/app_theme.dart';
 import 'app_bar.dart';
@@ -12,7 +17,7 @@ import 'history_screen.dart';
 import 'incogonito_screen.dart';
 import 'signin_screen.dart';
 import 'signup_screen.dart';
-import 'settings_screen.dart'; // INTEGRATED: Now includes showSettingsPopup
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,30 +31,28 @@ class _HomeScreenState extends State<HomeScreen>
   int _currentIndex = 0;
   int _previousIndex = 0;
 
-  // We use a getter for pages so they can be rebuilt if the auth state changes
+  // Modified to pass the bypass logic to the Dashboard
   List<Widget> get _pages => [
-    DashboardTab(onStartChat: () => _onItemSelected(1)),
+    DashboardTab(onStartChat: () => _onItemSelected(1, bypassAuth: true)),
     const ChatScreen(),
     const IncognitoScreen(),
     const HistoryScreen(),
     const SettingsScreen(),
   ];
 
-  void _onItemSelected(int index) {
+  // ADDED: bypassAuth parameter to ignore Supabase check for Guests
+  void _onItemSelected(int index, {bool bypassAuth = false}) {
     if (index == _currentIndex) return;
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // AUTH GUARD: Protect sensitive tabs (Chat, History)
-    // ──────────────────────────────────────────────────────────────────────────
-    if (index == 1 || index == 3) {
+    // AUTH GUARD: Only trigger if bypassAuth is false
+    if (!bypassAuth && (index == 1 || index == 3)) {
       final session = Supabase.instance.client.auth.currentSession;
       if (session == null) {
-        // User is not logged in, redirect to Sign In instead of switching tab
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const SignInScreen()),
         );
-        return; // Stop the tab switch
+        return;
       }
     }
 
@@ -80,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           CustomAppBar(
             selectedIndex: _currentIndex,
-            onItemSelected: _onItemSelected,
+            onItemSelected: (index) => _onItemSelected(index),
           ),
         ],
       )
@@ -97,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           CustomAppBar(
             selectedIndex: _currentIndex,
-            onItemSelected: _onItemSelected,
+            onItemSelected: (index) => _onItemSelected(index),
           ),
         ],
       ),
@@ -145,7 +148,6 @@ class _AnimatedPageSwitcher extends StatelessWidget {
 
 class DashboardTab extends StatefulWidget {
   final VoidCallback onStartChat;
-
   const DashboardTab({super.key, required this.onStartChat});
 
   @override
@@ -290,9 +292,39 @@ class _DashboardTabState extends State<DashboardTab>
                             btnCtrl: _btnCtrl,
                             btnScale: _btnScale,
                             onTap: widget.onStartChat,
+                            label: " < GUEST USER >", // MODIFIED: Updated label
                           ),
                           const SizedBox(height: 15),
-                          _ContinueButton(btnCtrl: _btnCtrl, btnScale: _btnScale),
+
+                          SizedBox(
+                            width: 220,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: GoogleButton(
+                                    label: 'Google',
+                                    width: null,
+                                    height: 52,
+                                    onPressed: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const SignInScreen()));
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: GithubButton.dark(
+                                    label: 'GitHub',
+                                    width: null,
+                                    height: 52,
+                                    onPressed: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const SignInScreen()));
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
                           const SizedBox(height: 15),
                           _SettingsButton(btnCtrl: _btnCtrl, btnScale: _btnScale),
                         ],
@@ -316,12 +348,12 @@ class _DashboardTabState extends State<DashboardTab>
   }
 }
 
-
 class _LaunchChatButton extends StatelessWidget {
   final AnimationController btnCtrl;
   final Animation<double> btnScale;
   final VoidCallback onTap;
-  const _LaunchChatButton({required this.btnCtrl, required this.btnScale, required this.onTap});
+  final String label; // ADDED: label parameter for customization
+  const _LaunchChatButton({required this.btnCtrl, required this.btnScale, required this.onTap, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +374,7 @@ class _LaunchChatButton extends StatelessWidget {
             boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
           ),
           child: Center(
-            child: Text(" < USE >", style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            child: Text(label, style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           ),
         ),
       ),
@@ -350,11 +382,12 @@ class _LaunchChatButton extends StatelessWidget {
   }
 }
 
+// ... [Rest of the UI helpers: _ShimmerText, _FeatureGrid, _GlassCard, _SettingsButton, _ParticlePainter, _Particle remain identical to original] ...
+
 class _ShimmerText extends AnimatedWidget {
   final String text;
   final TextStyle style;
   const _ShimmerText({required AnimationController controller, required this.text, required this.style}) : super(listenable: controller);
-
   @override
   Widget build(BuildContext context) {
     final t = (listenable as AnimationController).value;
@@ -384,11 +417,9 @@ class _FeatureGridState extends State<_FeatureGrid> with TickerProviderStateMixi
     (Icons.bolt, "Quantum Speed", "Instant delivery across the globe."),
     (Icons.blur_on, "Low Latency", "QuantMessage Welcomes You "),
   ];
-
   late final List<AnimationController> _ctrls;
   late final List<Animation<double>> _opacities;
   late final List<Animation<Offset>> _slides;
-
   @override
   void initState() {
     super.initState();
@@ -399,13 +430,11 @@ class _FeatureGridState extends State<_FeatureGrid> with TickerProviderStateMixi
       Future.delayed(Duration(milliseconds: 80 * i), () { if (mounted) _ctrls[i].forward(); });
     }
   }
-
   @override
   void dispose() {
     for (final c in _ctrls) c.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return Wrap(
@@ -426,7 +455,6 @@ class _GlassCard extends StatefulWidget {
   final String title;
   final String desc;
   const _GlassCard({required this.icon, required this.title, required this.desc});
-
   @override
   State<_GlassCard> createState() => _GlassCardState();
 }
@@ -435,17 +463,14 @@ class _GlassCardState extends State<_GlassCard> with SingleTickerProviderStateMi
   late final AnimationController _hoverCtrl;
   late final Animation<double> _glow;
   bool _pressed = false;
-
   @override
   void initState() {
     super.initState();
     _hoverCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     _glow = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _hoverCtrl, curve: Curves.easeOut));
   }
-
   @override
   void dispose() { _hoverCtrl.dispose(); super.dispose(); }
-
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -496,44 +521,16 @@ class _GlassCardState extends State<_GlassCard> with SingleTickerProviderStateMi
   }
 }
 
-class _ContinueButton extends StatelessWidget {
-  final AnimationController btnCtrl;
-  final Animation<double> btnScale;
-  const _ContinueButton({required this.btnCtrl, required this.btnScale});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => btnCtrl.forward(),
-      onTapUp: (_) async {
-        await btnCtrl.reverse();
-        Navigator.push(context, PageRouteBuilder(pageBuilder: (_, __, ___) => const SignInScreen(), transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child)));
-      },
-      onTapCancel: () => btnCtrl.reverse(),
-      child: ScaleTransition(
-        scale: btnScale,
-        child: Container(
-          width: 220, height: 60,
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
-          child: Center(child: Text("Continue", style: GoogleFonts.outfit(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold))),
-        ),
-      ),
-    );
-  }
-}
-
 class _SettingsButton extends StatelessWidget {
   final AnimationController btnCtrl;
   final Animation<double> btnScale;
   const _SettingsButton({required this.btnCtrl, required this.btnScale});
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) => btnCtrl.forward(),
       onTapUp: (_) async {
         await btnCtrl.reverse();
-        // INTEGRATED: Call the popup directly instead of pushing a route
         showSettingsPopup(context);
       },
       onTapCancel: () => btnCtrl.reverse(),
@@ -561,12 +558,10 @@ class _SettingsButton extends StatelessWidget {
 class _ParticlePainter extends CustomPainter {
   final double progress;
   _ParticlePainter(this.progress);
-
   static final List<_Particle> _particles = List.generate(28, (i) {
     final r = math.Random(i * 31 + 7);
     return _Particle(x: r.nextDouble(), y: r.nextDouble(), size: 0.8 + r.nextDouble() * 1.8, speed: 0.06 + r.nextDouble() * 0.10, phase: r.nextDouble() * math.pi * 2, drift: (r.nextDouble() - 0.5) * 0.015);
   });
-
   @override
   void paint(Canvas canvas, Size size) {
     for (final p in _particles) {
@@ -576,7 +571,6 @@ class _ParticlePainter extends CustomPainter {
       canvas.drawCircle(Offset(x * size.width, y * size.height), p.size, Paint()..color = Colors.white.withOpacity(opacity * 0.18)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5));
     }
   }
-
   @override
   bool shouldRepaint(_ParticlePainter oldDelegate) => oldDelegate.progress != progress;
 }

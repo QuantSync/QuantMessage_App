@@ -12,6 +12,9 @@ import 'signup_screen.dart';
 import 'home_screen.dart';
 import 'animations/animation_effects/connectors_animation.dart';
 
+// INTEGRATED: Import for the infinity animation
+import 'animations/animation_effects/infinity_animation.dart';
+
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -328,9 +331,22 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Center(
-              child: _ModernLogo(),
+            // ─────────────────────────────────────────────────────────────
+            // INTEGRATED: Infinity Animation replaces robotic logo
+            // ─────────────────────────────────────────────────────────────
+            Center(
+              child: SizedBox(
+                width: 140,
+                height: 80, // Height = size / 2 to avoid RenderFlex overflow
+                child: InfinityAnimation(
+                  size: 140,
+                  color: AppTheme.primaryRed,
+                  duration: const Duration(seconds: 4),
+                ),
+              ),
             ),
+            // ─────────────────────────────────────────────────────────────
+
             const SizedBox(height: 32),
             Text(
               'Welcome Back',
@@ -508,40 +524,6 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
   }
 }
 
-// Custom modern logo widget
-class _ModernLogo extends StatelessWidget {
-  const _ModernLogo();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: AppTheme.primaryRed.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.primaryRed.withOpacity(0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryRed.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
-        ],
-      ),
-      child: const Icon(
-        Icons.smart_toy_rounded,
-        size: 32,
-        color: AppTheme.primaryRed,
-      ),
-    );
-  }
-}
-
-// Enhanced Connectors Animation Widget
 class _EnhancedConnectorsAnimation extends StatelessWidget {
   const _EnhancedConnectorsAnimation();
 
