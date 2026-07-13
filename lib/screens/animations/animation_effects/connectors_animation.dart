@@ -17,7 +17,7 @@ import 'package:flutter/material.dart';
 /// HOW TO USE ON ANOTHER SCREEN:
 /// -----------------------------------------------------------
 /// 1. Copy this file into your project (e.g. lib/widgets/).
-/// 2. Import it wherever you want to show the diagram:
+/// 2. Import it wherever you want to show the diagram:+-
 ///
 ///      import 'connectors_animation.dart';
 ///

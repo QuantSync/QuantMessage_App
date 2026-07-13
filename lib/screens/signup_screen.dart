@@ -7,9 +7,9 @@ import 'package:animate_do/animate_do.dart';
 
 import '../core/app_theme.dart';
 import '../core/chat_message.dart';
-import '../core/config.dart' as app_config; // FIXED: Alias to avoid name conflict
+import '../core/config.dart' as app_config;
 import '../services/quant_space_api.dart';
-import 'animations/animation_effects/connectors_animation.dart'; // FIXED: Corrected import path
+import 'animations/animation_effects/connectors_animation.dart';
 import 'signin_screen.dart';
 import 'home_screen.dart';
 
@@ -54,15 +54,11 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     super.dispose();
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  //  INTEGRATED: Real Supabase Signup + Config Integration
-  // ──────────────────────────────────────────────────────────────────────────
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
     try {
-      // 1. Create the user in Supabase Auth
       final response = await _supabase.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -72,11 +68,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
       );
 
       if (response.user != null) {
-        // 2. Trigger the profile creation automatically via our SQL trigger
-        // The 'handle_new_user' function in Supabase takes care of inserting into 'profiles'
-
-        // 3. Send a welcome message to the AI (Optional, but keeps the system in sync)
-        // We use the model defined in Config
         final welcomeModel = app_config.Config.models[0];
         await _api.getAIResponse(
             "Hello AI, I just created an account using ${welcomeModel.name}.",
@@ -121,10 +112,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
       backgroundColor: AppTheme.backgroundBlack,
       body: Stack(
         children: [
-          // 1. Background image/gradient that gets blurred
           _buildBlurredBackground(),
-
-          // 2. The modern split-screen layout
           LayoutBuilder(
             builder: (context, constraints) {
               bool isMobile = constraints.maxWidth < 800;
@@ -133,10 +121,9 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                 return SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Mobile: Show the animation at the top
                       const SizedBox(
-                          height: 250,
-                          child: ConnectorsAnimation()
+                          height: 300,
+                          child: _EnhancedConnectorsAnimation()
                       ),
                       _buildSignupCard(),
                     ],
@@ -146,12 +133,10 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
 
               return Row(
                 children: [
-                  // LEFT SIDE: Hero / Branding Area
                   Expanded(
                     flex: 5,
                     child: _buildLeftHeroPanel(),
                   ),
-                  // RIGHT SIDE: The Card Style Signup Form
                   Expanded(
                     flex: 4,
                     child: _buildRightSignupPanel(),
@@ -165,7 +150,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     );
   }
 
-  // 1. Background with a slight color and an image overlay
   Widget _buildBlurredBackground() {
     return Container(
       decoration: const BoxDecoration(
@@ -177,7 +161,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
       ),
       child: Stack(
         children: [
-          // The actual image that will be blurred
           Positioned.fill(
             child: Opacity(
               opacity: 0.4,
@@ -188,7 +171,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
               ),
             ),
           ),
-          // The Blur Effect applied to the whole background
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -200,7 +182,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     );
   }
 
-  // 2. The Left Side: Big Branding & Visuals
   Widget _buildLeftHeroPanel() {
     return Container(
       padding: const EdgeInsets.all(40.0),
@@ -208,45 +189,53 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ──────────────────────────────────────────────────────────
-          // INTEGRATED: Connectors Animation at the top-left
-          // Wrapped in a glowing green border to make it pop.
-          // ──────────────────────────────────────────────────────────
           FadeInLeft(
             duration: const Duration(milliseconds: 1000),
             child: Container(
-              height: 230,
-              width: 430,
-              padding: const EdgeInsets.all(6), // Padding for the border thickness
+              height: 300,
+              width: 500,
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(30),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF1E1E1E),
+                    Color(0xFF2A1A1A),
+                  ],
+                ),
                 border: Border.all(
-                  color: const Color(0xFF22C55E).withOpacity(0.7), // Shining green border
+                  color: const Color(0xFF3A3A3A),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF22C55E).withOpacity(0.3), // Green glow shadow
-                    blurRadius: 20,
-                    spreadRadius: 1,
+                    color: Colors.black.withOpacity(0.6),
+                    blurRadius: 40,
+                    spreadRadius: 5,
+                    offset: const Offset(0, 15),
                   ),
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: const Color(0xFF22C55E).withOpacity(0.2),
                     blurRadius: 30,
-                    offset: const Offset(0, 10),
+                    spreadRadius: 2,
+                    offset: const Offset(-10, -10),
+                  ),
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(10, 10),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                // The imported widget fits naturally here
+                borderRadius: BorderRadius.circular(26),
                 child: const ConnectorsAnimation(),
               ),
             ),
           ),
           const SizedBox(height: 32),
-
           FadeInLeft(
             delay: const Duration(milliseconds: 300),
             duration: const Duration(milliseconds: 1000),
@@ -302,7 +291,6 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     );
   }
 
-  // 3. The Right Side: The Glassmorphism Card
   Widget _buildRightSignupPanel() {
     return Center(
       child: SingleChildScrollView(
@@ -428,7 +416,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
                     onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => const SignInScreen())),
-                    child: Text('Sign in', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                    child: Text('Sign in', style: GoogleFonts.outfit(color: AppTheme.primaryRed, fontWeight: FontWeight.w600, fontSize: 14)),
                   ),
                 ),
               ],
@@ -515,12 +503,72 @@ class _ModernLogo extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.primaryRed.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.primaryRed.withOpacity(0.3), width: 1.5),
+        border: Border.all(
+          color: AppTheme.primaryRed.withOpacity(0.3),
+          width: 1.5,
+        ),
         boxShadow: [
-          BoxShadow(color: AppTheme.primaryRed.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10))
+          BoxShadow(
+            color: AppTheme.primaryRed.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
         ],
       ),
-      child: const Icon(Icons.smart_toy_rounded, size: 32, color: AppTheme.primaryRed),
+      child: const Icon(
+        Icons.smart_toy_rounded,
+        size: 32,
+        color: AppTheme.primaryRed,
+      ),
+    );
+  }
+}
+
+// Enhanced Connectors Animation Widget
+class _EnhancedConnectorsAnimation extends StatelessWidget {
+  const _EnhancedConnectorsAnimation();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1E1E1E),
+            Color(0xFF2A1A1A),
+          ],
+        ),
+        border: Border.all(
+          color: const Color(0xFF3A3A3A),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.6),
+            blurRadius: 40,
+            spreadRadius: 5,
+            offset: const Offset(0, 15),
+          ),
+          BoxShadow(
+            color: const Color(0xFF22C55E).withOpacity(0.2),
+            blurRadius: 30,
+            spreadRadius: 2,
+            offset: const Offset(-10, -10),
+          ),
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(10, 10),
+          ),
+        ],
+      ),
+      child: const ClipRRect(
+        borderRadius: BorderRadius.all(Radius.circular(28)),
+        child: ConnectorsAnimation(),
+      ),
     );
   }
 }
