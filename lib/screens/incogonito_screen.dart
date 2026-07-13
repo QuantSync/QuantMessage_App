@@ -1,7 +1,4 @@
 // lib/screens/incognito_screen.dart
-// QuantMessage — Ghost Mode (ephemeral, no DB persistence)
-// Integrated with Flowise AI, Supabase, and updated Attachment Models
-
 import 'dart:async';
 import 'dart:io' show File;
 import 'dart:math' as math;
@@ -19,12 +16,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/app_theme.dart';
 import '../core/chat_message.dart';
 import '../core/attachment_model.dart';
-import '../core/config.dart' as app_config; // FIXED: Alias used to solve Config name conflict
+import '../core/config.dart' as app_config;
 import '../services/quant_space_api.dart';
 import 'widgets/attachment_preview.dart';
 import 'widgets/attachment_thumbnail.dart';
 import 'widgets/attachment_picker_sheet.dart';
 import 'animations/animation_effects/infinity_animation_incogonito.dart';
+
+// INTEGRATED: Import the high-end message box
+import 'message_box_pannel/message_box.dart';
 
 class IncognitoScreen extends StatefulWidget {
   const IncognitoScreen({super.key});
@@ -46,13 +46,15 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
 
+  // State for the Global Blur Effect
+  bool _isMessageBoxHovered = false;
+
   final List<Attachment> _pendingAttachments = [];
   String? _ephemeralSessionId;
 
-  late final AnimationController _inputFocusCtrl;
-  late final Animation<double> _inputGlow;
-  late final AnimationController _sendBtnCtrl;
-  late final Animation<double> _sendBtnScale;
+  // Model Selection for the MessageBox
+  String _selectedModelName = app_config.Config.models[0].name;
+
   late final AnimationController _emptyCtrl;
   late final Animation<double> _emptyOpacity;
   late final Animation<double> _emptyScale;
@@ -60,20 +62,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   @override
   void initState() {
     super.initState();
-    _inputFocusCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 260));
-    _inputGlow = CurvedAnimation(parent: _inputFocusCtrl, curve: Curves.easeOut);
-    _inputFocus.addListener(() {
-      _inputFocus.hasFocus ? _inputFocusCtrl.forward() : _inputFocusCtrl.reverse();
-    });
-
-    _sendBtnCtrl = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 110),
-        lowerBound: 0.0,
-        upperBound: 1.0);
-    _sendBtnScale = Tween<double>(begin: 1.0, end: 0.86).animate(
-        CurvedAnimation(parent: _sendBtnCtrl, curve: Curves.easeInOut));
-
     _emptyCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
     _emptyOpacity = CurvedAnimation(parent: _emptyCtrl, curve: Curves.easeOut);
     _emptyScale = Tween<double>(begin: 0.96, end: 1.0).animate(
@@ -92,8 +80,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
     _controller.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
-    _inputFocusCtrl.dispose();
-    _sendBtnCtrl.dispose();
     _emptyCtrl.dispose();
     super.dispose();
   }
@@ -102,15 +88,9 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
     Navigator.of(context).pop();
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // ATTACHMENT LOGIC
-  // ──────────────────────────────────────────────────────────────────────────
-
   void _addAttachment(Uint8List bytes, String filename, String mimeType) {
     final attachment = AttachmentX.fromBytes(bytes, filename, mimeType);
-
     setState(() => _pendingAttachments.add(attachment));
-
     _writeTempFile(bytes, filename).then((file) {
       if (!mounted || file == null) return;
       setState(() {
@@ -152,7 +132,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
 
     try {
       if (att.localFile == null) return null;
-
       final result = await _api.uploadFile(
         att.localFile!.path,
         conversationId: _ephemeralSessionId!,
@@ -164,7 +143,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
           url: result['url'],
           progress: 1.0,
         );
-
         setState(() {
           final i = _pendingAttachments.indexWhere((a) => a.filename == att.filename);
           if (i != -1) _pendingAttachments[i] = uploadedAttachment;
@@ -183,19 +161,14 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
     }
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // INTEGRATED: Send handler
-  // ──────────────────────────────────────────────────────────────────────────
   Future<void> _handleSend() async {
     final text = _controller.text.trim();
     final hasAttachments = _pendingAttachments.isNotEmpty;
     if ((text.isEmpty && !hasAttachments) || _isTyping) return;
 
     _emptyCtrl.reset();
-
     final pendingSnapshot = List<Attachment>.from(_pendingAttachments);
 
-    // FIXED: Provide conversationId, senderId, and createdAt to satisfy ChatMessage model
     final userMsg = ChatMessage(
       text: text,
       isUser: true,
@@ -203,6 +176,7 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
       senderId: 'ghost_user',
       createdAt: DateTime.now(),
       attachments: pendingSnapshot,
+      modelName: _selectedModelName,
     );
 
     setState(() {
@@ -215,7 +189,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
 
     try {
       String finalPrompt = text;
-
       for (final att in pendingSnapshot) {
         if (att.localFile != null) {
           final result = await _uploadPendingAttachment(att);
@@ -230,7 +203,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
       final response = await _api.getAIResponse(finalPrompt, _ephemeralSessionId!);
 
       if (!mounted) return;
-
       setState(() {
         _messages.add(ChatMessage(
           text: response,
@@ -289,6 +261,15 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
       body: Stack(
         children: [
           const _ParticleBackground(count: 25),
+
+          if (_isMessageBoxHovered)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(color: Colors.black.withOpacity(0.4)),
+              ),
+            ),
+
           if (_messages.isEmpty)
             _buildEmptyStateResponsive()
           else
@@ -299,16 +280,33 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
                   padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
                   child: Align(
                     alignment: Alignment.bottomCenter,
-                    child: FadeInAnimation(
-                      duration: const Duration(milliseconds: 400),
-                      child: _buildInputBox(),
-                    ),
+                    child: _buildMessageBox(),
                   ),
                 ),
               ],
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMessageBox() {
+    return MessageBox(
+      controller: _controller,
+      focusNode: _inputFocus,
+      selectedModelName: _selectedModelName,
+      hintText: _pendingAttachments.isNotEmpty
+          ? "Add a note for the ghost..."
+          : "Transmit encrypted message...",
+      onSend: _handleSend,
+      onAttachment: _onAttachmentButtonPressed,
+      onLogout: _exitIncognito,
+      onHoverChanged: (hovered) {
+        setState(() => _isMessageBoxHovered = hovered);
+      },
+      onModelChanged: (model) {
+        setState(() => _selectedModelName = model);
+      },
     );
   }
 
@@ -410,7 +408,7 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
                         FadeInAnimation(
                           duration: const Duration(milliseconds: 600),
                           delay: const Duration(milliseconds: 1200),
-                          child: _buildInputBox(),
+                          child: _buildMessageBox(),
                         ),
                         const SizedBox(height: 16),
                         FadeInAnimation(
@@ -600,114 +598,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildInputBox() {
-    return AnimatedBuilder(
-      animation: _inputGlow,
-      builder: (_, child) => Container(
-        constraints: const BoxConstraints(maxWidth: 800),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2F2F2F),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: Color.lerp(Colors.white10, Colors.white24, _inputGlow.value)!,
-            width: 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 15,
-                offset: const Offset(0, 8)),
-          ],
-        ),
-        child: child,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_pendingAttachments.isNotEmpty)
-              AttachmentPreviewStrip(
-                attachments: _pendingAttachments,
-                onRemove: _removePendingAttachment,
-              ),
-            TextField(
-              controller: _controller,
-              focusNode: _inputFocus,
-              maxLines: 4,
-              minLines: 1,
-              style: GoogleFonts.tinos(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
-              decoration: InputDecoration(
-                hintText: _pendingAttachments.isNotEmpty
-                    ? "Add a note for the ghost..."
-                    : "Transmit encrypted message...",
-                hintStyle: GoogleFonts.tinos(
-                    color: Colors.white38,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 8),
-              ),
-              onSubmitted: (_) => _handleSend(),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _AnimatedHoverIcon(
-                      icon: Icons.attach_file_rounded,
-                      onTap: _onAttachmentButtonPressed,
-                    ),
-                    const SizedBox(width: 8),
-                    _AnimatedHoverIcon(
-                      icon: Icons.vpn_key_outlined,
-                      onTap: () {},
-                    ),
-                    const SizedBox(width: 8),
-                    _AnimatedHoverIcon(
-                      icon: Icons.lock_outline,
-                      onTap: () {},
-                    ),
-                    const SizedBox(width: 12),
-                    if (_isTyping)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppTheme.accentGrey),
-                        ),
-                      )
-                    else
-                      ButtonBulge(
-                        onPressed: _handleSend,
-                        child: const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Icon(Icons.arrow_upward_rounded,
-                              color: Colors.white, size: 20),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildSuggestionPills() {
     return Wrap(
       spacing: 8,
@@ -722,7 +612,47 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   }
 }
 
-// Support Widgets (Retained for UI consistency)
+// ──────────────────────────────────────────────────────────────────────────
+// MISSING CLASSES ADDED BELOW
+// ──────────────────────────────────────────────────────────────────────────
+
+class _ParticleBackground extends StatelessWidget {
+  final int count;
+  const _ParticleBackground({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.3,
+      child: CustomPaint(
+          painter: _ChatParticlePainter(0.0, count),
+          size: MediaQuery.of(context).size),
+    );
+  }
+}
+
+class _ChatParticlePainter extends CustomPainter {
+  final double progress;
+  final int count;
+  _ChatParticlePainter(this.progress, this.count);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white10;
+    final random = math.Random(42);
+    for (int i = 0; i < count; i++) {
+      canvas.drawCircle(
+          Offset(random.nextDouble() * size.width,
+              random.nextDouble() * size.height),
+          1.5,
+          paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChatParticlePainter oldDelegate) => false;
+}
+
 class _SuggestionPill extends StatefulWidget {
   final IconData icon;
   final String label;
@@ -775,142 +705,6 @@ class _SuggestionPillState extends State<_SuggestionPill> {
   }
 }
 
-class _AnimatedHoverIcon extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _AnimatedHoverIcon({required this.icon, required this.onTap});
-
-  @override
-  State<_AnimatedHoverIcon> createState() => _AnimatedHoverIconState();
-}
-
-class _AnimatedHoverIconState extends State<_AnimatedHoverIcon> {
-  @override
-  Widget build(BuildContext context) {
-    return ButtonBulge(
-      onPressed: widget.onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Icon(widget.icon, color: Colors.white, size: 20),
-      ),
-    );
-  }
-}
-
-class _ParticleBackground extends StatelessWidget {
-  final int count;
-  const _ParticleBackground({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.3,
-      child: CustomPaint(
-          painter: _ChatParticlePainter(0.0, count),
-          size: MediaQuery.of(context).size),
-    );
-  }
-}
-
-class _ChatParticlePainter extends CustomPainter {
-  final double progress;
-  final int count;
-  _ChatParticlePainter(this.progress, this.count);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white10;
-    final random = math.Random(42);
-    for (int i = 0; i < count; i++) {
-      canvas.drawCircle(
-          Offset(random.nextDouble() * size.width,
-              random.nextDouble() * size.height),
-          1.5,
-          paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ChatParticlePainter oldDelegate) => false;
-}
-
-class ButtonBulge extends StatefulWidget {
-  final Widget child;
-  final VoidCallback? onPressed;
-  final double? width;
-  final double? height;
-
-  const ButtonBulge({
-    Key? key,
-    required this.child,
-    this.onPressed,
-    this.width,
-    this.height,
-  }) : super(key: key);
-
-  @override
-  State<ButtonBulge> createState() => _ButtonBulgeState();
-}
-
-class _ButtonBulgeState extends State<ButtonBulge> {
-  bool _hovered = false;
-  bool _clicked = false;
-
-  void _onEnter(PointerEnterEvent _) => setState(() => _hovered = true);
-  void _onExit(PointerExitEvent _) => setState(() => _hovered = false);
-
-  void _onTap() {
-    setState(() => _clicked = true);
-    if (widget.onPressed != null) widget.onPressed!();
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted) setState(() => _clicked = false);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final double scale = _hovered ? 1.07 : 1.0;
-    final Color backgroundColor = _clicked
-        ? Colors.white.withOpacity(0.5)
-        : Colors.white.withOpacity(0.1);
-
-    return MouseRegion(
-      onEnter: _onEnter,
-      onExit: _onExit,
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: _onTap,
-        child: AnimatedScale(
-          scale: scale,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: widget.width,
-                height: widget.height,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: widget.child,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class FadeInAnimation extends StatefulWidget {
   final Widget child;
   final Duration duration;
@@ -942,7 +736,9 @@ class _FadeInAnimationState extends State<FadeInAnimation>
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(curve);
 
     if (widget.delay != null) {
-      Future.delayed(widget.delay!, _controller.forward);
+      Future.delayed(widget.delay!, () {
+        if (mounted) _controller.forward();
+      });
     } else {
       _controller.forward();
     }

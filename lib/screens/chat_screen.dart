@@ -24,6 +24,9 @@ import 'widgets/attachment_preview.dart';
 import 'widgets/attachment_thumbnail.dart';
 import 'widgets/attachment_picker_sheet.dart';
 
+// IMPORT THE NEW MESSAGE BOX
+import 'message_box_pannel/message_box.dart';
+
 // --- Animation Helper Widgets ---
 class FadeInAnimation extends StatefulWidget {
   final Widget child;
@@ -141,13 +144,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final List<Attachment> _pendingAttachments = [];
   String _currentConversationId = "";
 
+  // State for the Global Blur Effect
+  bool _isMessageBoxHovered = false;
+
   String _selectedModelName = app_config.Config.models[0].name;
   String _selectedModelId = app_config.Config.models[0].id;
 
-  late final AnimationController _inputFocusCtrl;
-  late final Animation<double> _inputGlow;
-  late final AnimationController _sendBtnCtrl;
-  late final Animation<double> _sendBtnScale;
   late final AnimationController _emptyCtrl;
   late final Animation<double> _emptyOpacity;
   late final Animation<double> _emptyScale;
@@ -156,13 +158,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _generateConversationId();
-
-    _inputFocusCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 260));
-    _inputGlow = CurvedAnimation(parent: _inputFocusCtrl, curve: Curves.easeOut);
-    _inputFocus.addListener(() => _inputFocus.hasFocus ? _inputFocusCtrl.forward() : _inputFocusCtrl.reverse());
-
-    _sendBtnCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 110), lowerBound: 0.0, upperBound: 1.0);
-    _sendBtnScale = Tween<double>(begin: 1.0, end: 0.86).animate(CurvedAnimation(parent: _sendBtnCtrl, curve: Curves.easeInOut));
 
     _emptyCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
     _emptyOpacity = CurvedAnimation(parent: _emptyCtrl, curve: Curves.easeOut);
@@ -179,8 +174,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _controller.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
-    _inputFocusCtrl.dispose();
-    _sendBtnCtrl.dispose();
     _emptyCtrl.dispose();
     super.dispose();
   }
@@ -226,7 +219,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     if ((text.isEmpty && !hasAttachments) || _isTyping) return;
 
     final userId = _currentUser?.id ?? "guest_user";
-
     _emptyCtrl.reset();
     final pendingSnapshot = List<Attachment>.from(_pendingAttachments);
 
@@ -272,7 +264,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       );
 
       await _supabase.from('chat_messages').insert(aiMsg.toMap());
-
       if (!mounted) return;
       setState(() { _messages.add(aiMsg); });
     } catch (e) {
@@ -304,8 +295,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       backgroundColor: AppTheme.backgroundBlack,
       body: Stack(
         children: [
-          // INTEGRATED: The "Deep Space" Blurred Background from Auth screens
           _buildBlurredBackground(),
+
+          // INTEGRATED: GLOBAL BLUR LAYER
+          // This blurs the whole screen except the MessageBox when hovered
+          if (_isMessageBoxHovered)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(color: Colors.black.withOpacity(0.4)),
+              ),
+            ),
+
           Row(
             children: [
               LeftSidebar(
@@ -336,7 +337,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                                 children: [
                                   _buildGreeting(),
                                   const SizedBox(height: 40),
-                                  _buildInputBox(),
+                                  // Use MessageBox here
+                                  _buildMessageBox(),
                                   const SizedBox(height: 16),
                                   _buildSuggestionPills(),
                                 ],
@@ -351,7 +353,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           Expanded(child: _buildChatThread()),
                           Padding(
                             padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
-                            child: Align(alignment: Alignment.bottomCenter, child: _buildInputBox()),
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: _buildMessageBox(),
+                            ),
                           ),
                         ],
                       ),
@@ -365,7 +370,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  // INTEGRATED: Syncing depth with Signup/Signin screens
+  // Syncing depth with Signup/Signin screens
   Widget _buildBlurredBackground() {
     return Container(
       decoration: const BoxDecoration(
@@ -398,12 +403,35 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
+  // INTEGRATED: New MessageBox Component
+  Widget _buildMessageBox() {
+    return MessageBox(
+      controller: _controller,
+      focusNode: _inputFocus,
+      selectedModelName: _selectedModelName,
+      hintText: _pendingAttachments.isNotEmpty ? "Describe files..." : "Type a message...",
+      onSend: _handleSend,
+      onAttachment: _onAttachmentButtonPressed,
+      onLogout: _handleSignOut,
+      onHoverChanged: (hovered) {
+        setState(() => _isMessageBoxHovered = hovered);
+      },
+      onModelChanged: (model) {
+        setState(() {
+          _selectedModelName = model;
+          // Find the ID based on the name
+          final modelData = app_config.Config.models.firstWhere((m) => m.name == model);
+          _selectedModelId = modelData.id;
+        });
+      },
+    );
+  }
+
   Widget _buildGreeting() {
     final userName = _userName ?? 'there';
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // FIXED: Using Wrap and constrained SizedBox to prevent Pixel Overflow
         Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
@@ -411,12 +439,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             SizedBox(
               width: 100,
               height: 50,
-              // INTEGRATED: infinity_animation.dart now runs in its green
-              // variant here, matching the app's green accent (Start
-              // button, check badges, etc.) instead of the old red tint.
               child: InfinityAnimation(
                 size: 100,
-                color: const Color(0xFF22C55E), // green
+                color: const Color(0xFF22C55E),
                 duration: const Duration(seconds: 5),
               ),
             ),
@@ -484,95 +509,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildInputBox() {
-    return AnimatedBuilder(
-      animation: _inputGlow,
-      builder: (_, child) => Container(
-        constraints: const BoxConstraints(maxWidth: 800),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2F2F2F).withOpacity(0.8),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-              color: Color.lerp(Colors.white10, AppTheme.primaryRed.withOpacity(0.5), _inputGlow.value)!,
-              width: 1.0 + (_inputGlow.value * 0.5)
-          ),
-          boxShadow: [
-            BoxShadow(
-                color: AppTheme.primaryRed.withOpacity(_inputGlow.value * 0.2),
-                blurRadius: 15,
-                offset: const Offset(0, 8)
-            )
-          ],
-        ),
-        child: child,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_pendingAttachments.isNotEmpty)
-              AttachmentPreviewStrip(attachments: _pendingAttachments, onRemove: _removePendingAttachment),
-            TextField(
-              controller: _controller,
-              focusNode: _inputFocus,
-              maxLines: 4, minLines: 1,
-              style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
-              decoration: InputDecoration(
-                hintText: _pendingAttachments.isNotEmpty ? "Describe files..." : "Type a message...",
-                hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 16),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              onSubmitted: (_) => _handleSend(),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _AnimatedHoverIcon(icon: Icons.add, onTap: _onAttachmentButtonPressed),
-                    const SizedBox(width: 8),
-                    AnimatedDropdown(
-                      backgroundColor: const Color(0xFF3B3B3B),
-                      dropdownWidth: 260,
-                      items: app_config.Config.models.map((model) {
-                        return DropdownMenuItemData(
-                          title: model.name,
-                          subtitle: "Powered by ${model.id.split('/').last}",
-                          trailing: Text(model.icon, style: const TextStyle(fontSize: 16)),
-                          onTap: () => setState(() { _selectedModelName = model.name; _selectedModelId = model.id; }),
-                        );
-                      }).toList(),
-                      child: _AnimatedHoverDropdownButton(text: _selectedModelName),
-                    ),
-                    const SizedBox(width: 8),
-                    _AnimatedHoverIcon(icon: Icons.mic_none, onTap: () {}),
-                    const SizedBox(width: 8),
-                    _AnimatedHoverIcon(icon: Icons.graphic_eq, onTap: () {}),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTapDown: (_) => _sendBtnCtrl.forward(),
-                      onTapUp: (_) async { await _sendBtnCtrl.reverse(); _handleSend(); },
-                      onTapCancel: () => _sendBtnCtrl.reverse(),
-                      child: ScaleTransition(scale: _sendBtnScale, child: _AnimatedHoverSendButton(onTap: () {})),
-                    ),
-                    const SizedBox(width: 8),
-                    _AnimatedHoverIcon(icon: Icons.logout_rounded, onTap: _handleSignOut),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildSuggestionPills() {
     return Wrap(
       spacing: 8, runSpacing: 8, alignment: WrapAlignment.center,
@@ -587,8 +523,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 }
 
-// ... [Keep _AnimatedMessageRow and all UI helpers exactly as they were] ...
-
+// ──────────────────────────────────────────────────────────────────────────
+// MESSAGE ROW & AI CONTENT
+// ──────────────────────────────────────────────────────────────────────────
 class _AnimatedMessageRow extends StatefulWidget {
   final ChatMessage message;
   const _AnimatedMessageRow({required this.message});
@@ -678,89 +615,6 @@ class _SuggestionPill extends StatelessWidget {
   );
 }
 
-class _AnimatedHoverIcon extends StatefulWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _AnimatedHoverIcon({required this.icon, required this.onTap});
-  @override
-  State<_AnimatedHoverIcon> createState() => _AnimatedHoverIconState();
-}
-
-class _AnimatedHoverIconState extends State<_AnimatedHoverIcon> {
-  bool _isHovered = false;
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    onEnter: (_) => setState(() => _isHovered = true),
-    onExit: (_) => setState(() => _isHovered = false),
-    child: GestureDetector(
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: _isHovered ? Colors.white.withOpacity(0.05) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
-        child: Icon(widget.icon, color: _isHovered ? Colors.white : Colors.white70, size: 20),
-      ),
-    ),
-  );
-}
-
-class _AnimatedHoverDropdownButton extends StatefulWidget {
-  final String text;
-  const _AnimatedHoverDropdownButton({required this.text});
-  @override
-  State<_AnimatedHoverDropdownButton> createState() => _AnimatedHoverDropdownButtonState();
-}
-
-class _AnimatedHoverDropdownButtonState extends State<_AnimatedHoverDropdownButton> {
-  bool _isHovered = false;
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    onEnter: (_) => setState(() => _isHovered = true),
-    onExit: (_) => setState(() => _isHovered = false),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: _isHovered ? Colors.white.withOpacity(0.1) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(widget.text, style: GoogleFonts.outfit(color: _isHovered ? Colors.white : Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-          const SizedBox(width: 4),
-          Icon(Icons.keyboard_arrow_down, color: _isHovered ? Colors.white : Colors.white54, size: 16),
-        ],
-      ),
-    ),
-  );
-}
-
-class _AnimatedHoverSendButton extends StatefulWidget {
-  final VoidCallback onTap;
-  const _AnimatedHoverSendButton({required this.onTap});
-  @override
-  State<_AnimatedHoverSendButton> createState() => _AnimatedHoverSendButtonState();
-}
-
-class _AnimatedHoverSendButtonState extends State<_AnimatedHoverSendButton> {
-  bool _isHovered = false;
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.click,
-    onEnter: (_) => setState(() => _isHovered = true),
-    onExit: (_) => setState(() => _isHovered = false),
-    child: GestureDetector(
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: _isHovered ? Colors.white : Colors.white24, shape: BoxShape.circle),
-        child: Icon(Icons.arrow_upward_rounded, color: _isHovered ? Colors.black : Colors.white, size: 20),
-      ),
-    ),
-  );
-}
-
 class _ThinkingDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Row(children: [Text("...", style: TextStyle(color: Colors.white38, fontSize: 20))]);
@@ -786,158 +640,4 @@ class _ChatParticlePainter extends CustomPainter {
   }
   @override
   bool shouldRepaint(covariant _ChatParticlePainter oldDelegate) => false;
-}
-
-class AnimatedDropdown extends StatefulWidget {
-  final Widget child;
-  final List<DropdownMenuItemData> items;
-  final double dropdownWidth;
-  final Color backgroundColor;
-  const AnimatedDropdown({Key? key, required this.child, required this.items, this.dropdownWidth = 300, this.backgroundColor = const Color(0xFF2D2D2D)}) : super(key: key);
-
-  @override
-  State<AnimatedDropdown> createState() => _AnimatedDropdownState();
-}
-
-class _AnimatedDropdownState extends State<AnimatedDropdown> with SingleTickerProviderStateMixin {
-  final LayerLink _layerLink = LayerLink();
-  OverlayEntry? _overlayEntry;
-  bool _isOpen = false;
-  late final AnimationController _animationController;
-  late final Animation<double> _expandAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _expandAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic);
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _removeOverlay();
-    super.dispose();
-  }
-
-  void _toggleDropdown() { _isOpen ? _closeDropdown() : _showDropdown(); }
-
-  void _showDropdown() {
-    if (_overlayEntry != null) return;
-    final renderBox = context.findRenderObject() as RenderBox;
-    final size = renderBox.size;
-    _overlayEntry = OverlayEntry(
-      builder: (context) => Stack(
-        children: [
-          Positioned.fill(child: GestureDetector(behavior: HitTestBehavior.translucent, onTap: _closeDropdown, child: const ColoredBox(color: Colors.transparent))),
-          CompositedTransformFollower(
-            link: _layerLink,
-            offset: Offset(0, size.height + 8),
-            child: Material(
-              color: Colors.transparent,
-              child: SizeTransition(
-                sizeFactor: _expandAnimation,
-                axisAlignment: -1.0,
-                child: Container(
-                  width: widget.dropdownWidth,
-                  decoration: BoxDecoration(color: widget.backgroundColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withOpacity(0.1)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))]),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 300),
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: widget.items.map((item) {
-                            if (item.isDivider) return Divider(height: 1, color: Colors.white.withOpacity(0.1), indent: 16, endIndent: 16);
-                            return _DropdownItemWidget(item: item, onItemTapped: () { if (item.onTap != null) item.onTap!(); if (item.closeOnTap) _closeDropdown(); });
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-    Overlay.of(context).insert(_overlayEntry!);
-    _isOpen = true;
-    _animationController.forward();
-  }
-
-  Future<void> _closeDropdown() async {
-    await _animationController.reverse();
-    _removeOverlay();
-  }
-
-  void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-    _isOpen = false;
-  }
-
-  @override
-  Widget build(BuildContext context) => CompositedTransformTarget(link: _layerLink, child: GestureDetector(onTap: _toggleDropdown, child: widget.child));
-}
-
-class DropdownMenuItemData {
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-  final Widget? titleTrailing;
-  final VoidCallback? onTap;
-  final bool closeOnTap;
-  final bool isDivider;
-  final bool isDisabled;
-
-  const DropdownMenuItemData({this.title = '', this.subtitle, this.trailing, this.titleTrailing, this.onTap, this.closeOnTap = true, this.isDivider = false, this.isDisabled = false});
-
-  factory DropdownMenuItemData.divider() => const DropdownMenuItemData(isDivider: true);
-}
-
-class _DropdownItemWidget extends StatefulWidget {
-  final DropdownMenuItemData item;
-  final VoidCallback onItemTapped;
-  const _DropdownItemWidget({Key? key, required this.item, required this.onItemTapped}) : super(key: key);
-
-  @override
-  State<_DropdownItemWidget> createState() => _DropdownItemWidgetState();
-}
-
-class _DropdownItemWidgetState extends State<_DropdownItemWidget> {
-  bool _isHovered = false;
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    onEnter: (_) { if (!widget.item.isDisabled) setState(() => _isHovered = true); },
-    onExit: (_) { if (!widget.item.isDisabled) setState(() => _isHovered = false); },
-    cursor: widget.item.isDisabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
-    child: GestureDetector(
-      onTap: widget.item.isDisabled ? null : widget.onItemTapped,
-      child: Container(
-        color: _isHovered ? Colors.white.withOpacity(0.05) : Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Text(widget.item.title, style: TextStyle(color: widget.item.isDisabled ? Colors.white.withOpacity(0.3) : Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
-                    if (widget.item.titleTrailing != null) ...[const SizedBox(width: 8), widget.item.titleTrailing!],
-                  ]),
-                  if (widget.item.subtitle != null) ...[const SizedBox(height: 4), Text(widget.item.subtitle!, style: TextStyle(color: widget.item.isDisabled ? Colors.white.withOpacity(0.3) : Colors.white.withOpacity(0.5), fontSize: 13))],
-                ],
-              ),
-            ),
-            if (widget.item.trailing != null) ...[const SizedBox(width: 12), widget.item.trailing!],
-          ],
-        ),
-      ),
-    ),
-  );
 }
