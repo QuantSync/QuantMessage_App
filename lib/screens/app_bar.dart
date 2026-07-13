@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../screens/settings_screen.dart'; // for showSettingsPopup()
+import 'settings_screen.dart'; // FIXED: Changed from '../screens/settings_screen.dart' to 'settings_screen.dart' since both are in lib/screens
 
 class CustomAppBar extends StatelessWidget {
   final int selectedIndex;
