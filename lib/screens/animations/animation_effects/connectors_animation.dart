@@ -60,11 +60,13 @@ class _ConnectorsAnimationState extends State<ConnectorsAnimation> with SingleTi
           ),
 
           // 2. Animated Connections & Particles (CustomPaint - Dynamic)
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) => CustomPaint(
-              size: const Size(_designSize, _designSize),
-              painter: _QuantumConnectorPainter(_controller.value),
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) => CustomPaint(
+                size: const Size(_designSize, _designSize),
+                painter: _QuantumConnectorPainter(_controller.value),
+              ),
             ),
           ),
 

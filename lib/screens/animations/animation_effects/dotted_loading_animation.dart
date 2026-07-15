@@ -78,18 +78,20 @@ class _DottedLoadingAnimationAltState extends State<DottedLoadingAnimationAlt>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return CustomPaint(
-          size: Size(widget.size, widget.size),
-          painter: _WaveDotPainter(
-            progress: _controller.value,
-            dotCount: widget.dotCount,
-            color: widget.color,
-          ),
-        );
-      },
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return CustomPaint(
+            size: Size(widget.size, widget.size),
+            painter: _WaveDotPainter(
+              progress: _controller.value,
+              dotCount: widget.dotCount,
+              color: widget.color,
+            ),
+          );
+        },
+      ),
     );
   }
 }

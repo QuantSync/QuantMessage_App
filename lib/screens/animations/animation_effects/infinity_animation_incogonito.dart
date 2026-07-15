@@ -64,15 +64,17 @@ class _InfinityAnimationIncognitoState
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) => CustomPaint(
-        // Identical size contract to InfinityAnimation: height = width / 2
-        size: Size(widget.size, widget.size / 2),
-        painter: _IncognitoPainter(
-          progress: _controller.value,
-          ribbonColor: widget.ribbonColor,
-          spineColor: widget.spineColor,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) => CustomPaint(
+          // Identical size contract to InfinityAnimation: height = width / 2
+          size: Size(widget.size, widget.size / 2),
+          painter: _IncognitoPainter(
+            progress: _controller.value,
+            ribbonColor: widget.ribbonColor,
+            spineColor: widget.spineColor,
+          ),
         ),
       ),
     );

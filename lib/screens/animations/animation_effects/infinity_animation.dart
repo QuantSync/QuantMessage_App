@@ -40,17 +40,19 @@ class _InfinityAnimationState extends State<InfinityAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
-          size: Size(widget.size, widget.size / 2),
-          painter: _HypnoticInfinityPainter(
-            progress: _controller.value,
-            color: widget.color,
-          ),
-        );
-      },
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return CustomPaint(
+            size: Size(widget.size, widget.size / 2),
+            painter: _HypnoticInfinityPainter(
+              progress: _controller.value,
+              color: widget.color,
+            ),
+          );
+        },
+      ),
     );
   }
 }
