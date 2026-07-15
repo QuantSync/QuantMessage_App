@@ -1,7 +1,6 @@
 // lib/services/quant_space_api.dart
 //
 // QuantMessage — Backend API client (Integrated with Flowise AI & Supabase)
-// -----------------------------------------------------------------------
 
 import 'dart:convert';
 import 'dart:io';
@@ -25,7 +24,7 @@ typedef _ErrorInterceptorHandler   = dio_pkg.ErrorInterceptorHandler;
 class QuantSpaceApi {
   late final _Dio _dio;
 
-  // Credentials pulled from .env
+  // ye vo credentails hgain jo env file se pull kiye hain
   String get flowiseUrl => dotenv.env['FLOWISE_URL'] ?? '';
   String get flowiseApiKey => dotenv.env['FLOWISE_API_KEY'] ?? '';
   String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';

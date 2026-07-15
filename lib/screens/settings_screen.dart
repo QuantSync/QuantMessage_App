@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'dart:ui';
-import 'package:supabase_flutter/supabase_flutter.dart'; // INTEGRATED
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_theme.dart';
+import '../core/config.dart' as app_config;
+import '../providers/attachment_provider.dart';
+import 'widgets/attachment_picker_sheet.dart' show kMaxAttachmentSizeBytes;
 
 Future<void> showSettingsPopup(BuildContext context) {
   return showGeneralDialog(
@@ -33,27 +37,26 @@ Future<void> showSettingsPopup(BuildContext context) {
   );
 }
 
-class _SettingsDialog extends StatefulWidget {
+class _SettingsDialog extends ConsumerStatefulWidget {
   const _SettingsDialog();
 
   @override
-  State<_SettingsDialog> createState() => _SettingsDialogState();
+  ConsumerState<_SettingsDialog> createState() => _SettingsDialogState();
 }
 
-class _SettingsDialogState extends State<_SettingsDialog> {
-  final SupabaseClient _supabase = Supabase.instance.client; // INTEGRATED
+class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
+  final SupabaseClient _supabase = Supabase.instance.client;
   int _selectedNavIndex = 0;
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
 
-  // --- User Data State ---
   Map<String, dynamic>? _userProfile;
   bool _isLoading = true;
 
-  // --- UI State for various settings ---
   bool _isDarkMode = true;
   bool _notificationsEnabled = true;
   bool _soundEnabled = false;
+  bool _fileUploadsEnabled = true;
   int _selectedColorIndex = 0;
   String _selectedFont = 'Outfit';
   String _selectedMotion = 'Default';
@@ -460,16 +463,122 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   }
 
   Widget _buildCapabilitiesPage() {
+    final models = ref.watch(modelsProvider);
+    final selected = ref.watch(selectedModelProvider);
+    final maxMb =
+        (kMaxAttachmentSizeBytes / (1024 * 1024)).toStringAsFixed(0);
+    final configReady = app_config.Config.isReady;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('AI Capabilities'),
         const SizedBox(height: 16),
-        _settingsRow(label: 'Web search', trailing: _buildMiniSwitch(true, (val) {})),
+        _settingsRow(
+          label: 'Web search',
+          trailing: _buildMiniSwitch(true, (_) {}),
+        ),
         _divider(),
-        _settingsRow(label: 'Code execution', trailing: _buildMiniSwitch(true, (val) {})),
+        _settingsRow(
+          label: 'Code execution',
+          trailing: _buildMiniSwitch(true, (_) {}),
+        ),
         _divider(),
-        _settingsRow(label: 'File uploads', trailing: _buildMiniSwitch(true, (val) {})),
+        _settingsRow(
+          label: 'File uploads (max ${maxMb}MB)',
+          trailing: _buildMiniSwitch(_fileUploadsEnabled, (val) {
+            setState(() => _fileUploadsEnabled = val);
+          }),
+        ),
+        _divider(),
+        _settingsRow(
+          label: 'Config status',
+          trailing: _pillValue(configReady ? 'Ready' : 'Incomplete'),
+        ),
+        const SizedBox(height: 28),
+        _sectionTitle('Default model'),
+        const SizedBox(height: 12),
+        Text(
+          'Applies across chat & attachments. Vision models accept images.',
+          style: GoogleFonts.outfit(
+            color: Colors.white.withOpacity(0.4),
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 14),
+        ...models.map((model) {
+          final isSelected = model.name == selected.name;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () =>
+                    ref.read(selectedModelProvider.notifier).select(model),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primaryRed.withOpacity(0.12)
+                        : Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppTheme.primaryRed.withOpacity(0.4)
+                          : Colors.white10,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(model.icon, style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              model.name,
+                              style: GoogleFonts.outfit(
+                                color: isSelected
+                                    ? AppTheme.primaryRed
+                                    : Colors.white,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              model.description,
+                              style: GoogleFonts.outfit(
+                                color: Colors.white54,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (model.supportsVision)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(
+                            Icons.visibility_outlined,
+                            size: 14,
+                            color: Color(0xFFE27457),
+                          ),
+                        ),
+                      if (isSelected)
+                        const Icon(Icons.check_circle,
+                            color: AppTheme.primaryRed, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -655,7 +764,11 @@ class _NavItem {
 }
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  /// When embedded in the Home shell, show inline capabilities instead of
+  /// opening a popup and calling Navigator.pop (which would leave Home).
+  final bool embedded;
+
+  const SettingsScreen({super.key, this.embedded = false});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -665,14 +778,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await showSettingsPopup(context);
-      if (mounted) Navigator.of(context).pop();
-    });
+    if (!widget.embedded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await showSettingsPopup(context);
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(backgroundColor: Colors.transparent);
+    if (!widget.embedded) {
+      return const Scaffold(backgroundColor: Colors.transparent);
+    }
+
+    // Inline placeholder while the shell primarily uses the settings popup.
+    // Tapping Settings in AppBar opens [showSettingsPopup]; this page keeps
+    // IndexedStack slot valid without popping the Home route.
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundBlack,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.settings_rounded, color: Colors.white38, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'Settings',
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Open from the navigation bar for the full panel.',
+              style: GoogleFonts.outfit(color: Colors.white54, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () => showSettingsPopup(context),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: AppTheme.primaryRed.withOpacity(0.2),
+              ),
+              child: Text('Open settings', style: GoogleFonts.outfit()),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

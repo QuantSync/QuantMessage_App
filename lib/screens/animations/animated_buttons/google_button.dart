@@ -90,7 +90,7 @@ class _GoogleButtonState extends State<GoogleButton> with TickerProviderStateMix
                 duration: const Duration(milliseconds: 200),
                 width: widget.width ?? double.infinity, // FIX: Allow Expanded to work
                 height: widget.height,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -132,38 +132,43 @@ class _GoogleButtonState extends State<GoogleButton> with TickerProviderStateMix
                         ),
                       ),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedBuilder(
-                          animation: _introController,
-                          builder: (context, _) {
-                            return Transform.rotate(
-                              angle: (1 - _iconRotate.value) * -0.6,
-                              child: Transform.scale(
-                                scale: 0.4 + (0.6 * _iconScale.value),
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CustomPaint(painter: _GoogleGPainter()),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedBuilder(
+                                animation: _introController,
+                                builder: (context, _) {
+                                  return Transform.rotate(
+                                    angle: (1 - _iconRotate.value) * -0.6,
+                                    child: Transform.scale(
+                                      scale: 0.4 + (0.6 * _iconScale.value),
+                                      child: const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CustomPaint(
+                                            painter: _GoogleGPainter()),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _RevealText(
+                                text: widget.label,
+                                controller: _introController,
+                                style: TextStyle(
+                                  color: widget.textColor,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.1,
+                                  height: 1.1,
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 10),
-                        _RevealText(
-                          text: widget.label,
-                          controller: _introController,
-                          style: TextStyle(
-                            color: widget.textColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.1,
+                            ],
                           ),
                         ),
-                      ],
-                    ),
                   ],
                 ),
               ),

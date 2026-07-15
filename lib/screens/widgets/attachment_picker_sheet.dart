@@ -1,37 +1,45 @@
 // lib/screens/widgets/attachment_picker_sheet.dart
 // ------------------------------------------------------------
-//   Cross‑platform attachment picker (mobile + web)
-//   Updated to use the `mime` package from pubspec.yaml for
-//   reliable MIME‑type detection.
+//   Cross-platform attachment picker (mobile + web)
+//   Fully integrated with Attachment model and MessageBox
 // ------------------------------------------------------------
 
-import 'dart:io' show File;               // Tree‑shaken on web
+import 'dart:convert'; // ← ADDED for base64.decode
+import 'dart:io' show File;
 import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mime/mime.dart'; // ← New import for MIME lookup
+import 'package:mime/mime.dart';
+
+import '../../core/attachment_model.dart';
 
 /// Signature for the callback that receives the selected attachment.
-///
-/// * **bytes** – raw file bytes (already read from the picker).
-/// * **filename** – original file name (including extension).
-/// * **mimeType** – detected MIME type (e.g. `image/jpeg`).
-typedef AttachmentSelected = void Function(
-    Uint8List bytes,
-    String filename,
-    String mimeType,
-    );
+typedef AttachmentSelected = void Function(Attachment attachment);
+
+/// Maximum file size: 20 MB (configurable)
+const int kMaxAttachmentSizeBytes = 20 * 1024 * 1024;
 
 class AttachmentPickerSheet extends StatefulWidget {
   final AttachmentSelected onSelected;
-  const AttachmentPickerSheet({super.key, required this.onSelected});
+  final int? maxFileSizeBytes;
+  final List<AttachmentType>? allowedTypes;
 
-  /// Convenience helper to present the bottom‑sheet.
+  const AttachmentPickerSheet({
+    super.key,
+    required this.onSelected,
+    this.maxFileSizeBytes,
+    this.allowedTypes,
+  });
+
   static Future<void> show(
       BuildContext context, {
         required AttachmentSelected onSelected,
+        int? maxFileSizeBytes,
+        List<AttachmentType>? allowedTypes,
       }) {
     return showModalBottomSheet(
       context: context,
@@ -42,7 +50,11 @@ class AttachmentPickerSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => AttachmentPickerSheet(onSelected: onSelected),
+      builder: (ctx) => AttachmentPickerSheet(
+        onSelected: onSelected,
+        maxFileSizeBytes: maxFileSizeBytes,
+        allowedTypes: allowedTypes,
+      ),
     );
   }
 
@@ -52,15 +64,14 @@ class AttachmentPickerSheet extends StatefulWidget {
 
 class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     with SingleTickerProviderStateMixin {
-  // ── Animations ─────────────────────────────────────────────────────────
   late final AnimationController _entryCtrl;
   late final Animation<double> _slideAnim;
   late final Animation<double> _fadeAnim;
 
-  // ── UI state ───────────────────────────────────────────────────────────
   bool _busy = false;
 
-  // ── Allowed extensions (kept in one place for easy updates) ────────
+  int get _maxFileSize => widget.maxFileSizeBytes ?? kMaxAttachmentSizeBytes;
+
   static const List<String> _allowedExtensions = [
     'pdf',
     'txt',
@@ -71,6 +82,9 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     'jpeg',
     'webp',
     'gif',
+    'md',
+    'csv',
+    'json',
   ];
 
   @override
@@ -80,8 +94,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
-    _slideAnim =
-        CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic);
+    _slideAnim = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic);
     _fadeAnim = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
     _entryCtrl.forward();
   }
@@ -92,7 +105,9 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     super.dispose();
   }
 
-  // ── ── ── PICKERS (cross‑platform) ── ── ────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════
+  // Pickers (cross-platform)
+  // ═══════════════════════════════════════════════════════════════════════
 
   Future<void> _pickFromGallery() async {
     if (_busy) return;
@@ -106,8 +121,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
       );
       if (image != null && mounted) {
         final bytes = await image.readAsBytes();
-        widget.onSelected(bytes, image.name, _guessMime(image.name));
-        if (mounted) Navigator.of(context).pop();
+        await _processAndDeliver(bytes, image.name);
       }
     } catch (e) {
       _showError('Could not pick image: $e');
@@ -132,9 +146,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
       );
       if (image != null && mounted) {
         final bytes = await image.readAsBytes();
-        // For a freshly captured photo we can safely assume JPEG.
-        widget.onSelected(bytes, image.name, 'image/jpeg');
-        if (mounted) Navigator.of(context).pop();
+        await _processAndDeliver(bytes, image.name, mimeOverride: 'image/jpeg');
       }
     } catch (e) {
       _showError('Camera error: $e');
@@ -150,7 +162,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: _allowedExtensions,
-        withData: true, // gives us `bytes` on web & desktop
+        withData: true,
       );
 
       if (result == null || result.files.isEmpty) return;
@@ -158,15 +170,13 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
       final PlatformFile picked = result.files.single;
       Uint8List? bytes = picked.bytes;
 
-      // Mobile fallback – read the file from the native file system.
       if (bytes == null && picked.path != null) {
         final file = File(picked.path!);
         bytes = await file.readAsBytes();
       }
 
       if (bytes != null && mounted) {
-        widget.onSelected(bytes, picked.name, _guessMime(picked.name));
-        if (mounted) Navigator.of(context).pop();
+        await _processAndDeliver(bytes, picked.name);
       }
     } catch (e) {
       _showError('File picker error: $e');
@@ -175,26 +185,181 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     }
   }
 
-  // ── MIME‑type helper (uses `mime` package) ────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════
+  // Clipboard handling — NULL-SAFE VERSION
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// Paste image from clipboard
+  Future<void> _pasteFromClipboard() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      Uint8List? bytes;
+
+      if (kIsWeb) {
+        bytes = await _readImageFromClipboardWeb();
+      } else {
+        bytes = await _readImageFromClipboardMobile();
+      }
+
+      if (bytes != null && bytes.isNotEmpty) {
+        final filename =
+            'pasted_${DateTime.now().millisecondsSinceEpoch}.png';
+        await _processAndDeliver(bytes, filename, mimeOverride: 'image/png');
+      } else {
+        _showError('No image found in clipboard. Try copying an image first.');
+      }
+    } catch (e) {
+      _showError('Clipboard error: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Web: Read image from clipboard
+  Future<Uint8List?> _readImageFromClipboardWeb() async {
+    try {
+      // Method 1: Try 'image/png' MIME type
+      final ClipboardData? pngData = await Clipboard.getData('image/png');
+      final String? pngText = pngData?.text;
+      if (pngText != null && pngText.isNotEmpty) {
+        final Uint8List? decoded = _base64ToBytes(pngText);
+        if (decoded != null) return decoded;
+      }
+
+      // Method 2: Try 'text/plain' (some browsers put data URL there)
+      final ClipboardData? plainData =
+      await Clipboard.getData(Clipboard.kTextPlain);
+      final String? plainText = plainData?.text;
+      if (plainText != null && plainText.isNotEmpty) {
+        if (plainText.startsWith('data:image')) {
+          final Uint8List? decoded = _base64ToBytes(plainText);
+          if (decoded != null) return decoded;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('Web clipboard read error: $e');
+      return null;
+    }
+  }
+
+  /// Mobile: Try to read image from clipboard
+  Future<Uint8List?> _readImageFromClipboardMobile() async {
+    try {
+      // Try text/plain MIME type
+      final ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
+
+      // ✅ Extract to local variable with nullable type
+      final String? text = data?.text;
+
+      // ✅ Single null check covers all subsequent uses
+      if (text == null || text.isEmpty) {
+        return null;
+      }
+
+      // Now `text` is guaranteed non-null in this scope
+      if (text.startsWith('data:image')) {
+        final Uint8List? decoded = _base64ToBytes(text);
+        if (decoded != null) return decoded;
+      }
+
+      // Android: try to get image URI
+      if (!kIsWeb) {
+        try {
+          if (text.startsWith('content://') || text.startsWith('file://')) {
+            final String path = text.replaceFirst('file://', '');
+            final File file = File(path);
+            if (await file.exists()) {
+              return await file.readAsBytes();
+            }
+          }
+        } catch (_) {
+          // Ignore file read errors
+        }
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('Mobile clipboard read error: $e');
+      return null;
+    }
+  }
+
+  /// Convert base64 string to bytes
+  Uint8List? _base64ToBytes(String base64String) {
+    try {
+      String cleanBase64 = base64String;
+      if (base64String.contains(',')) {
+        cleanBase64 = base64String.split(',').last;
+      }
+      return base64.decode(cleanBase64);
+    } catch (e) {
+      debugPrint('Base64 decode error: $e');
+      return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // Processing & delivery
+  // ═══════════════════════════════════════════════════════════════════════
+
+  Future<void> _processAndDeliver(
+      Uint8List bytes,
+      String filename, {
+        String? mimeOverride,
+      }) async {
+    if (bytes.length > _maxFileSize) {
+      final sizeMB = (bytes.length / 1024 / 1024).toStringAsFixed(1);
+      final maxMB = (_maxFileSize / 1024 / 1024).toStringAsFixed(0);
+      _showError('File too large ($sizeMB MB). Max allowed: $maxMB MB');
+      return;
+    }
+
+    final mime = mimeOverride ?? _guessMime(filename);
+    final attachment = AttachmentX.fromBytes(bytes, filename, mime);
+
+    if (widget.allowedTypes != null &&
+        !widget.allowedTypes!.contains(attachment.type)) {
+      _showError('File type "${attachment.type.name}" is not allowed');
+      return;
+    }
+
+    if (mounted) {
+      widget.onSelected(attachment);
+      Navigator.of(context).pop();
+    }
+  }
+
   String _guessMime(String filename) {
-    // `lookupMimeType` returns `null` if it cannot guess – we fallback
-    // to a generic binary type.
     return lookupMimeType(filename) ?? 'application/octet-stream';
   }
 
-  // ── UI helpers ───────────────────────────────────────────────────────
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
         backgroundColor: const Color(0xFF2A2A2A),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
 
-  // ── Build UI ─────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════
+  // Build UI
+  // ═══════════════════════════════════════════════════════════════════════
+
   @override
   Widget build(BuildContext context) {
     return SlideTransition(
@@ -224,13 +389,11 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
               ],
             ),
             child: Padding(
-              padding:
-              const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Drag‑handle ───────────────────────────────────────
                   Center(
                     child: Container(
                       width: 40,
@@ -242,8 +405,6 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                       ),
                     ),
                   ),
-
-                  // ── Header ─────────────────────────────────────────────
                   const Row(
                     children: [
                       Icon(Icons.add_circle_outline,
@@ -270,11 +431,10 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // ── Options ───────────────────────────────────────────────
                   _OptionTile(
                     icon: Icons.image_outlined,
-                    title: kIsWeb ? 'Image from Computer' : 'Photo from Gallery',
+                    title:
+                    kIsWeb ? 'Image from Computer' : 'Photo from Gallery',
                     subtitle: 'JPG, PNG, WebP, GIF',
                     onTap: _pickFromGallery,
                     enabled: !_busy,
@@ -287,14 +447,21 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                     enabled: !_busy && !kIsWeb,
                   ),
                   _OptionTile(
+                    icon: Icons.content_paste_rounded,
+                    title: 'Paste from Clipboard',
+                    subtitle: kIsWeb
+                        ? 'Copy an image then click here'
+                        : 'Copy an image from gallery, then paste here',
+                    onTap: _pasteFromClipboard,
+                    enabled: !_busy,
+                  ),
+                  _OptionTile(
                     icon: Icons.picture_as_pdf_outlined,
                     title: 'Document (PDF / File)',
-                    subtitle: 'PDF, TXT, DOC, DOCX',
+                    subtitle: 'PDF, TXT, DOC, DOCX, MD, CSV',
                     onTap: _pickFile,
                     enabled: !_busy,
                   ),
-
-                  // ── Busy indicator ───────────────────────────────────────
                   if (_busy)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
@@ -308,31 +475,26 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                                 strokeWidth: 2, color: Colors.white70),
                           ),
                           SizedBox(width: 12),
-                          Text('Opening file picker...',
+                          Text('Processing...',
                               style: TextStyle(color: Colors.white70)),
                         ],
                       ),
                     ),
-
-                  // ── Web‑only tip ─────────────────────────────────────────────
-                  if (kIsWeb)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              size: 14, color: Colors.white24),
-                          SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'Tip: Ctrl+V (⌘+V) to paste images from clipboard',
-                              style: TextStyle(
-                                  color: Colors.white24, fontSize: 11),
-                            ),
-                          ),
-                        ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          size: 12, color: Colors.white24),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Max file size: ${(_maxFileSize / 1024 / 1024).toStringAsFixed(0)} MB',
+                          style: const TextStyle(
+                              color: Colors.white24, fontSize: 11),
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -343,7 +505,10 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
   }
 }
 
-// ── Reusable tile widget ───────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// Reusable tile widget (unchanged)
+// ═══════════════════════════════════════════════════════════════════════════
+
 class _OptionTile extends StatefulWidget {
   final IconData icon;
   final String title;
@@ -383,9 +548,12 @@ class _OptionTileState extends State<_OptionTile> {
           ? SystemMouseCursors.click
           : SystemMouseCursors.basic,
       child: GestureDetector(
-        onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
-        onTapUp: widget.enabled ? (_) => setState(() => _pressed = false) : null,
-        onTapCancel: widget.enabled ? () => setState(() => _pressed = false) : null,
+        onTapDown:
+        widget.enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp:
+        widget.enabled ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel:
+        widget.enabled ? () => setState(() => _pressed = false) : null,
         onTap: widget.enabled ? widget.onTap : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),

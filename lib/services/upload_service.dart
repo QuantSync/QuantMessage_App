@@ -1,8 +1,6 @@
 // lib/services/upload_service.dart
 //
 // QuantMessage — File upload + multimodal chat messages
-// Integrated with Flowise AI, Supabase, and the new Attachment Model
-// ---------------------------------------------------------------------------
 
 import 'dart:async';
 import 'dart:convert';
@@ -14,9 +12,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
+import 'package:path/path.dart' as p;
 import 'package:supabase_flutter/supabase_flutter.dart' hide MultipartFile;
 
-// IMPORTANT: Ensure these files exist in your project
+//  make sure karna ki ye files aapke project me exity karti hooo
 import '../core/chat_message.dart';
 import '../core/attachment_model.dart';
 import 'quant_space_api.dart';
@@ -33,7 +32,7 @@ class UploadService {
     return _defaultBaseUrl;
   }
 
-  // Dependencies
+  // ye sari application ki call on and call of Dependencies hain
   final SupabaseClient _supabase;
   final Dio _dio;
   final http.Client _fallbackClient;
@@ -44,7 +43,7 @@ class UploadService {
     Dio? dio,
     http.Client? fallbackClient,
     QuantSpaceApi? quantApi,
-  })  : _supabase = supabase ?? Supabase.instance.client, // Uses the singleton from main.dart
+  })  : _supabase = supabase ?? Supabase.instance.client,
         _dio = dio ??
             Dio(
               BaseOptions(
@@ -55,7 +54,7 @@ class UploadService {
             ),
         _fallbackClient = fallbackClient ?? http.Client(),
         _quantApi = quantApi ?? QuantSpaceApi() {
-    // Add the auth interceptor to automatically attach the Supabase token to every Dio request
+    // har ek supabse request ko token dene ke liye ek auth lagaya hai
     _dio.interceptors.add(_SupabaseAuthInterceptor(_supabase));
   }
 
@@ -73,9 +72,7 @@ class UploadService {
     'Content-Type': 'application/json',
   };
 
-  // ──────────────────────────────────────────────────────────────────────────
   // UPLOAD (Integrated with QuantSpaceApi and Supabase)
-  // ──────────────────────────────────────────────────────────────────────────
 
   Future<Attachment> uploadFile({
     required File file,
@@ -96,9 +93,8 @@ class UploadService {
       if (result['status'] == 'success') {
         onProgress?.call(1.0);
 
-        // Return the Attachment model compatible with your UI
         return Attachment(
-          filename: file.path.split('/').last,
+          filename: p.basename(file.path),
           type: _typeFromMime(lookupMimeType(file.path) ?? 'application/octet-stream'),
           mimeType: lookupMimeType(file.path) ?? 'application/octet-stream',
           sizeBytes: await file.length(),
@@ -116,9 +112,7 @@ class UploadService {
     }
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
   // CHAT MESSAGE (Integrated with Flowise via QuantSpaceApi)
-  // ──────────────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> sendMessageWithAttachments({
     required String message,
@@ -127,7 +121,6 @@ class UploadService {
     bool isIncognito = false,
     String? agentOverride,
   }) async {
-    // Construct the prompt by appending attachment URLs for the AI to "see" them
     String finalMessage = message;
     for (var a in attachments) {
       if (a.url != null) {
@@ -145,9 +138,7 @@ class UploadService {
     };
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
   // Streaming chat (SSE)
-  // ──────────────────────────────────────────────────────────────────────────
 
   Stream<Map<String, dynamic>> streamMessageWithAttachments({
     required String message,
@@ -161,12 +152,10 @@ class UploadService {
     yield {'content': response, 'conversation_id': conversationId};
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
   // Voice transcription
-  // ──────────────────────────────────────────────────────────────────────────
 
   Future<String> transcribeAudio(File audioFile) async {
-    final filename = audioFile.path.split('/').last;
+    final filename = p.basename(audioFile.path);
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(
         audioFile.path,
@@ -192,9 +181,7 @@ class UploadService {
     return body['text'] as String? ?? '';
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
   // Conversation history & Settings
-  // ──────────────────────────────────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> getHistory({int limit = 50}) async {
     final response = await _fallbackClient.get(

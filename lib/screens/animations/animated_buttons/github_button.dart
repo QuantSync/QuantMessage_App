@@ -109,7 +109,7 @@ class _GithubButtonState extends State<GithubButton> with TickerProviderStateMix
                     duration: const Duration(milliseconds: 200),
                     width: widget.width ?? double.infinity, // FIX: Allow Expanded to work
                     height: widget.height,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -156,18 +156,20 @@ class _GithubButtonState extends State<GithubButton> with TickerProviderStateMix
                             ),
                           ),
                         ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _glowingIcon(pulse),
-                            const SizedBox(width: 14),
-                            _glowingText(pulse),
-                          ],
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _glowingIcon(pulse),
+                              const SizedBox(width: 8),
+                              _glowingText(pulse),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  );
-                },
+                  );                },
               ),
             ),
           ),
@@ -183,8 +185,8 @@ class _GithubButtonState extends State<GithubButton> with TickerProviderStateMix
         return Transform.scale(
           scale: 0.4 + (0.6 * _iconScale.value),
           child: SizedBox(
-            width: 26,
-            height: 26,
+            width: 20,
+            height: 20,
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -192,10 +194,10 @@ class _GithubButtonState extends State<GithubButton> with TickerProviderStateMix
                   imageFilter: ui.ImageFilter.blur(sigmaX: 4 + 3 * pulse, sigmaY: 4 + 3 * pulse),
                   child: Opacity(
                     opacity: 0.55 + 0.25 * pulse,
-                    child: CustomPaint(size: const Size(26, 26), painter: _OctocatPainter(_glowColor)),
+                    child: CustomPaint(size: const Size(20, 20), painter: _OctocatPainter(_glowColor)),
                   ),
                 ),
-                CustomPaint(size: const Size(26, 26), painter: _OctocatPainter(_fgColor)),
+                CustomPaint(size: const Size(20, 20), painter: _OctocatPainter(_fgColor)),
               ],
             ),
           ),
@@ -224,9 +226,10 @@ class _GithubButtonState extends State<GithubButton> with TickerProviderStateMix
                   chars[i] == ' ' ? '\u00A0' : chars[i],
                   style: TextStyle(
                     color: _fgColor,
-                    fontSize: 17,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
+                    height: 1.1,
                     shadows: [
                       Shadow(color: _glowColor.withOpacity(0.55 + 0.35 * pulse), blurRadius: 10 + 8 * pulse),
                       Shadow(color: _glowColor.withOpacity(0.25 + 0.2 * pulse), blurRadius: 20 + 14 * pulse),

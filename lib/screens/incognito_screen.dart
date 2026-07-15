@@ -1,11 +1,12 @@
 // lib/screens/incognito_screen.dart
+// QuantMessage — Ghost Mode (ephemeral, no DB persistence)
+
 import 'dart:async';
 import 'dart:io' show File;
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,21 +19,25 @@ import '../core/chat_message.dart';
 import '../core/attachment_model.dart';
 import '../core/config.dart' as app_config;
 import '../services/quant_space_api.dart';
-import 'widgets/attachment_preview.dart';
+import '../services/upload_service.dart';
 import 'widgets/attachment_thumbnail.dart';
-import 'widgets/attachment_picker_sheet.dart';
 import 'animations/animation_effects/infinity_animation_incogonito.dart';
 
-// INTEGRATED: Import the high-end message box
+// Shared floating MessageBox (same as ChatScreen)
 import 'message_box_pannel/message_box.dart';
 
 class IncognitoScreen extends StatefulWidget {
-  const IncognitoScreen({super.key});
+  /// When embedded in the Home shell, back/exit switches tabs instead of popping routes.
+  final VoidCallback? onExit;
+
+  const IncognitoScreen({super.key, this.onExit});
+
   @override
   State<IncognitoScreen> createState() => _IncognitoScreenState();
 }
 
-class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderStateMixin {
+class _IncognitoScreenState extends State<IncognitoScreen>
+    with TickerProviderStateMixin {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   User? get _currentUser => _supabase.auth.currentUser;
@@ -41,19 +46,16 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final QuantSpaceApi _api = QuantSpaceApi();
+  final UploadService _uploadService = UploadService();
   final FocusNode _inputFocus = FocusNode();
 
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
-
-  // State for the Global Blur Effect
   bool _isMessageBoxHovered = false;
-
-  final List<Attachment> _pendingAttachments = [];
   String? _ephemeralSessionId;
 
-  // Model Selection for the MessageBox
   String _selectedModelName = app_config.Config.models[0].name;
+  String _selectedModelId = app_config.Config.models[0].id;
 
   late final AnimationController _emptyCtrl;
   late final Animation<double> _emptyOpacity;
@@ -62,17 +64,18 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   @override
   void initState() {
     super.initState();
-    _emptyCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
+    _emptyCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 650));
     _emptyOpacity = CurvedAnimation(parent: _emptyCtrl, curve: Curves.easeOut);
     _emptyScale = Tween<double>(begin: 0.96, end: 1.0).animate(
         CurvedAnimation(parent: _emptyCtrl, curve: Curves.easeOutBack));
     _emptyCtrl.forward();
-
     _generateEphemeralId();
   }
 
   void _generateEphemeralId() {
-    _ephemeralSessionId = 'ghost_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(9999)}';
+    _ephemeralSessionId =
+    'ghost_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(9999)}';
   }
 
   @override
@@ -85,21 +88,13 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   }
 
   void _exitIncognito() {
-    Navigator.of(context).pop();
-  }
-
-  void _addAttachment(Uint8List bytes, String filename, String mimeType) {
-    final attachment = AttachmentX.fromBytes(bytes, filename, mimeType);
-    setState(() => _pendingAttachments.add(attachment));
-    _writeTempFile(bytes, filename).then((file) {
-      if (!mounted || file == null) return;
-      setState(() {
-        final idx = _pendingAttachments.indexWhere((a) => a.filename == filename);
-        if (idx != -1) {
-          _pendingAttachments[idx] = _pendingAttachments[idx].copyWith(localFile: file);
-        }
-      });
-    });
+    if (widget.onExit != null) {
+      widget.onExit!();
+      return;
+    }
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<File?> _writeTempFile(Uint8List bytes, String filename) async {
@@ -108,101 +103,72 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
       final tempFile = File(p.join(dir.path, filename));
       await tempFile.writeAsBytes(bytes, flush: true);
       return tempFile;
-    } catch (e) {
-      debugPrint('Temp file error: $e');
+    } catch (_) {
       return null;
     }
   }
 
-  Future<void> _onAttachmentButtonPressed() async {
-    await AttachmentPickerSheet.show(context, onSelected: _addAttachment);
-  }
+  Future<void> _handleSend(String text, List<Attachment> attachments) async {
+    final trimmedText = text.trim();
+    final hasAttachments = attachments.isNotEmpty;
 
-  void _removePendingAttachment(int index) {
-    setState(() => _pendingAttachments.removeAt(index));
-  }
-
-  Future<Attachment?> _uploadPendingAttachment(Attachment att) async {
-    setState(() {
-      final idx = _pendingAttachments.indexOf(att);
-      if (idx != -1) {
-        _pendingAttachments[idx] = att.copyWith(status: UploadStatus.uploading, progress: 0.1);
-      }
-    });
-
-    try {
-      if (att.localFile == null) return null;
-      final result = await _api.uploadFile(
-        att.localFile!.path,
-        conversationId: _ephemeralSessionId!,
-      );
-
-      if (result['status'] == 'success') {
-        final uploadedAttachment = att.copyWith(
-          status: UploadStatus.success,
-          url: result['url'],
-          progress: 1.0,
-        );
-        setState(() {
-          final i = _pendingAttachments.indexWhere((a) => a.filename == att.filename);
-          if (i != -1) _pendingAttachments[i] = uploadedAttachment;
-        });
-        return uploadedAttachment;
-      }
-      return null;
-    } catch (e) {
-      setState(() {
-        final i = _pendingAttachments.indexWhere((a) => a.filename == att.filename);
-        if (i != -1) {
-          _pendingAttachments[i] = att.copyWith(status: UploadStatus.failed);
-        }
-      });
-      return null;
-    }
-  }
-
-  Future<void> _handleSend() async {
-    final text = _controller.text.trim();
-    final hasAttachments = _pendingAttachments.isNotEmpty;
-    if ((text.isEmpty && !hasAttachments) || _isTyping) return;
+    if ((trimmedText.isEmpty && !hasAttachments) || _isTyping) return;
 
     _emptyCtrl.reset();
-    final pendingSnapshot = List<Attachment>.from(_pendingAttachments);
+
+    final List<Attachment> preparedAttachments = [];
+    for (final att in attachments) {
+      if (att.localFile != null) {
+        preparedAttachments.add(att);
+      } else if (att.bytes != null) {
+        final file = await _writeTempFile(att.bytes!, att.filename);
+        preparedAttachments.add(
+          file != null ? att.copyWith(localFile: file) : att,
+        );
+      } else {
+        preparedAttachments.add(att);
+      }
+    }
 
     final userMsg = ChatMessage(
-      text: text,
+      text: trimmedText,
       isUser: true,
       conversationId: _ephemeralSessionId!,
       senderId: 'ghost_user',
       createdAt: DateTime.now(),
-      attachments: pendingSnapshot,
+      attachments: preparedAttachments,
       modelName: _selectedModelName,
     );
 
     setState(() {
       _messages.add(userMsg);
       _isTyping = true;
-      _pendingAttachments.clear();
     });
-    _controller.clear();
+
     _scrollToBottom();
 
     try {
-      String finalPrompt = text;
-      for (final att in pendingSnapshot) {
+      String finalPrompt = trimmedText;
+
+      for (final att in preparedAttachments) {
         if (att.localFile != null) {
-          final result = await _uploadPendingAttachment(att);
-          if (result != null) {
-            finalPrompt += result.promptFragment;
+          try {
+            final uploaded = await _uploadService.uploadFile(
+              file: att.localFile!,
+              conversationId: _ephemeralSessionId!,
+            );
+            finalPrompt += uploaded.promptFragment;
+          } catch (e) {
+            debugPrint('Upload error for ${att.filename}: $e');
           }
-        } else if (att.url != null) {
-          finalPrompt += att.promptFragment;
         }
       }
 
-      final response = await _api.getAIResponse(finalPrompt, _ephemeralSessionId!);
+      final response =
+      await _api.getAIResponse(finalPrompt, _ephemeralSessionId!);
 
       if (!mounted) return;
+
       setState(() {
         _messages.add(ChatMessage(
           text: response,
@@ -210,7 +176,7 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
           conversationId: _ephemeralSessionId!,
           senderId: 'ghost_agent',
           createdAt: DateTime.now(),
-          modelName: 'GHOST AI',
+          modelName: _selectedModelName,
         ));
       });
     } catch (e) {
@@ -245,7 +211,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   void _burnSession() {
     setState(() {
       _messages.clear();
-      _pendingAttachments.clear();
       _generateEphemeralId();
     });
     _api.resetSession();
@@ -254,40 +219,68 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: AppTheme.backgroundBlack,
+      // Manual keyboard offset via the floating MessageBox
+      resizeToAvoidBottomInset: false,
       appBar: _buildBlurredAppBar(),
-      body: Stack(
-        children: [
-          const _ParticleBackground(count: 25),
-
-          if (_isMessageBoxHovered)
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(color: Colors.black.withOpacity(0.4)),
-              ),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: _ParticleBackground(count: 25),
             ),
+            if (_isMessageBoxHovered)
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(color: Colors.black.withOpacity(0.4)),
+                ),
+              ),
+            if (_messages.isEmpty)
+              _buildEmptyStateResponsive()
+            else
+              _buildChatState(),
 
-          if (_messages.isEmpty)
-            _buildEmptyStateResponsive()
-          else
-            Column(
-              children: [
-                Expanded(child: _buildChatThread()),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: _buildMessageBox(),
+            // MessageBox — vertical center when empty, bottom dock when chatting
+            if (_messages.isEmpty)
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    0,
+                    20,
+                    keyboardInset > 0 ? keyboardInset : 24,
+                  ),
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 3),
+                      _buildMessageBox(),
+                      const SizedBox(height: 12),
+                      _buildSuggestionPills(),
+                      const Spacer(flex: 2),
+                    ],
                   ),
                 ),
-              ],
-            ),
-        ],
+              )
+            else
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 16 + keyboardInset,
+                child: _buildMessageBox(),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildChatState() {
+    return _buildChatThread();
   }
 
   Widget _buildMessageBox() {
@@ -295,137 +288,112 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
       controller: _controller,
       focusNode: _inputFocus,
       selectedModelName: _selectedModelName,
-      hintText: _pendingAttachments.isNotEmpty
-          ? "Add a note for the ghost..."
-          : "Transmit encrypted message...",
+      hintText: "Transmit encrypted message...",
       onSend: _handleSend,
-      onAttachment: _onAttachmentButtonPressed,
       onLogout: _exitIncognito,
       onHoverChanged: (hovered) {
-        setState(() => _isMessageBoxHovered = hovered);
+        if (mounted) setState(() => _isMessageBoxHovered = hovered);
       },
-      onModelChanged: (model) {
-        setState(() => _selectedModelName = model);
+      onModelChanged: (modelName) {
+        final model = app_config.Config.getModelByName(modelName);
+        if (model == null) return;
+        setState(() {
+          _selectedModelName = model.name;
+          _selectedModelId = model.id;
+        });
       },
     );
   }
 
   Widget _buildEmptyStateResponsive() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        var constH;
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(flex: 2),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        FadeInAnimation(
-                          duration: const Duration(milliseconds: 600),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white10),
-                            ),
-                            child: Text("Secure Session",
-                                style: GoogleFonts.tinos(
-                                    color: Colors.white54,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
-                          ),
+    // Intro content in the upper band; MessageBox centered via Stack overlay
+    return FadeTransition(
+      opacity: _emptyOpacity,
+      child: ScaleTransition(
+        scale: _emptyScale,
+        child: Align(
+          alignment: const Alignment(0, -0.65),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white10),
                         ),
-                        const SizedBox(height: 24),
-                        FadeInAnimation(
-                          duration: const Duration(milliseconds: 1000),
-                          delay: const Duration(milliseconds: 200),
-                          child: _buildInfinityAnimation(constraints),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            FadeInAnimation(
-                              duration: const Duration(milliseconds: 800),
-                              child: const Icon(Icons.security,
-                                  color: Color(0xFF6B7280), size: 36),
-                            ),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: TypingText(
-                                text: "< Gone Incognito >",
-                                style: GoogleFonts.tinos(
-                                  color: const Color(0xFFE8E8E8),
-                                  fontSize: 54,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                                typingSpeed: const Duration(milliseconds: 50),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          constraints: const BoxConstraints(maxWidth: 360),
-                          child: TypingText(
-                            text: "Ephemeral mode active. Conversations and uploads are handled via ghost session and will be purged upon exit.",
+                        child: Text("Secure Session",
                             style: GoogleFonts.tinos(
-                              color: AppTheme.textSecondary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              height: 1.6,
-                            ),
-                            typingSpeed: const Duration(milliseconds: 25),
-                            delayBeforeStart: const Duration(milliseconds: 900),
-                          ),
-                        ),
-                        if (_userEmail != null) ...[
-                          constH, SizedBox(height: 12),
-                          FadeInAnimation(
-                            duration: const Duration(milliseconds: 1000),
-                            delay: const Duration(milliseconds: 1500),
-                            child: Text(
-                              "Ghost session · $_userEmail",
-                              textAlign: TextAlign.center,
+                                color: Colors.white54,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfinityAnimation(constraints),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.security,
+                              color: Color(0xFF6B7280), size: 28),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: TypingText(
+                              text: "< Gone Incognito >",
                               style: GoogleFonts.tinos(
-                                color: Colors.white24,
-                                fontSize: 11,
-                                fontStyle: FontStyle.italic,
+                                color: const Color(0xFFE8E8E8),
+                                fontSize: 36,
+                                fontWeight: FontWeight.w900,
                               ),
+                              typingSpeed: const Duration(milliseconds: 50),
                             ),
                           ),
                         ],
-                        const SizedBox(height: 40),
-                        FadeInAnimation(
-                          duration: const Duration(milliseconds: 600),
-                          delay: const Duration(milliseconds: 1200),
-                          child: _buildMessageBox(),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: TypingText(
+                          text:
+                              "Ephemeral mode active. Conversations and uploads are handled via ghost session and will be purged upon exit.",
+                          style: GoogleFonts.tinos(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            height: 1.5,
+                          ),
+                          typingSpeed: const Duration(milliseconds: 25),
+                          delayBeforeStart: const Duration(milliseconds: 900),
                         ),
-                        const SizedBox(height: 16),
-                        FadeInAnimation(
-                          duration: const Duration(milliseconds: 800),
-                          delay: const Duration(milliseconds: 1400),
-                          child: _buildSuggestionPills(),
+                      ),
+                      if (_userEmail != null) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          "Ghost session · $_userEmail",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.tinos(
+                            color: Colors.white24,
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                          ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                  const Spacer(flex: 3),
-                ],
-              ),
+                );
+              },
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -451,7 +419,7 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded,
                   color: Colors.white70, size: 18),
-              onPressed: () => Navigator.pop(context),
+              onPressed: _exitIncognito,
             ),
             title: Row(
               mainAxisSize: MainAxisSize.min,
@@ -470,12 +438,6 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
             centerTitle: true,
             actions: [
               IconButton(
-                icon: const Icon(Icons.exit_to_app_rounded,
-                    color: Colors.white38),
-                tooltip: "Exit Incognito",
-                onPressed: _exitIncognito,
-              ),
-              IconButton(
                 icon: const Icon(Icons.delete_sweep_rounded,
                     color: Colors.white38),
                 tooltip: "Burn Session",
@@ -492,15 +454,33 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   Widget _buildChatThread() {
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.only(top: 100, bottom: 20),
-      itemCount: _messages.length,
+      // Extra bottom padding so last messages clear the floating MessageBox
+      padding: const EdgeInsets.only(top: 90, bottom: 140),
+      itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == _messages.length) {
+          return _buildTypingIndicator();
+        }
         return FadeInAnimation(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutCubic,
           child: _buildMessageRow(_messages[index]),
         );
       },
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+      child: Row(
+        children: [
+          _buildAvatar("👻", AppTheme.accentGrey),
+          const SizedBox(width: 16),
+          const Text("...",
+              style: TextStyle(color: Colors.white38, fontSize: 24)),
+        ],
+      ),
     );
   }
 
@@ -512,9 +492,7 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
-        color: msg.isUser
-            ? Colors.transparent
-            : AppTheme.surfaceDark.withOpacity(0.5),
+        color: msg.isUser ? Colors.transparent : AppTheme.surfaceDark.withOpacity(0.5),
         border: Border(
             bottom: BorderSide(color: Colors.white.withOpacity(0.05), width: 1)),
       ),
@@ -539,8 +517,7 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
                       letterSpacing: 1.2),
                 ),
                 const SizedBox(height: 8),
-                if (hasAttachments)
-                  AttachmentList(attachments: msg.attachments),
+                if (hasAttachments) AttachmentList(attachments: msg.attachments),
                 if (hasText)
                   MarkdownBody(
                     data: msg.text,
@@ -572,8 +549,7 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
                           fontWeight: FontWeight.bold),
                       blockquoteDecoration: const BoxDecoration(
                         border: Border(
-                            left: BorderSide(
-                                color: AppTheme.accentGrey, width: 3)),
+                            left: BorderSide(color: AppTheme.accentGrey, width: 3)),
                       ),
                     ),
                   ),
@@ -612,9 +588,9 @@ class _IncognitoScreenState extends State<IncognitoScreen> with TickerProviderSt
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// MISSING CLASSES ADDED BELOW
-// ──────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// Support Widgets
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _ParticleBackground extends StatelessWidget {
   final int count;
@@ -625,8 +601,9 @@ class _ParticleBackground extends StatelessWidget {
     return Opacity(
       opacity: 0.3,
       child: CustomPaint(
-          painter: _ChatParticlePainter(0.0, count),
-          size: MediaQuery.of(context).size),
+        painter: _ChatParticlePainter(0.0, count),
+        size: MediaQuery.of(context).size,
+      ),
     );
   }
 }
@@ -642,8 +619,7 @@ class _ChatParticlePainter extends CustomPainter {
     final random = math.Random(42);
     for (int i = 0; i < count; i++) {
       canvas.drawCircle(
-          Offset(random.nextDouble() * size.width,
-              random.nextDouble() * size.height),
+          Offset(random.nextDouble() * size.width, random.nextDouble() * size.height),
           1.5,
           paint);
     }
@@ -675,30 +651,22 @@ class _SuggestionPillState extends State<_SuggestionPill> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: _isHovered
-              ? Colors.white.withOpacity(0.1)
-              : const Color(0xFF2F2F2F),
+          color: _isHovered ? Colors.white.withOpacity(0.1) : const Color(0xFF2F2F2F),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: _isHovered ? Colors.white54 : Colors.white10),
+          border: Border.all(color: _isHovered ? Colors.white54 : Colors.white10),
         ),
-        child: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 200),
-          style: GoogleFonts.tinos(
-            color: _isHovered ? Colors.white : Colors.white70,
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.icon,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(widget.icon, color: _isHovered ? Colors.white : Colors.white70, size: 16),
+            const SizedBox(width: 6),
+            Text(widget.label,
+                style: GoogleFonts.tinos(
                   color: _isHovered ? Colors.white : Colors.white70,
-                  size: 16),
-              const SizedBox(width: 6),
-              Text(widget.label),
-            ],
-          ),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                )),
+          ],
         ),
       ),
     );

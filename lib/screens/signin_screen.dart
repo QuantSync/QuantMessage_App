@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/app_theme.dart';
 import '../core/config.dart' as app_config;
 import '../services/quant_space_api.dart';
+import 'app_bar.dart' show smoothPageRoute;
 import 'signup_screen.dart';
 import 'home_screen.dart';
 import 'animations/animation_effects/connectors_animation.dart';
@@ -82,7 +83,7 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
           );
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            smoothPageRoute(const HomeScreen()),
           );
         }
       }
@@ -440,7 +441,7 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
                   child: GestureDetector(
                     onTap: () => Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (c) => const SignUpScreen()),
+                      smoothPageRoute(const SignUpScreen()),
                     ),
                     child: Text(
                       'Sign up',

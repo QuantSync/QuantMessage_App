@@ -1,8 +1,8 @@
 // lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'dart:ui';
 import 'dart:math' as math;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -11,150 +11,149 @@ import 'animations/animated_buttons/google_button.dart';
 import 'animations/animated_buttons/github_button.dart';
 
 import '../core/app_theme.dart';
+import '../providers/attachment_provider.dart';
+import '../providers/navigation_provider.dart';
 import 'app_bar.dart';
 import 'chat_screen.dart';
 import 'history_screen.dart';
-import 'incogonito_screen.dart';
+import 'incognito_screen.dart';
 import 'signin_screen.dart';
-import 'signup_screen.dart';
 import 'settings_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  int _currentIndex = 0;
-  int _previousIndex = 0;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // Pages stay alive in IndexedStack so chat / history state survives tab switches.
+  late final List<Widget> _pages;
 
-  // Modified to pass the bypass logic to the Dashboard
-  List<Widget> get _pages => [
-    DashboardTab(onStartChat: () => _onItemSelected(1, bypassAuth: true)),
-    const ChatScreen(),
-    const IncognitoScreen(),
-    const HistoryScreen(),
-    const SettingsScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Align shared tab index when the shell mounts (splash / auth → home)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(navigationProvider.notifier).goHome();
+    });
+    _pages = [
+      DashboardTab(onStartChat: () => _selectTab(AppTab.chat, bypassAuth: true)),
+      const ChatScreen(),
+      IncognitoScreen(onExit: () => _selectTab(AppTab.home)),
+      const HistoryScreen(embedded: true),
+      const SettingsScreen(embedded: true),
+    ];
+  }
 
-  // ADDED: bypassAuth parameter to ignore Supabase check for Guests
-  void _onItemSelected(int index, {bool bypassAuth = false}) {
-    if (index == _currentIndex) return;
+  Future<void> _selectTab(AppTab tab, {bool bypassAuth = false}) async {
+    final current = ref.read(navigationProvider);
+    if (current == tab && tab != AppTab.settings) return;
 
-    // AUTH GUARD: Only trigger if bypassAuth is false
-    if (!bypassAuth && (index == 1 || index == 3)) {
+    if (!bypassAuth && tab.requiresAuth) {
       final session = Supabase.instance.client.auth.currentSession;
       if (session == null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SignInScreen()),
-        );
+        if (!mounted) return;
+        await Navigator.push(context, smoothPageRoute(const SignInScreen()));
         return;
       }
     }
 
-    setState(() {
-      _previousIndex = _currentIndex;
-      _currentIndex = index;
-    });
+    // Settings opens as a floating panel — keep the current tab selected
+    if (tab == AppTab.settings) {
+      await showSettingsPopup(context);
+      return;
+    }
+
+    ref.read(navigationProvider.notifier).goTo(tab);
+  }
+
+  void _onItemSelected(int index) {
+    _selectTab(AppTabX.fromIndex(index));
   }
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final bool isDesktop = screenWidth > 600;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 600;
+    final currentTab = ref.watch(navigationProvider);
+    final currentIndex = currentTab.index;
+
+    // Keep shared model provider warm across tabs
+    ref.watch(selectedModelProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: isDesktop
           ? Row(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 70),
-              child: _AnimatedPageSwitcher(
-                currentIndex: _currentIndex,
-                pages: _pages,
-              ),
-            ),
-          ),
-          CustomAppBar(
-            selectedIndex: _currentIndex,
-            onItemSelected: (index) => _onItemSelected(index),
-          ),
-        ],
-      )
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 80),
+                    child: _ShellPageHost(
+                      currentIndex: currentIndex,
+                      pages: _pages,
+                    ),
+                  ),
+                ),
+                CustomAppBar(
+                  selectedIndex: currentIndex,
+                  onItemSelected: _onItemSelected,
+                ),
+              ],
+            )
           : Column(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 70),
-              child: _AnimatedPageSwitcher(
-                currentIndex: _currentIndex,
-                pages: _pages,
-              ),
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ShellPageHost(
+                      currentIndex: currentIndex,
+                      pages: _pages,
+                    ),
+                  ),
+                ),
+                CustomAppBar(
+                  selectedIndex: currentIndex,
+                  onItemSelected: _onItemSelected,
+                ),
+              ],
             ),
-          ),
-          CustomAppBar(
-            selectedIndex: _currentIndex,
-            onItemSelected: (index) => _onItemSelected(index),
-          ),
-        ],
-      ),
     );
   }
 }
 
-class _AnimatedPageSwitcher extends StatelessWidget {
+/// Keeps all shell pages mounted so chat/history survive tab switches.
+class _ShellPageHost extends StatelessWidget {
   final int currentIndex;
   final List<Widget> pages;
 
-  const _AnimatedPageSwitcher({
+  const _ShellPageHost({
     required this.currentIndex,
     required this.pages,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 400),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.04, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: child,
-          ),
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey<int>(currentIndex),
-        child: pages[currentIndex],
-      ),
+    return IndexedStack(
+      index: currentIndex,
+      sizing: StackFit.expand,
+      children: pages,
     );
   }
 }
 
-class DashboardTab extends StatefulWidget {
+class DashboardTab extends ConsumerStatefulWidget {
   final VoidCallback onStartChat;
   const DashboardTab({super.key, required this.onStartChat});
 
   @override
-  State<DashboardTab> createState() => _DashboardTabState();
+  ConsumerState<DashboardTab> createState() => _DashboardTabState();
 }
 
-class _DashboardTabState extends State<DashboardTab>
+class _DashboardTabState extends ConsumerState<DashboardTab>
     with TickerProviderStateMixin {
   late final AnimationController _entranceCtrl;
   late final AnimationController _pulseCtrl;
@@ -281,7 +280,7 @@ class _DashboardTabState extends State<DashboardTab>
                     opacity: _gridOpacity,
                     child: ScaleTransition(scale: _gridScale, child: _FeatureGrid()),
                   ),
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 48),
                   FadeTransition(
                     opacity: _btnOpacity,
                     child: SlideTransition(
@@ -292,40 +291,57 @@ class _DashboardTabState extends State<DashboardTab>
                             btnCtrl: _btnCtrl,
                             btnScale: _btnScale,
                             onTap: widget.onStartChat,
-                            label: " < GUEST USER >", // MODIFIED: Updated label
+                            label: " < GUEST USER >",
                           ),
-                          const SizedBox(height: 15),
-
-                          SizedBox(
-                            width: 220,
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: GoogleButton(
-                                    label: 'Google',
-                                    width: null,
-                                    height: 52,
-                                    onPressed: () {
-                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const SignInScreen()));
-                                    },
-                                  ),
+                          const SizedBox(height: 16),
+                          // Responsive auth buttons — no overflow
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final rowWidth = math.min(
+                                340.0,
+                                constraints.maxWidth > 0
+                                    ? constraints.maxWidth
+                                    : 340.0,
+                              );
+                              return SizedBox(
+                                width: rowWidth,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: GoogleButton(
+                                        label: 'Google',
+                                        height: 48,
+                                        borderRadius: 14,
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            smoothPageRoute(
+                                                const SignInScreen()),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: GithubButton.dark(
+                                        label: 'GitHub',
+                                        height: 48,
+                                        borderRadius: 14,
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            smoothPageRoute(
+                                                const SignInScreen()),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: GithubButton.dark(
-                                    label: 'GitHub',
-                                    width: null,
-                                    height: 52,
-                                    onPressed: () {
-                                      Navigator.push(context, MaterialPageRoute(builder: (context) => const SignInScreen()));
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
-
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 16),
                           _SettingsButton(btnCtrl: _btnCtrl, btnScale: _btnScale),
                         ],
                       ),

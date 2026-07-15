@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 
 import '../core/app_theme.dart';
-import '../core/chat_message.dart';
 import '../core/config.dart' as app_config;
 import '../services/quant_space_api.dart';
 import 'animations/animation_effects/connectors_animation.dart';
@@ -16,6 +15,7 @@ import 'animations/animation_effects/infinity_animation.dart';
 
 import 'signin_screen.dart';
 import 'home_screen.dart';
+import 'app_bar.dart' show smoothPageRoute;
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -89,7 +89,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
           );
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            smoothPageRoute(const HomeScreen()),
           );
         }
       }
@@ -432,7 +432,10 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
-                    onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (c) => const SignInScreen())),
+                    onTap: () => Navigator.pushReplacement(
+                      context,
+                      smoothPageRoute(const SignInScreen()),
+                    ),
                     child: Text('Sign in', style: GoogleFonts.outfit(color: AppTheme.primaryRed, fontWeight: FontWeight.w600, fontSize: 14)),
                   ),
                 ),
