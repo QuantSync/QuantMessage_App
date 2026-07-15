@@ -33,6 +33,9 @@ import 'widgets/attachment_thumbnail.dart';
 // ✅ IMPORT THE INTEGRATED MESSAGE BOX
 import 'message_box_pannel/message_box.dart';
 import 'widgets/name_onboarding_card.dart';
+import 'animations/animated_buttons/upgrade_plan_button.dart';
+import 'pricing_screen/pricing_screen.dart';
+import 'app_bar.dart' show smoothPageRoute;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ANIMATION HELPER WIDGETS
@@ -253,6 +256,101 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       CurvedAnimation(parent: _emptyCtrl, curve: Curves.easeOutBack),
     );
     _emptyCtrl.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkNameOnboarding();
+    });
+    _authSub = _supabase.auth.onAuthStateChange.listen((_) {
+      _checkNameOnboarding();
+    });
+  }
+
+  StreamSubscription<AuthState>? _authSub;
+
+  /// First-time account: show name card until onboarding is complete.
+  Future<void> _checkNameOnboarding() async {
+    final user = _currentUser;
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _onboardingChecked = true;
+          _showNameOnboarding = false;
+          _displayName = null;
+        });
+      }
+      return;
+    }
+
+    final meta = user.userMetadata ?? {};
+    final metaFlag = meta['onboarding_complete'];
+    final existing = (meta['full_name'] as String?)?.trim();
+
+    bool? profileFlag;
+    String? profileName = existing;
+    try {
+      final row = await _supabase
+          .from('profiles')
+          .select('full_name, onboarding_complete')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (row != null) {
+        profileFlag = row['onboarding_complete'] as bool?;
+        final pn = (row['full_name'] as String?)?.trim();
+        if (pn != null && pn.isNotEmpty) profileName = pn;
+      }
+    } catch (_) {
+      // profiles.onboarding_complete may not exist yet — auth metadata is enough
+    }
+
+    final explicitComplete =
+        metaFlag == true || profileFlag == true;
+    final explicitIncomplete =
+        metaFlag == false || profileFlag == false;
+    final hasName = profileName != null && profileName.isNotEmpty;
+
+    // New signups set onboarding_complete: false → always show the card.
+    // Legacy users who already have a name → skip the card.
+    final shouldShow = !explicitComplete &&
+        (explicitIncomplete || !hasName);
+
+    if (!mounted) return;
+    setState(() {
+      _displayName = profileName;
+      _onboardingChecked = true;
+      _showNameOnboarding = shouldShow;
+    });
+  }
+
+  Future<void> _saveDisplayName(String name) async {
+    final user = _currentUser;
+    if (user == null) return;
+
+    final trimmed = name.trim();
+
+    await _supabase.auth.updateUser(
+      UserAttributes(data: {
+        'full_name': trimmed,
+        'onboarding_complete': true,
+      }),
+    );
+
+    try {
+      await _supabase.from('profiles').upsert({
+        'id': user.id,
+        'full_name': trimmed,
+        'onboarding_complete': true,
+        'email': user.email,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Profile upsert warning: $e');
+      // Auth metadata already saved — greeting still works
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _displayName = trimmed;
+      _showNameOnboarding = false;
+    });
   }
 
   void _generateConversationId() {
@@ -261,6 +359,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     _inputFocus.dispose();
@@ -446,6 +545,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   child: Stack(
                     children: [
                       const _ParticleBackground(count: 22),
+
+                      // Top-centre upgrade pill
+                      Positioned(
+                        top: 10,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: UpgradePlanButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                smoothPageRoute(const PricingScreen()),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+
                       if (_messages.isEmpty)
                         _buildEmptyState()
                       else
@@ -487,6 +604,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 ),
               ],
             ),
+
+            // First-time name onboarding (blur + glass card)
+            if (_onboardingChecked && _showNameOnboarding)
+              Positioned.fill(
+                child: NameOnboardingOverlay(
+                  initialName: _displayName,
+                  onSave: _saveDisplayName,
+                ),
+              ),
           ],
         ),
       ),
@@ -587,7 +713,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ═══════════════════════════════════════════════════════════════════════
 
   Widget _buildGreeting() {
-    final userName = _userName ?? 'there';
+    final userName = _userName;
     return LayoutBuilder(
       builder: (context, constraints) {
         final double fontSize =
@@ -617,7 +743,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      "Hello, $userName",
+                      '< Hey "${userName ?? 'there'}" >',
                       style: GoogleFonts.outfit(
                         color: const Color(0xFFE8E8E8),
                         fontSize: fontSize,

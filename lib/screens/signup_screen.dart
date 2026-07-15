@@ -68,6 +68,7 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
         password: _passwordController.text.trim(),
         data: {
           'full_name': _nameController.text.trim(),
+          'onboarding_complete': false,
         },
       );
 

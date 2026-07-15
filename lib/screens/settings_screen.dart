@@ -121,16 +121,49 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      await _supabase
-          .from('profiles')
-          .update({'full_name': newName})
-          .eq('id', user.id);
+      final trimmed = newName.trim();
+      if (trimmed.isEmpty) return;
+
+      // Keep auth metadata + profiles in sync so ChatScreen greeting updates
+      await _supabase.auth.updateUser(
+        UserAttributes(data: {
+          'full_name': trimmed,
+          'onboarding_complete': true,
+        }),
+      );
+
+      try {
+        await _supabase.from('profiles').upsert({
+          'id': user.id,
+          'full_name': trimmed,
+          'onboarding_complete': true,
+          'email': user.email,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      } catch (_) {
+        await _supabase
+            .from('profiles')
+            .update({'full_name': trimmed})
+            .eq('id', user.id);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _userProfile = {
+          ...?_userProfile,
+          'full_name': trimmed,
+        };
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully')),
       );
     } catch (e) {
       debugPrint('Update Error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update name: $e')),
+      );
     }
   }
 

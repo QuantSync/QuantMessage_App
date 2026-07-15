@@ -13,6 +13,7 @@ import 'screens/home_screen.dart';
 import 'screens/signin_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/pricing_screen/pricing_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,6 +72,8 @@ class QuantSpaceApp extends StatelessWidget {
             return smoothPageRoute(const SignInScreen());
           case '/signup':
             return smoothPageRoute(const SignUpScreen());
+          case '/pricing':
+            return smoothPageRoute(const PricingScreen());
           default:
             return null;
         }
