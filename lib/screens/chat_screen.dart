@@ -18,6 +18,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../core/app_theme.dart';
 import '../core/chat_message.dart';
@@ -33,9 +34,12 @@ import 'widgets/attachment_thumbnail.dart';
 // ✅ IMPORT THE INTEGRATED MESSAGE BOX
 import 'message_box_pannel/message_box.dart';
 import 'message_box_pannel/message_card.dart';
+import 'message_box_pannel/chat_answers.dart';
 import 'widgets/name_onboarding_card.dart';
 import 'animations/animated_buttons/upgrade_plan_button.dart';
+import 'animations/animated_buttons/mode_slider_button.dart';
 import 'animations/animation_effects/step_status_text.dart';
+import 'animations/animation_effects/coming_soon_card.dart';
 import 'pricing_screen/pricing_screen.dart';
 import 'app_bar.dart' show smoothPageRoute;
 
@@ -223,10 +227,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ── State ──
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
+  List<String> _agentSteps = [];        // 4-agent pipeline steps for the UI
   String _currentConversationId = "";
   String? _displayName;
   bool _showNameOnboarding = false;
   bool _onboardingChecked = false;
+  AppMode _currentMode = AppMode.drive;
 
   // State for the Global Blur Effect (when MessageBox is hovered)
   bool _isMessageBoxHovered = false;
@@ -356,7 +362,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   void _generateConversationId() {
-    _currentConversationId = DateTime.now().millisecondsSinceEpoch.toString();
+    _currentConversationId = const Uuid().v4();
   }
 
   @override
@@ -447,14 +453,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         }
       }
 
-      // Save user message to Supabase
-      await _supabase.from('chat_messages').insert(userMsg.toMap());
+      // Save messages to Supabase only when user is properly authenticated
+      final isGuest = _currentUser == null;
+      if (!isGuest) {
+        await _supabase.from('chat_messages').insert(userMsg.toMap());
+      }
 
-      // Get AI response via Flowise
-      final response = await _api.getAIResponse(finalPrompt, userId);
+      // Get AI response via the 4-Agent Pipeline Backend
+      final result = await _api.getAIResponseFull(
+        finalPrompt,
+        userId,
+        modelId: _selectedModelId,
+        conversationId: _currentConversationId,
+        mode: _currentMode.name,
+      );
+
+      final responseText  = result['response'] as String;
+      final steps         = (result['steps'] as List?)?.cast<String>() ?? [];
+
+      if (mounted) setState(() => _agentSteps = steps);
 
       final aiMsg = ChatMessage(
-        text: response,
+        text: responseText,
         isUser: false,
         conversationId: _currentConversationId,
         senderId: 'agent',
@@ -462,8 +482,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         modelName: _selectedModelName,
       );
 
-      // Save AI message to Supabase
-      await _supabase.from('chat_messages').insert(aiMsg.toMap());
+      // Save AI message to Supabase only for authenticated users
+      if (!isGuest) {
+        await _supabase.from('chat_messages').insert(aiMsg.toMap());
+      }
 
       if (!mounted) return;
       setState(() {
@@ -553,7 +575,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                         top: 10,
                         left: 0,
                         right: 0,
-                        child: Center(
+                        child: Align(
+                          alignment: Alignment.topCenter,
                           child: UpgradePlanButton(
                             onPressed: () {
                               Navigator.push(
@@ -562,6 +585,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                               );
                             },
                           ),
+                        ),
+                      ),
+                      
+                      // Top-left mode slider
+                      Positioned(
+                        top: 10,
+                        left: 20,
+                        child: ModeSliderButton(
+                          currentMode: _currentMode,
+                          onModeChanged: (mode) {
+                            setState(() {
+                              _currentMode = mode;
+                            });
+                          },
                         ),
                       ),
 
@@ -614,6 +651,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   initialName: _displayName,
                   onSave: _saveDisplayName,
                 ),
+              ),
+              
+            // Coming soon cards for Fly/Jet modes
+            if (_currentMode == AppMode.fly || _currentMode == AppMode.jet)
+              ComingSoonCard(
+                modeName: _currentMode == AppMode.fly ? 'Fly' : 'Jet',
+                onClose: () {
+                  setState(() {
+                    _currentMode = AppMode.drive;
+                  });
+                },
               ),
           ],
         ),
@@ -788,22 +836,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _messages.length) {
-          // Show dotted loading animation + step status text
-          return const StepStatusText();
+          // Show dotted loading animation + 4-agent pipeline step status
+          return StepStatusText(steps: _agentSteps);
         }
         final msg = _messages[index];
         return FadeInAnimation(
           duration: const Duration(milliseconds: 400),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
             children: [
-              MessageCard(
-                message: msg,
-                selectedModelName: _selectedModelName,
-              ),
+              if (msg.isUser)
+                MessageCard(
+                  message: msg,
+                  selectedModelName: _selectedModelName,
+                )
+              else
+                ChatAnswerCard(
+                  message: msg,
+                ),
               // Show step status text right below the last user message while typing
               if (_isTyping && msg.isUser && index == _messages.length - 1)
-                const StepStatusText(),
+                StepStatusText(steps: _agentSteps),
             ],
           ),
         );

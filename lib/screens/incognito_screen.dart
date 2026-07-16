@@ -13,6 +13,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../core/app_theme.dart';
 import '../core/chat_message.dart';
@@ -22,11 +23,16 @@ import '../services/quant_space_api.dart';
 import '../services/upload_service.dart';
 import 'widgets/attachment_thumbnail.dart';
 import 'animations/animation_effects/infinity_animation_incogonito.dart';
+import 'animations/animation_effects/dotted_loading_animation.dart';
+import 'animations/animation_effects/step_status_text.dart';
 
 // Shared floating MessageBox (same as ChatScreen)
 import 'message_box_pannel/message_box.dart';
 import 'message_box_pannel/message_card.dart';
+import 'message_box_pannel/chat_answers.dart';
 import 'animations/animation_effects/step_status_text.dart';
+import 'animations/animated_buttons/mode_slider_button.dart';
+import 'animations/animation_effects/coming_soon_card.dart';
 
 class IncognitoScreen extends StatefulWidget {
   /// When embedded in the Home shell, back/exit switches tabs instead of popping routes.
@@ -55,9 +61,11 @@ class _IncognitoScreenState extends State<IncognitoScreen>
   bool _isTyping = false;
   bool _isMessageBoxHovered = false;
   String? _ephemeralSessionId;
+  List<String> _agentSteps = [];   // 4-agent pipeline steps for the UI
 
-  String _selectedModelName = app_config.Config.models[0].name;
-  String _selectedModelId = app_config.Config.models[0].id;
+  String _selectedModelName = "QuantCore 1.0";
+  String _selectedModelId = "groq/llama3-8b-8192";
+  AppMode _currentMode = AppMode.drive;
 
   late final AnimationController _emptyCtrl;
   late final Animation<double> _emptyOpacity;
@@ -76,8 +84,7 @@ class _IncognitoScreenState extends State<IncognitoScreen>
   }
 
   void _generateEphemeralId() {
-    _ephemeralSessionId =
-    'ghost_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(9999)}';
+    _ephemeralSessionId = const Uuid().v4();
   }
 
   @override
@@ -166,14 +173,23 @@ class _IncognitoScreenState extends State<IncognitoScreen>
         }
       }
 
-      final response =
-      await _api.getAIResponse(finalPrompt, _ephemeralSessionId!);
+      final result = await _api.getAIResponseFull(
+        finalPrompt,
+        'guest_user',
+        modelId: _selectedModelId,
+        conversationId: _ephemeralSessionId!,
+        mode: _currentMode.name,
+      );
+
+      final responseText = result['response'] as String;
+      final steps = (result['steps'] as List?)?.cast<String>() ?? [];
+      if (mounted) setState(() => _agentSteps = steps);
 
       if (!mounted) return;
 
       setState(() {
         _messages.add(ChatMessage(
-          text: response,
+          text: responseText,
           isUser: false,
           conversationId: _ephemeralSessionId!,
           senderId: 'ghost_agent',
@@ -246,6 +262,20 @@ class _IncognitoScreenState extends State<IncognitoScreen>
               _buildEmptyStateResponsive()
             else
               _buildChatState(),
+              
+            // Mode Slider (Positioned below AppBar, left aligned)
+            Positioned(
+              top: 80,
+              left: 20,
+              child: ModeSliderButton(
+                currentMode: _currentMode,
+                onModeChanged: (mode) {
+                  setState(() {
+                    _currentMode = mode;
+                  });
+                },
+              ),
+            ),
 
             // MessageBox — vertical center when empty, bottom dock when chatting
             if (_messages.isEmpty)
@@ -274,6 +304,17 @@ class _IncognitoScreenState extends State<IncognitoScreen>
                 right: 20,
                 bottom: 16 + keyboardInset,
                 child: _buildMessageBox(),
+              ),
+              
+            // Coming soon cards for Fly/Jet modes
+            if (_currentMode == AppMode.fly || _currentMode == AppMode.jet)
+              ComingSoonCard(
+                modeName: _currentMode == AppMode.fly ? 'Fly' : 'Jet',
+                onClose: () {
+                  setState(() {
+                    _currentMode = AppMode.drive;
+                  });
+                },
               ),
           ],
         ),
@@ -461,23 +502,28 @@ class _IncognitoScreenState extends State<IncognitoScreen>
       itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _messages.length) {
-          // Show dotted loading animation + step status text
-          return const StepStatusText();
+          // Show dotted loading animation + 4-agent pipeline step status
+          return StepStatusText(steps: _agentSteps);
         }
         final msg = _messages[index];
         return FadeInAnimation(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutCubic,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
             children: [
-              MessageCard(
-                message: msg,
-                selectedModelName: _selectedModelName,
-              ),
+              if (msg.isUser)
+                MessageCard(
+                  message: msg,
+                  selectedModelName: _selectedModelName,
+                )
+              else
+                ChatAnswerCard(
+                  message: msg,
+                ),
               // Show step status text right below the last user message while typing
               if (_isTyping && msg.isUser && index == _messages.length - 1)
-                const StepStatusText(),
+                StepStatusText(steps: _agentSteps),
             ],
           ),
         );

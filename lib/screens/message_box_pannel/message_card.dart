@@ -46,25 +46,16 @@ class MessageCard extends StatelessWidget {
     final maxWidth = MediaQuery.of(context).size.width * 0.78;
 
     return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: Alignment.center,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Container(
-          margin: EdgeInsets.only(
-            top: 6,
-            bottom: 4,
-            left: isUser ? 48 : 0,
-            right: isUser ? 0 : 48,
-          ),
+          margin: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            color: isUser
-                ? const Color(0xFF2A2A2A).withOpacity(0.85)
-                : const Color(0xFF1A1A1A).withOpacity(0.9),
+            borderRadius: BorderRadius.circular(16),
+            color: const Color(0xFF2A2A2A).withOpacity(0.85),
             border: Border.all(
-              color: isUser
-                  ? Colors.white.withOpacity(0.12)
-                  : Colors.white.withOpacity(0.06),
+              color: Colors.white.withOpacity(0.12),
               width: 1,
             ),
             boxShadow: [
@@ -76,7 +67,7 @@ class MessageCard extends StatelessWidget {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
               child: Padding(
@@ -88,34 +79,6 @@ class MessageCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Header label
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundColor: isUser
-                              ? Colors.white.withOpacity(0.1)
-                              : const Color(0xFF2ECC71).withOpacity(0.15),
-                          child: Text(
-                            isUser ? '👤' : '🤖',
-                            style: const TextStyle(fontSize: 9),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isUser
-                              ? 'YOU'
-                              : message.modelName.toUpperCase(),
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 9,
-                            color: Colors.white38,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
 
                     // Attachment thumbnails (if any)
                     if (message.hasAttachments) ...[

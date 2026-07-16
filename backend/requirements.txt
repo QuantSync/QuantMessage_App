@@ -1,0 +1,24 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+python-dotenv
+
+# LangChain / LangGraph
+langchain
+langchain-community
+langchain-core
+langgraph
+langchain-google-genai
+langchain-groq
+langchain-openai
+
+# Search
+duckduckgo-search
+tavily-python
+requests
+
+# Document processing
+pypdf
+fpdf2
+pillow

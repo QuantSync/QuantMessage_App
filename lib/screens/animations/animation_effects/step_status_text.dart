@@ -1,8 +1,9 @@
 // lib/screens/animations/animation_effects/step_status_text.dart
-// QuantMessage — Step-by-step status text displayed during AI processing
-// Shows sequential green italic messages below the user's message card
-// Integrated with: ChatScreen, IncognitoScreen, DottedLoadingAnimationAlt
-// ------------------------------------------------------------------------------
+// QuantMessage — Step-by-step status text displayed during AI processing.
+// Shows the 4-agent pipeline steps (Thinker, Reviewer, Supervisor, Producer)
+// or generic placeholders while waiting.
+// Integrated with: ChatScreen, IncognitoScreen
+// ─────────────────────────────────────────────────────────────────────────────
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -10,27 +11,32 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'dotted_loading_animation.dart';
 
-/// The ordered status steps displayed while the AI is processing.
+/// Default steps shown while the backend is busy (pre-response).
 const List<String> kThinkingSteps = [
-  'Choosing right model…',
-  'Analysing query…',
-  'Searching web…',
-  'Figuring out solutions…',
+  '🧠 Thinker: Analysing your request…',
+  '🔍 Reviewer: Checking for accuracy…',
+  '🎯 Supervisor: Orchestrating agents…',
+  '✨ Producer: Preparing your answer…',
 ];
 
-/// A compact widget that shows:
-///  1. A small [DottedLoadingAnimationAlt] on the left.
-///  2. Green italic step-text that advances automatically through [kThinkingSteps].
+/// A compact animated widget that shows:
+///  1. A small [DottedLoadingAnimationAlt] spinner.
+///  2. Green italic step text cycling through [steps] or [kThinkingSteps].
 ///
-/// Place this directly below the user's [MessageCard] inside the chat thread
-/// while [isTyping] is true.
+/// When [steps] is non-empty (returned by the backend), it cycles
+/// through those real pipeline steps. Otherwise uses the placeholders.
 class StepStatusText extends StatefulWidget {
-  /// How long each step is displayed before advancing to the next.
+  /// How long each step is displayed before advancing.
   final Duration stepDuration;
+
+  /// Real pipeline steps returned by the backend after the response.
+  /// Pass an empty list while waiting (will show kThinkingSteps placeholders).
+  final List<String> steps;
 
   const StepStatusText({
     super.key,
     this.stepDuration = const Duration(milliseconds: 1800),
+    this.steps = const [],
   });
 
   @override
@@ -45,6 +51,9 @@ class _StepStatusTextState extends State<StepStatusText>
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
+  List<String> get _displaySteps =>
+      widget.steps.isNotEmpty ? widget.steps : kThinkingSteps;
+
   @override
   void initState() {
     super.initState();
@@ -58,15 +67,23 @@ class _StepStatusTextState extends State<StepStatusText>
 
     _stepTimer = Timer.periodic(widget.stepDuration, (_) {
       if (!mounted) return;
-      // Fade-out → switch text → fade-in
       _fadeCtrl.reverse().then((_) {
         if (!mounted) return;
         setState(() {
-          _currentStep = (_currentStep + 1) % kThinkingSteps.length;
+          _currentStep = (_currentStep + 1) % _displaySteps.length;
         });
         _fadeCtrl.forward();
       });
     });
+  }
+
+  @override
+  void didUpdateWidget(StepStatusText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When real steps arrive from backend, reset to step 0
+    if (oldWidget.steps != widget.steps) {
+      setState(() => _currentStep = 0);
+    }
   }
 
   @override
@@ -78,31 +95,37 @@ class _StepStatusTextState extends State<StepStatusText>
 
   @override
   Widget build(BuildContext context) {
+    final steps = _displaySteps;
+    final currentText =
+        steps.isNotEmpty ? steps[_currentStep % steps.length] : '';
+
     return Padding(
       padding: const EdgeInsets.only(left: 60, top: 6, bottom: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Small dotted loading spinner
           const DottedLoadingAnimationAlt(
             size: 18,
             dotCount: 6,
             color: Color(0xFF2ECC71),
             duration: Duration(milliseconds: 1200),
           ),
-          const SizedBox(width: 8),
-          // Animated green italic step text
-          FadeTransition(
-            opacity: _fadeAnim,
-            child: Text(
-              kThinkingSteps[_currentStep],
-              style: GoogleFonts.outfit(
-                color: const Color(0xFF2ECC71),
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                fontWeight: FontWeight.w400,
-                height: 1.3,
+          const SizedBox(width: 10),
+          Flexible(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: Text(
+                currentText,
+                style: GoogleFonts.outfit(
+                  color: const Color(0xFF2ECC71),
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w400,
+                  height: 1.3,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ),

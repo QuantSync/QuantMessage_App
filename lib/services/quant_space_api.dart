@@ -25,8 +25,8 @@ class QuantSpaceApi {
   late final _Dio _dio;
 
   // ye vo credentails hgain jo env file se pull kiye hain
-  String get flowiseUrl => dotenv.env['FLOWISE_URL'] ?? '';
-  String get flowiseApiKey => dotenv.env['FLOWISE_API_KEY'] ?? '';
+  // Local python backend url
+  String get multiAgentUrl => dotenv.env['MULTI_AGENT_URL'] ?? 'http://127.0.0.1:8000/api/v1/chat';
   String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
 
   QuantSpaceApi() {
@@ -45,45 +45,70 @@ class QuantSpaceApi {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  //  CORE AI INTEGRATION (Flowise)
+  //  CORE AI INTEGRATION (4-Agent Pipeline Backend)
   // ──────────────────────────────────────────────────────────────────────────
 
-  Future<String> getAIResponse(String message, String userId) async {
-    if (flowiseUrl.isEmpty) {
-      return "🚨 Configuration Error: FLOWISE_URL is missing in .env file.";
-    }
-
+  /// Returns a structured map with 'response' (string) and 'steps' (list).
+  Future<Map<String, dynamic>> getAIResponseFull(
+    String message,
+    String userId, {
+    String modelId = 'groq/llama-3.1-8b-instant',
+    String conversationId = 'default',
+    String mode = 'drive',
+  }) async {
     try {
       final response = await _dio.post(
-        flowiseUrl,
+        multiAgentUrl,
         data: {
-          "question": message,
-          "overrideConfig": {
-            "sessionId": userId, // This ensures the AI remembers the user session
-          },
+          'message': message,
+          'model_id': modelId,
+          'conversation_id': conversationId,
+          'user_id': userId,
+          'mode': mode,
         },
-        options: _Options(
-          headers: {
-            "Authorization": "Bearer $flowiseApiKey",
-          },
-        ),
       );
 
-      // Flowise can return a simple string or a JSON map
-      if (response.data is String) {
-        return response.data;
-      } else if (response.data is Map) {
-        return response.data['text'] ?? response.data['content'] ?? response.data.toString();
+      if (response.data != null && response.data is Map) {
+        final text    = response.data['response']?.toString() ?? 'No response received';
+        final steps   = (response.data['agent_steps'] as List?)?.cast<String>() ?? [];
+        final isGuest = response.data['is_guest'] as bool? ?? false;
+        return {'response': text, 'steps': steps, 'is_guest': isGuest};
       }
-
-      return response.data.toString();
+      return {'response': response.data.toString(), 'steps': <String>[], 'is_guest': false};
     } on _DioException catch (e) {
-      debugPrint('[QuantSpace API] Flowise Error: ${e.response?.data ?? e.message}');
-      return "🚨 AI Error: ${e.message ?? 'Unknown error occurred'}";
+      debugPrint('[QuantSpace API] Backend Error: ${e.response?.data ?? e.message}');
+      if (e.type == dio_pkg.DioExceptionType.connectionError &&
+          multiAgentUrl.contains('127.0.0.1')) {
+        return {
+          'response': '🚨 Cannot connect to the local backend.\n\n'
+              'Please make sure the Python server is running:\n'
+              '```\ncd backend\npython main.py\n```',
+          'steps': <String>[],
+        };
+      }
+      return {'response': '🚨 AI Error: ${e.message ?? "Unknown error"}', 'steps': <String>[]};
     } catch (e) {
       debugPrint('[QuantSpace API] Unexpected Error: $e');
-      return "🚨 System Error: $e";
+      return {'response': '🚨 System Error: $e', 'steps': <String>[]};
     }
+  }
+
+  /// Simple string-only wrapper kept for backward compatibility.
+  Future<String> getAIResponse(
+    String message,
+    String userId, {
+    String modelId = 'groq/llama-3.1-8b-instant',
+    String conversationId = 'default',
+    String mode = 'drive',
+  }) async {
+    final result = await getAIResponseFull(
+      message,
+      userId,
+      modelId: modelId,
+      conversationId: conversationId,
+      mode: mode,
+    );
+    return result['response'] as String;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
