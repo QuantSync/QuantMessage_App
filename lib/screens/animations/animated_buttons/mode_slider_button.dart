@@ -11,7 +11,7 @@ class ModeSliderButton extends StatefulWidget {
 
   const ModeSliderButton({
     super.key,
-    required this.currentMode,
+    required this.currentMode,//
     required this.onModeChanged,
   });
 
