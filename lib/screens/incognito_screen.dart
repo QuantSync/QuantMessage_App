@@ -25,6 +25,8 @@ import 'animations/animation_effects/infinity_animation_incogonito.dart';
 
 // Shared floating MessageBox (same as ChatScreen)
 import 'message_box_pannel/message_box.dart';
+import 'message_box_pannel/message_card.dart';
+import 'animations/animation_effects/step_status_text.dart';
 
 class IncognitoScreen extends StatefulWidget {
   /// When embedded in the Home shell, back/exit switches tabs instead of popping routes.
@@ -459,107 +461,31 @@ class _IncognitoScreenState extends State<IncognitoScreen>
       itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _messages.length) {
-          return _buildTypingIndicator();
+          // Show dotted loading animation + step status text
+          return const StepStatusText();
         }
+        final msg = _messages[index];
         return FadeInAnimation(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutCubic,
-          child: _buildMessageRow(_messages[index]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MessageCard(
+                message: msg,
+                selectedModelName: _selectedModelName,
+              ),
+              // Show step status text right below the last user message while typing
+              if (_isTyping && msg.isUser && index == _messages.length - 1)
+                const StepStatusText(),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildTypingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-      child: Row(
-        children: [
-          _buildAvatar("👻", AppTheme.accentGrey),
-          const SizedBox(width: 16),
-          const Text("...",
-              style: TextStyle(color: Colors.white38, fontSize: 24)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageRow(ChatMessage msg) {
-    final hasAttachments = msg.hasAttachments;
-    final hasText = msg.hasText;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-      decoration: BoxDecoration(
-        color: msg.isUser ? Colors.transparent : AppTheme.surfaceDark.withOpacity(0.5),
-        border: Border(
-            bottom: BorderSide(color: Colors.white.withOpacity(0.05), width: 1)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildAvatar(
-            msg.isUser ? "🕵️" : "👻",
-            msg.isUser ? Colors.white24 : AppTheme.accentGrey,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  msg.isUser ? "USER_GHOST" : msg.modelName.toUpperCase(),
-                  style: GoogleFonts.tinos(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                      color: AppTheme.textSecondary,
-                      letterSpacing: 1.2),
-                ),
-                const SizedBox(height: 8),
-                if (hasAttachments) AttachmentList(attachments: msg.attachments),
-                if (hasText)
-                  MarkdownBody(
-                    data: msg.text,
-                    selectable: true,
-                    styleSheet: MarkdownStyleSheet(
-                      p: GoogleFonts.tinos(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          height: 1.6,
-                          color: AppTheme.textPrimary),
-                      h1: GoogleFonts.tinos(
-                          color: AppTheme.primaryWhite,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold),
-                      code: GoogleFonts.tinos(
-                        backgroundColor: AppTheme.surfaceMedium,
-                        color: AppTheme.accentGrey,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      codeblockDecoration: BoxDecoration(
-                        color: AppTheme.surfaceMedium,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      blockquote: GoogleFonts.tinos(
-                          color: Colors.white60,
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.bold),
-                      blockquoteDecoration: const BoxDecoration(
-                        border: Border(
-                            left: BorderSide(color: AppTheme.accentGrey, width: 3)),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // _buildTypingIndicator and _buildMessageRow replaced by MessageCard + StepStatusText
 
   Widget _buildAvatar(String icon, Color color) {
     return Container(

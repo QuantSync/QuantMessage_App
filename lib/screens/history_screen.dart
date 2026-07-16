@@ -12,6 +12,7 @@ import '../core/attachment_model.dart';
 import '../core/chat_message.dart';
 import '../core/config.dart' as app_config;
 import 'widgets/attachment_thumbnail.dart';
+import 'message_box_pannel/message_card.dart';
 
 class HistoryItem {
   final String conversationId;

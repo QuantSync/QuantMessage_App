@@ -32,8 +32,10 @@ import 'widgets/attachment_thumbnail.dart';
 
 // ✅ IMPORT THE INTEGRATED MESSAGE BOX
 import 'message_box_pannel/message_box.dart';
+import 'message_box_pannel/message_card.dart';
 import 'widgets/name_onboarding_card.dart';
 import 'animations/animated_buttons/upgrade_plan_button.dart';
+import 'animations/animation_effects/step_status_text.dart';
 import 'pricing_screen/pricing_screen.dart';
 import 'app_bar.dart' show smoothPageRoute;
 
@@ -785,27 +787,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       padding: const EdgeInsets.only(top: 20, bottom: 140),
       itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index == _messages.length) return _buildTypingIndicator();
-        return _AnimatedMessageRow(
-          message: _messages[index],
-          selectedModelName: _selectedModelName,
+        if (index == _messages.length) {
+          // Show dotted loading animation + step status text
+          return const StepStatusText();
+        }
+        final msg = _messages[index];
+        return FadeInAnimation(
+          duration: const Duration(milliseconds: 400),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MessageCard(
+                message: msg,
+                selectedModelName: _selectedModelName,
+              ),
+              // Show step status text right below the last user message while typing
+              if (_isTyping && msg.isUser && index == _messages.length - 1)
+                const StepStatusText(),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildTypingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          _buildAvatar("⚡", AppTheme.primaryWhite),
-          const SizedBox(width: 15),
-          _ThinkingDots(),
-        ],
-      ),
-    );
-  }
+  // Typing indicator is now handled by StepStatusText inline in _buildChatThread
 
   Widget _buildAvatar(String icon, Color color) {
     return Container(
@@ -840,124 +846,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ANIMATED MESSAGE ROW — With attachment support
-// ═══════════════════════════════════════════════════════════════════════════
-
-class _AnimatedMessageRow extends StatefulWidget {
-  final ChatMessage message;
-  final String selectedModelName;
-
-  const _AnimatedMessageRow({
-    required this.message,
-    required this.selectedModelName,
-  });
-
-  @override
-  State<_AnimatedMessageRow> createState() => _AnimatedMessageRowState();
-}
-
-class _AnimatedMessageRowState extends State<_AnimatedMessageRow> {
-  bool _isTypingComplete = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeInAnimation(
-      duration: const Duration(milliseconds: 400),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-        decoration: BoxDecoration(
-          color: widget.message.isUser
-              ? Colors.transparent
-              : AppTheme.surfaceDark.withValues(alpha: 0.3),
-          border: Border(
-            bottom: BorderSide(color: Colors.white.withValues(alpha: 0.03)),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor:
-              widget.message.isUser ? Colors.white10 : Colors.blueAccent,
-              child: Text(
-                widget.message.isUser ? "👤" : "🤖",
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.message.isUser
-                        ? "USER"
-                        : widget.message.modelName.toUpperCase(),
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 10,
-                      color: Colors.white38,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-
-                  // ── Attachment thumbnails (if any) ──
-                  if (widget.message.hasAttachments) ...[
-                    AttachmentList(
-                      attachments: widget.message.attachments,
-                      selectedModelName: widget.selectedModelName,
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  // ── Message text content ──
-                  if (widget.message.hasText)
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.8,
-                      ),
-                      child: widget.message.isUser
-                          ? MarkdownBody(
-                        data: widget.message.text,
-                        styleSheet: MarkdownStyleSheet(
-                          p: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontSize: 15,
-                          ),
-                        ),
-                      )
-                          : _buildAIContent(),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAIContent() {
-    return _isTypingComplete
-        ? MarkdownBody(
-      data: widget.message.text,
-      styleSheet: MarkdownStyleSheet(
-        p: GoogleFonts.outfit(color: Colors.white, fontSize: 15),
-      ),
-    )
-        : TypingText(
-      text: widget.message.text,
-      style: GoogleFonts.outfit(color: Colors.white, fontSize: 15),
-      onComplete: () {
-        setState(() {
-          _isTypingComplete = true;
-        });
-      },
-    );
-  }
-}
+// _AnimatedMessageRow replaced by MessageCard (from message_box_pannel/message_card.dart)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // UI HELPER WIDGETS
@@ -1012,17 +901,7 @@ class _SuggestionPillState extends State<_SuggestionPill> {
   }
 }
 
-class _ThinkingDots extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Text("...",
-            style: TextStyle(color: Colors.white38, fontSize: 20)),
-      ],
-    );
-  }
-}
+// _ThinkingDots replaced by StepStatusText (from animations/animation_effects/step_status_text.dart)
 
 class _ParticleBackground extends StatelessWidget {
   final int count;
