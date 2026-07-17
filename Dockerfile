@@ -1,5 +1,5 @@
 # ---- Build stage ----
-FROM ghcr.io/cirruslabs/flutter:3.22.2 AS build
+FROM ghcr.io/cirruslabs/flutter:stable AS build
 WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
