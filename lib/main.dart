@@ -14,6 +14,8 @@ import 'screens/signin_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/pricing_screen/pricing_screen.dart';
+import 'package:flutter/cupertino.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
