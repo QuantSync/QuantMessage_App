@@ -29,12 +29,12 @@ GUEST_USER_ID = "guest_user"
 app = FastAPI(
     title="QuantMessage Multi-Agent Backend",
     description=(
-        "4-Agent LangGraph pipeline: Thinker → Reviewer → Supervisor → Producer.\n"
+        "4-Agent LangGraph pipeline: Search Analyst → Error Solver → Supervisor → Reviewer & Producer.\n"
         "Supports Groq, Gemini, OpenRouter models.\n"
         "Features: web search, math, code review, image gen, PDF/MD creation.\n"
         "Guest users are fully supported — their messages are not persisted."
     ),
-    version="2.1.0",
+    version="3.0.0",
 )
 
 # Allow the Flutter app (any origin on dev) to call this API
@@ -81,8 +81,8 @@ def _is_guest(user_id: str) -> bool:
 def health():
     return {
         "status":  "🟢 Online",
-        "version": "2.1.0",
-        "agents":  ["Thinker", "Reviewer", "Supervisor", "Producer"],
+        "version": "3.0.0",
+        "agents":  ["Search Analyst", "Error Solver", "Supervisor", "Reviewer & Producer"],
         "models":  ["Groq", "Gemini", "OpenRouter"],
         "guest_support": True,
     }

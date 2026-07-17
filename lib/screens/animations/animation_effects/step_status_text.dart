@@ -1,6 +1,6 @@
 // lib/screens/animations/animation_effects/step_status_text.dart
 // QuantMessage — Step-by-step status text displayed during AI processing.
-// Shows the 4-agent pipeline steps (Thinker, Reviewer, Supervisor, Producer)
+// Shows the 4-agent pipeline steps (Search Analyst, Error Solver, Reviewer, Supervisor)
 // or generic placeholders while waiting.
 // Integrated with: ChatScreen, IncognitoScreen
 // ─────────────────────────────────────────────────────────────────────────────
@@ -13,10 +13,10 @@ import 'dotted_loading_animation.dart';
 
 /// Default steps shown while the backend is busy (pre-response).
 const List<String> kThinkingSteps = [
-  '🧠 Thinker: Analysing your request…',
-  '🔍 Reviewer: Checking for accuracy…',
-  '🎯 Supervisor: Orchestrating agents…',
-  '✨ Producer: Preparing your answer…',
+  '🌐 Agent 1: Analyzing and searching the web...',
+  '🛠️ Agent 2: Identifying and solving errors...',
+  '✅ Agent 3: Reviewing and formatting answers...',
+  '👁️ Agent 4: Supervising pipeline...',
 ];
 
 /// A compact animated widget that shows:
