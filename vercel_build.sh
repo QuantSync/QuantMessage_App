@@ -6,8 +6,9 @@ export PATH="$PATH:`pwd`/flutter/bin"
 # Get project dependencies
 flutter pub get
 
-# Ensure .env exists to prevent asset errors if referenced in pubspec.yaml
-touch .env
+# Generate .env file from Vercel environment variables
+echo "SUPABASE_URL=$SUPABASE_URL" > .env
+echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
 
 # Build the Flutter web application
 flutter build web --release
