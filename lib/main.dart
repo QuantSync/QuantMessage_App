@@ -53,7 +53,7 @@ class QuantSpaceApp extends StatelessWidget {
           brightness: Brightness.dark,
           surface: AppTheme.surfaceDark,
         ),
-        pageTransitionsTheme: const PageTransitionsTheme(
+        pageTransitionsTheme: PageTransitionsTheme(
           builders: {
             TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
