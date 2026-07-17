@@ -97,7 +97,22 @@ class _LeftSidebarState extends State<LeftSidebar>
   Widget build(BuildContext context) {
     return Container(
       width: 52,
-      color: const Color(0xFF0A0A0A),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0A0A),
+        border: Border(
+          right: BorderSide(
+            color: Colors.white.withOpacity(0.08),
+            width: 1.5,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 10,
+            offset: const Offset(2, 0),
+          ),
+        ],
+      ),
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [

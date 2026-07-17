@@ -38,6 +38,8 @@ import 'message_box_pannel/chat_answers.dart';
 import 'widgets/name_onboarding_card.dart';
 import 'animations/animated_buttons/upgrade_plan_button.dart';
 import 'animations/animated_buttons/mode_slider_button.dart';
+import 'animations/animated_buttons/share_chat_button.dart';
+import 'widgets/share_chat_card.dart';
 import 'animations/animation_effects/step_status_text.dart';
 import 'animations/animation_effects/coming_soon_card.dart';
 import 'pricing_screen/pricing_screen.dart';
@@ -570,35 +572,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     children: [
                       const _ParticleBackground(count: 22),
 
-                      // Top-centre upgrade pill
+                      // Top bar elements
                       Positioned(
                         top: 10,
-                        left: 0,
-                        right: 0,
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          child: UpgradePlanButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                smoothPageRoute(const PricingScreen()),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      
-                      // Top-left mode slider
-                      Positioned(
-                        top: 10,
-                        left: 20,
-                        child: ModeSliderButton(
-                          currentMode: _currentMode,
-                          onModeChanged: (mode) {
-                            setState(() {
-                              _currentMode = mode;
-                            });
-                          },
+                        left: 16,
+                        right: 16,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            ModeSliderButton(
+                              currentMode: _currentMode,
+                              onModeChanged: (mode) {
+                                setState(() {
+                                  _currentMode = mode;
+                                });
+                              },
+                            ),
+                            UpgradePlanButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  smoothPageRoute(const PricingScreen()),
+                                );
+                              },
+                            ),
+                            Visibility(
+                              visible: _messages.isNotEmpty,
+                              maintainSize: true,
+                              maintainAnimation: true,
+                              maintainState: true,
+                              child: ShareChatButton(
+                                onTap: () {
+                                  if (_currentConversationId.isNotEmpty) {
+                                    ShareChatCard.show(context, _currentConversationId);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -736,25 +747,42 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ═══════════════════════════════════════════════════════════════════════
 
   Widget _buildMessageBox() {
-    return MessageBox(
-      controller: _controller,
-      focusNode: _inputFocus,
-      selectedModelName: _selectedModelName,
-      hintText: "Type a message...",
-      onSend: _handleSend,
-      onLogout: _handleSignOut,
-      onHoverChanged: (hovered) {
-        if (mounted) setState(() => _isMessageBoxHovered = hovered);
-      },
-      onModelChanged: (modelName) {
-        ref.read(selectedModelProvider.notifier).selectByName(modelName);
-        final model = app_config.Config.getModelByName(modelName);
-        if (model == null) return;
-        setState(() {
-          _selectedModelName = model.name;
-          _selectedModelId = model.id;
-        });
-      },
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        MessageBox(
+          controller: _controller,
+          focusNode: _inputFocus,
+          selectedModelName: _selectedModelName,
+          isGenerating: _isTyping,
+          hintText: "Type a message...",
+          onSend: _handleSend,
+          onLogout: _handleSignOut,
+          onHoverChanged: (hovered) {
+            if (mounted) setState(() => _isMessageBoxHovered = hovered);
+          },
+          onModelChanged: (modelName) {
+            ref.read(selectedModelProvider.notifier).selectByName(modelName);
+            final model = app_config.Config.getModelByName(modelName);
+            if (model == null) return;
+            setState(() {
+              _selectedModelName = model.name;
+              _selectedModelId = model.id;
+            });
+          },
+        ),
+        if (_messages.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            "QuantSync can make mistakes. Please double check responses.",
+            style: GoogleFonts.outfit(
+              color: Colors.white38,
+              fontSize: 10,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ],
     );
   }
 
@@ -828,16 +856,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ═══════════════════════════════════════════════════════════════════════
 
   Widget _buildChatThread() {
-    return ListView.builder(
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
-      // Extra bottom padding so last messages clear the floating MessageBox
-      padding: const EdgeInsets.only(top: 20, bottom: 140),
-      itemCount: _messages.length + (_isTyping ? 1 : 0),
+    return ClipRect(
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        // Extra bottom padding so last messages clear the floating MessageBox
+        padding: const EdgeInsets.only(top: 70, bottom: 140),
+        itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _messages.length) {
           // Show dotted loading animation + 4-agent pipeline step status
-          return StepStatusText(steps: _agentSteps);
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: StepStatusText(steps: _agentSteps),
+          );
         }
         final msg = _messages[index];
         return FadeInAnimation(
@@ -856,11 +888,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 ),
               // Show step status text right below the last user message while typing
               if (_isTyping && msg.isUser && index == _messages.length - 1)
-                StepStatusText(steps: _agentSteps),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: StepStatusText(steps: _agentSteps),
+                ),
             ],
           ),
         );
       },
+    ),
     );
   }
 

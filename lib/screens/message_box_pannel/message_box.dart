@@ -28,6 +28,10 @@ class MessageBox extends StatefulWidget {
   final String hintText;
   final String selectedModelName;
 
+  /// Whether the LLM is currently generating a response.
+  /// When true, the send button becomes non-interactive and visually dimmed.
+  final bool isGenerating;
+
   final Function(String text, List<Attachment> attachments) onSend;
   final Function(String) onModelChanged;
   final VoidCallback onLogout;
@@ -39,6 +43,7 @@ class MessageBox extends StatefulWidget {
     required this.focusNode,
     this.hintText = "Type a message...",
     required this.selectedModelName,
+    this.isGenerating = false,
     required this.onSend,
     required this.onModelChanged,
     required this.onLogout,
@@ -302,6 +307,7 @@ class _MessageBoxState extends State<MessageBox>
                               _SendButton(
                                 onTap: _triggerSend,
                                 isHovered: _isHovered,
+                                isGenerating: widget.isGenerating,
                               ),
                               const SizedBox(width: 6),
                               _CircleIconButton(
@@ -386,8 +392,13 @@ class _CircleIconButtonState extends State<_CircleIconButton> {
 class _SendButton extends StatefulWidget {
   final VoidCallback onTap;
   final bool isHovered;
+  final bool isGenerating;
 
-  const _SendButton({required this.onTap, required this.isHovered});
+  const _SendButton({
+    required this.onTap,
+    required this.isHovered,
+    this.isGenerating = false,
+  });
 
   @override
   State<_SendButton> createState() => _SendButtonState();
@@ -396,38 +407,55 @@ class _SendButton extends StatefulWidget {
 class _SendButtonState extends State<_SendButton> {
   bool _pressed = false;
 
+  // Active green
+  static const Color _activeGreen = Color(0xFF2ECC71);
+  // Disabled dark desaturated green
+  static const Color _disabledGreen = Color(0xFF3A5A40);
+
   @override
   Widget build(BuildContext context) {
-    final isHighlighted = widget.isHovered || _pressed;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) {
-          setState(() => _pressed = false);
-          widget.onTap();
-        },
-        onTapCancel: () => setState(() => _pressed = false),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: isHighlighted ? Colors.white : Colors.white24,
-            shape: BoxShape.circle,
-            boxShadow: isHighlighted
-                ? [
-              BoxShadow(
-                color: Colors.white.withOpacity(0.3),
-                blurRadius: 12,
-                spreadRadius: 1,
-              )
-            ]
-                : [],
-          ),
-          child: Icon(
-            Icons.arrow_upward_rounded,
-            color: isHighlighted ? Colors.black : Colors.white,
-            size: 20,
+    final bool disabled = widget.isGenerating;
+    final bool isHighlighted = !disabled && (widget.isHovered || _pressed);
+
+    final Color bgColor = disabled
+        ? _disabledGreen
+        : (isHighlighted ? _activeGreen : _activeGreen.withValues(alpha: 0.7));
+    final Color iconColor = disabled
+        ? Colors.white38
+        : (isHighlighted ? Colors.black : Colors.white);
+
+    return IgnorePointer(
+      ignoring: disabled,
+      child: MouseRegion(
+        cursor: disabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) {
+            setState(() => _pressed = false);
+            widget.onTap();
+          },
+          onTapCancel: () => setState(() => _pressed = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: bgColor,
+              shape: BoxShape.circle,
+              boxShadow: isHighlighted
+                  ? [
+                BoxShadow(
+                  color: _activeGreen.withValues(alpha: 0.4),
+                  blurRadius: 14,
+                  spreadRadius: 2,
+                )
+              ]
+                  : [],
+            ),
+            child: Icon(
+              Icons.arrow_upward_rounded,
+              color: iconColor,
+              size: 20,
+            ),
           ),
         ),
       ),

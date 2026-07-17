@@ -95,12 +95,12 @@ class _ComingSoonCardState extends State<ComingSoonCard>
                       margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: const Color(0xFF1E1E2E).withValues(alpha: 0.7), // Dark glassmorphism base
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.black, width: 2),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Colors.black.withValues(alpha: 0.5),
                             blurRadius: 30,
                             offset: const Offset(0, 15),
                           ),
@@ -119,7 +119,7 @@ class _ComingSoonCardState extends State<ComingSoonCard>
                                     ? Icons.flight_takeoff_rounded
                                     : Icons.rocket_launch_rounded,
                                 size: 48,
-                                color: Colors.black87,
+                                color: Colors.white,
                               ),
                               const SizedBox(height: 20),
                               FittedBox(
@@ -128,7 +128,7 @@ class _ComingSoonCardState extends State<ComingSoonCard>
                                   '${widget.modeName.toUpperCase()} MODE\nCOMING SOON',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.outfit(
-                                    color: Colors.black,
+                                    color: Colors.white,
                                     fontSize: 24,
                                     fontWeight: FontWeight.w900,
                                     height: 1.2,
@@ -141,9 +141,9 @@ class _ComingSoonCardState extends State<ComingSoonCard>
                                 'We are working hard to bring you the next generation of QuantMessage capabilities.',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.outfit(
-                                  color: Colors.black54,
+                                  color: Colors.white70,
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w400,
                                   height: 1.5,
                                 ),
                               ),
@@ -162,11 +162,12 @@ class _ComingSoonCardState extends State<ComingSoonCard>
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: Colors.black,
+                                    color: Colors.white.withValues(alpha: 0.1),
                                     shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white30, width: 1),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
+                                        color: Colors.black.withValues(alpha: 0.2),
                                         blurRadius: 5,
                                         offset: const Offset(0, 2),
                                       ),

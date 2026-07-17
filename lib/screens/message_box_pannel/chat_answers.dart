@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:markdown/markdown.dart' as md;
 
 import '../../core/chat_message.dart';
+import '../animations/animation_effects/fast_reveal_text.dart';
 import 'code_snippet_card.dart';
 
 /// Builder to intercept Markdown code blocks and render them using [CodeSnippetCard].
@@ -47,8 +48,8 @@ class ChatAnswerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 90% of screen width to give it a spacious, document-like feel
-    final maxWidth = MediaQuery.of(context).size.width * 0.90;
+    // 65% of screen width to give it a concise, centered document feel
+    final maxWidth = MediaQuery.of(context).size.width * 0.65;
 
     return Align(
       alignment: Alignment.center,
@@ -60,7 +61,15 @@ class ChatAnswerCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF1E1E1E), // Subtle dark card background
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.4),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,26 +79,28 @@ class ChatAnswerCard extends StatelessWidget {
               
               const SizedBox(height: 4),
               
-              // Markdown Content
-              MarkdownBody(
-                data: message.text,
-                selectable: true,
-                builders: {
-                  'code': _CodeElementBuilder(),
-                },
-                styleSheet: MarkdownStyleSheet(
-                  // Base text
-                  p: GoogleFonts.outfit(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 15,
-                    height: 1.6,
-                    fontWeight: FontWeight.w300,
-                  ),
-                  // Bold Headings
-                  strong: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
+              // Markdown Content wrapped in FastRevealText
+              FastRevealText(
+                text: message.text,
+                builder: (revealedText) => MarkdownBody(
+                  data: revealedText,
+                  selectable: true,
+                  builders: {
+                    'code': _CodeElementBuilder(),
+                  },
+                  styleSheet: MarkdownStyleSheet(
+                    // Base text
+                    p: GoogleFonts.outfit(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14, // reduced font size
+                      height: 1.5,
+                      fontWeight: FontWeight.w400, // increased weight for crispness
+                    ),
+                    // Bold Headings
+                    strong: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   h1: GoogleFonts.outfit(
                     color: Colors.white,
                     fontSize: 22,
@@ -156,9 +167,11 @@ class ChatAnswerCard extends StatelessWidget {
                     color: Colors.white,
                   ),
                   tableBody: GoogleFonts.outfit(
-                    color: Colors.white70,
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                    tableCellsPadding: const EdgeInsets.all(12),
                   ),
-                  tableCellsPadding: const EdgeInsets.all(12),
                 ),
               ),
             ],

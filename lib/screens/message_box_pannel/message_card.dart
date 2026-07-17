@@ -46,23 +46,25 @@ class MessageCard extends StatelessWidget {
     final maxWidth = MediaQuery.of(context).size.width * 0.78;
 
     return Align(
-      alignment: Alignment.center,
+      alignment: Alignment.centerRight,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          margin: EdgeInsets.only(
+              top: 8, bottom: 8, right: MediaQuery.of(context).size.width * 0.15),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: const Color(0xFF2A2A2A).withOpacity(0.85),
+            color: const Color(0xFF1E1E1E), // Darker widget
             border: Border.all(
-              color: Colors.white.withOpacity(0.12),
-              width: 1,
+              color: Colors.white.withOpacity(0.15),
+              width: 1.5, // Solid border
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -72,8 +74,8 @@ class MessageCard extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                  horizontal: 18,
+                  vertical: 14,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

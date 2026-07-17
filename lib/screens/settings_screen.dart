@@ -200,7 +200,7 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
             decoration: BoxDecoration(
               color: const Color(0xFF1A1A1A),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.5),
               boxShadow: [
                 BoxShadow(color: Colors.black.withOpacity(0.6), blurRadius: 60, spreadRadius: 10),
                 BoxShadow(color: AppTheme.primaryRed.withOpacity(0.04), blurRadius: 80, spreadRadius: -10),

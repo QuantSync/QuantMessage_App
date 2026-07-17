@@ -327,24 +327,41 @@ class _IncognitoScreenState extends State<IncognitoScreen>
   }
 
   Widget _buildMessageBox() {
-    return MessageBox(
-      controller: _controller,
-      focusNode: _inputFocus,
-      selectedModelName: _selectedModelName,
-      hintText: "Transmit encrypted message...",
-      onSend: _handleSend,
-      onLogout: _exitIncognito,
-      onHoverChanged: (hovered) {
-        if (mounted) setState(() => _isMessageBoxHovered = hovered);
-      },
-      onModelChanged: (modelName) {
-        final model = app_config.Config.getModelByName(modelName);
-        if (model == null) return;
-        setState(() {
-          _selectedModelName = model.name;
-          _selectedModelId = model.id;
-        });
-      },
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        MessageBox(
+          controller: _controller,
+          focusNode: _inputFocus,
+          selectedModelName: _selectedModelName,
+          isGenerating: _isTyping,
+          hintText: "Transmit encrypted message...",
+          onSend: _handleSend,
+          onLogout: _exitIncognito,
+          onHoverChanged: (hovered) {
+            if (mounted) setState(() => _isMessageBoxHovered = hovered);
+          },
+          onModelChanged: (modelName) {
+            final model = app_config.Config.getModelByName(modelName);
+            if (model == null) return;
+            setState(() {
+              _selectedModelName = model.name;
+              _selectedModelId = model.id;
+            });
+          },
+        ),
+        if (_messages.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            "QuantSync can make mistakes. Please double check responses.",
+            style: GoogleFonts.outfit(
+              color: Colors.white38,
+              fontSize: 10,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ],
     );
   }
 
@@ -495,15 +512,20 @@ class _IncognitoScreenState extends State<IncognitoScreen>
   }
 
   Widget _buildChatThread() {
-    return ListView.builder(
-      controller: _scrollController,
-      // Extra bottom padding so last messages clear the floating MessageBox
-      padding: const EdgeInsets.only(top: 90, bottom: 140),
-      itemCount: _messages.length + (_isTyping ? 1 : 0),
+    return ClipRect(
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        // Extra bottom padding so last messages clear the floating MessageBox
+        padding: const EdgeInsets.only(top: 90, bottom: 140),
+        itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _messages.length) {
           // Show dotted loading animation + 4-agent pipeline step status
-          return StepStatusText(steps: _agentSteps);
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: StepStatusText(steps: _agentSteps),
+          );
         }
         final msg = _messages[index];
         return FadeInAnimation(
@@ -523,11 +545,15 @@ class _IncognitoScreenState extends State<IncognitoScreen>
                 ),
               // Show step status text right below the last user message while typing
               if (_isTyping && msg.isUser && index == _messages.length - 1)
-                StepStatusText(steps: _agentSteps),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: StepStatusText(steps: _agentSteps),
+                ),
             ],
           ),
         );
       },
+    ),
     );
   }
 

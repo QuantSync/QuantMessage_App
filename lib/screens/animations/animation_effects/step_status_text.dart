@@ -99,8 +99,11 @@ class _StepStatusTextState extends State<StepStatusText>
     final currentText =
         steps.isNotEmpty ? steps[_currentStep % steps.length] : '';
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final leftPadding = screenWidth * 0.175; // Align with the 65% width center card
+
     return Padding(
-      padding: const EdgeInsets.only(left: 60, top: 6, bottom: 4),
+      padding: EdgeInsets.only(left: leftPadding, top: 6, bottom: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -119,10 +122,11 @@ class _StepStatusTextState extends State<StepStatusText>
                 currentText,
                 style: GoogleFonts.outfit(
                   color: const Color(0xFF2ECC71),
-                  fontSize: 12,
+                  fontSize: 13,
                   fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.w400,
+                  fontWeight: FontWeight.w600, // increased weight for crispness
                   height: 1.3,
+                  letterSpacing: 0.5,
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
