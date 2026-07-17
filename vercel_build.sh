@@ -10,5 +10,5 @@ flutter pub get
 echo "SUPABASE_URL=$SUPABASE_URL" > .env
 echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
 
-# Build the Flutter web application
-flutter build web --release
+# Build the Flutter web application (with flags to reduce memory usage on Vercel)
+flutter build web --release --no-wasm-dry-run --no-tree-shake-icons
