@@ -38,6 +38,8 @@ import 'message_box_pannel/chat_answers.dart';
 import 'widgets/name_onboarding_card.dart';
 import 'animations/animated_buttons/upgrade_plan_button.dart';
 import 'animations/animated_buttons/mode_slider_button.dart';
+import 'animations/animated_buttons/model_selector_button/model_selector_button.dart';
+import 'animations/animation_effects/model_selector_card/model_selector_card.dart';
 import 'animations/animated_buttons/share_chat_button.dart';
 import 'widgets/share_chat_card.dart';
 import 'animations/animation_effects/step_status_text.dart';
@@ -578,15 +580,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                         left: 16,
                         right: 16,
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            ModeSliderButton(
-                              currentMode: _currentMode,
-                              onModeChanged: (mode) {
-                                setState(() {
-                                  _currentMode = mode;
-                                });
-                              },
+                            // Left cluster: Mode + Model selector stacked vertically
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ModeSliderButton(
+                                  currentMode: _currentMode,
+                                  onModeChanged: (mode) {
+                                    setState(() {
+                                      _currentMode = mode;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                ModelSelectorButton(
+                                  onPressed: () {
+                                    ModelSelectorCard.show(
+                                      context,
+                                      selectedModelName: _selectedModelName,
+                                      onModelSelected: (modelName) {
+                                        ref
+                                            .read(selectedModelProvider.notifier)
+                                            .selectByName(modelName);
+                                        final model = app_config.Config
+                                            .getModelByName(modelName);
+                                        if (model == null) return;
+                                        if (mounted) {
+                                          setState(() {
+                                            _selectedModelName = model.name;
+                                            _selectedModelId = model.id;
+                                          });
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                             UpgradePlanButton(
                               onPressed: () {

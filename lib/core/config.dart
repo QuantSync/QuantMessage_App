@@ -90,77 +90,102 @@ class Config {
 
   /// Internal list (cached for performance)
   static final List<AiModel> _models = [
+    // --- NATIVE ---
     const AiModel(
-      name: 'QuantCore 1.0',
-      id: 'groq/llama-3.3-70b-versatile',
+      name: 'QuantCore',
+      id: 'quantcore-native',
       icon: '⚡',
-      description: 'Groq Llama 3.3 70B, Versatile Quant Expert',
-      category: ModelCategory.general,
+      description: 'Native Quant Expert',
+      category: ModelCategory.native,
       supportsVision: false,
       maxContextLength: 131072,
     ),
+    
+    // --- REASONING ---
     const AiModel(
-      name: 'Gemini 1.5 Pro',
-      id: 'gemini-1.5-pro-002',
+      name: 'Google Gemini Pro',
+      id: 'gemini-pro-reasoning',
       icon: '✨',
-      description: 'Google highly capable multimodal model',
+      description: 'Google highly capable reasoning model',
       category: ModelCategory.reasoning,
       supportsVision: true,
       maxContextLength: 2097152,
     ),
     const AiModel(
-      name: 'Gemini 1.5 Flash',
-      id: 'gemini-1.5-flash-8b',
+      name: 'Google Gemini flash',
+      id: 'gemini-flash-reasoning',
       icon: '⚡',
-      description: 'Google fast & versatile multimodal model',
-      category: ModelCategory.fast,
+      description: 'Google fast & versatile reasoning model',
+      category: ModelCategory.reasoning,
       supportsVision: true,
       maxContextLength: 1048576,
     ),
+
+    // --- CODING ---
     const AiModel(
-      name: 'GPT-4o',
-      id: 'openai/gpt-4o',
-      icon: '🧠',
-      description: 'OpenAI latest multimodal model',
-      category: ModelCategory.multimodal,
-      supportsVision: true,
-      maxContextLength: 128000,
-    ),
-    const AiModel(
-      name: 'Claude 3.5 Sonnet',
-      id: 'anthropic/claude-3.5-sonnet:beta',
+      name: 'Claude Opus',
+      id: 'claude-opus-coding',
       icon: '🎭',
-      description: "Anthropic's high-quality assistant",
-      category: ModelCategory.multimodal,
+      description: "Anthropic's most powerful coding model",
+      category: ModelCategory.coding,
       supportsVision: true,
       maxContextLength: 200000,
     ),
     const AiModel(
-      name: 'Llama 3.1 8B',
-      id: 'groq/llama-3.1-8b-instant',
+      name: 'Google Gemini Pro',
+      id: 'gemini-pro-coding',
+      icon: '✨',
+      description: 'Google highly capable coding model',
+      category: ModelCategory.coding,
+      supportsVision: true,
+      maxContextLength: 2097152,
+    ),
+    const AiModel(
+      name: 'Grok Code Fast',
+      id: 'grok-code-fast',
       icon: '🚀',
-      description: 'Fast, inexpensive Llama 8B',
-      category: ModelCategory.fast,
+      description: 'Fast coding model',
+      category: ModelCategory.coding,
       supportsVision: false,
-      maxContextLength: 8192,
+      maxContextLength: 32768,
     ),
     const AiModel(
-      name: 'Gemma 2 9B',
-      id: 'groq/gemma2-9b-it',
-      icon: '🔥',
-      description: 'Google Gemma 2 via Groq',
-      category: ModelCategory.reasoning,
-      supportsVision: false,
-      maxContextLength: 8192,
+      name: 'OpenAi GPT Latest',
+      id: 'gpt-latest-coding',
+      icon: '🧠',
+      description: 'OpenAI latest multimodal coding model',
+      category: ModelCategory.coding,
+      supportsVision: true,
+      maxContextLength: 128000,
     ),
+
+    // --- ROLEPLAY ---
     const AiModel(
-      name: 'DeepSeek Chat',
-      id: 'deepseek/deepseek-chat',
+      name: 'DeepSeek V 3.2',
+      id: 'deepseek-v3.2-roleplay',
       icon: '🤖',
-      description: 'Open-source-focused large model',
-      category: ModelCategory.general,
+      description: 'DeepSeek chat and roleplay model',
+      category: ModelCategory.roleplay,
       supportsVision: false,
       maxContextLength: 64000,
+    ),
+    const AiModel(
+      name: 'Mistral Nemo',
+      id: 'mistral-nemo-roleplay',
+      icon: '🌪️',
+      description: 'Mistral roleplay model',
+      category: ModelCategory.roleplay,
+      supportsVision: false,
+      maxContextLength: 32768,
+    ),
+    const AiModel(
+      name: 'Google Gemini Flash Latest',
+      id: 'gemini-flash-roleplay',
+      icon: '⚡',
+      description: 'Google fast roleplay model',
+      category: ModelCategory.roleplay,
+      supportsVision: true,
+      maxContextLength: 1048576,
     ),
   ];
 
@@ -235,10 +260,10 @@ class Config {
 // ═══════════════════════════════════════════════════════════════════════════
 
 enum ModelCategory {
-  general,     // General-purpose (QuantCore, DeepSeek)
-  multimodal,  // Vision + text (GPT-4o, Claude)
-  fast,        // Low-latency (Llama 8B)
-  reasoning,   // Strong reasoning (Mixtral)
+  native,
+  reasoning,
+  coding,
+  roleplay,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -259,7 +284,7 @@ class AiModel {
     required this.id,
     required this.icon,
     required this.description,
-    this.category = ModelCategory.general,
+    this.category = ModelCategory.native,
     this.supportsVision = false,
     this.maxContextLength = 8192,
   });
@@ -286,7 +311,7 @@ class AiModel {
       description: json['description'] as String? ?? '',
       category: ModelCategory.values.firstWhere(
             (c) => c.name == json['category'],
-        orElse: () => ModelCategory.general,
+        orElse: () => ModelCategory.native,
       ),
       supportsVision: json['supportsVision'] as bool? ?? false,
       maxContextLength: json['maxContextLength'] as int? ?? 8192,
