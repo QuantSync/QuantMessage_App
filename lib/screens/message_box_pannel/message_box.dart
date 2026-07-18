@@ -17,6 +17,7 @@ import '../../core/config.dart' as app_config;
 import '../../core/attachment_model.dart';
 import '../widgets/attachment_picker_sheet.dart';
 import '../widgets/attachment_preview.dart';
+import '../widgets/model_logo.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MessageBox
@@ -798,7 +799,7 @@ class _ModelTileState extends State<_ModelTile> {
           ),
           child: Row(
             children: [
-              Text(widget.model.icon, style: const TextStyle(fontSize: 16)),
+              ModelLogo(modelId: widget.model.id, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

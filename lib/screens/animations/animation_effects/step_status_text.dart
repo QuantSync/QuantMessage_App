@@ -13,10 +13,10 @@ import 'dotted_loading_animation.dart';
 
 /// Default steps shown while the backend is busy (pre-response).
 const List<String> kThinkingSteps = [
-  '🌐 Agent 1: Analyzing and searching the web...',
-  '🛠️ Agent 2: Identifying and solving errors...',
-  '✅ Agent 3: Reviewing and formatting answers...',
-  '👁️ Agent 4: Supervising pipeline...',
+  'Gatherer: Analyzing and searching the web...',
+  'Worker: Identifying and solving errors...',
+  'Reviewer: Reviewing and formatting answers...',
+  'Supervisor: Supervising pipeline...',
 ];
 
 /// A compact animated widget that shows:

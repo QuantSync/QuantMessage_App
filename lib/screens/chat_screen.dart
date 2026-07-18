@@ -12,7 +12,6 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
@@ -29,7 +28,6 @@ import '../services/quant_space_api.dart';
 import '../services/upload_service.dart';
 import 'animations/animation_effects/infinity_animation.dart';
 import 'sidebar_panel/left_sidebar.dart';
-import 'widgets/attachment_thumbnail.dart';
 
 // ✅ IMPORT THE INTEGRATED MESSAGE BOX
 import 'message_box_pannel/message_box.dart';
@@ -45,6 +43,7 @@ import 'widgets/share_chat_card.dart';
 import 'animations/animation_effects/step_status_text.dart';
 import 'animations/animation_effects/coming_soon_card.dart';
 import 'pricing_screen/pricing_screen.dart';
+import 'animations/animated_dropdown/account_dropup.dart';
 import 'app_bar.dart' show smoothPageRoute;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -579,9 +578,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                         top: 10,
                         left: 16,
                         right: 16,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.start,
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             // Left cluster: Mode + Model selector stacked vertically
                             Column(
@@ -621,26 +622,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                 ),
                               ],
                             ),
-                            UpgradePlanButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  smoothPageRoute(const PricingScreen()),
-                                );
-                              },
-                            ),
-                            Visibility(
-                              visible: _messages.isNotEmpty,
-                              maintainSize: true,
-                              maintainAnimation: true,
-                              maintainState: true,
-                              child: ShareChatButton(
-                                onTap: () {
-                                  if (_currentConversationId.isNotEmpty) {
-                                    ShareChatCard.show(context, _currentConversationId);
-                                  }
-                                },
-                              ),
+                            // Right cluster
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                UpgradePlanButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      smoothPageRoute(const PricingScreen()),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                Visibility(
+                                  visible: _messages.isNotEmpty,
+                                  maintainSize: true,
+                                  maintainAnimation: true,
+                                  maintainState: true,
+                                  child: ShareChatButton(
+                                    onTap: () {
+                                      if (_currentConversationId.isNotEmpty) {
+                                        ShareChatCard.show(context, _currentConversationId);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -682,6 +690,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                           bottom: 16 + keyboardInset,
                           child: _buildMessageBox(),
                         ),
+                        
+                      // ── Account Dropup Button ──
+                      Positioned(
+                        bottom: 16 + keyboardInset + 8,
+                        right: 16,
+                        child: Builder(
+                          builder: (ctx) {
+                            return MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  final box = ctx.findRenderObject() as RenderBox;
+                                  final position = box.localToGlobal(Offset.zero);
+                                  final rect = RelativeRect.fromLTRB(
+                                    position.dx,
+                                    position.dy - 340,
+                                    position.dx + box.size.width,
+                                    position.dy,
+                                  );
+                                  showAccountDropup(
+                                    context, 
+                                    rect, 
+                                    _userEmail ?? "user@quantsync.ai", 
+                                    _handleSignOut,
+                                  );
+                                },
+                                child: _buildAvatar(
+                                  _userName?.substring(0, 1).toUpperCase() ?? "U",
+                                  Colors.blueAccent,
+                                ),
+                              ),
+                            );
+                          }
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -889,7 +932,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ═══════════════════════════════════════════════════════════════════════
 
   Widget _buildChatThread() {
-    return ClipRect(
+    return ShaderMask(
+      shaderCallback: (Rect rect) {
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.black, Colors.black, Colors.black],
+          stops: [0.0, 0.1, 0.9, 1.0],
+        ).createShader(rect);
+      },
+      blendMode: BlendMode.dstIn,
+      child: ClipRect(
       child: ListView.builder(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -929,6 +982,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           ),
         );
       },
+    ),
     ),
     );
   }

@@ -58,8 +58,8 @@ class _ModelSelectorButtonState extends State<ModelSelectorButton>
   Widget build(BuildContext context) {
     // Turn greenish white on press, highlight on hover
     final Color effectiveBgColor = _isPressed
-        ? const Color(0xFFE8F5E9).withOpacity(0.8) // Greenish white
-        : (_isHovered ? Colors.white.withOpacity(0.15) : Colors.white.withOpacity(0.08));
+        ? const Color(0xFFD4EED8) // Darker Greenish white for visibility on light bg
+        : (_isHovered ? Colors.white : const Color(0xFFF0F0F5)); // Bright whitish grey
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -82,14 +82,14 @@ class _ModelSelectorButtonState extends State<ModelSelectorButton>
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _isHovered
-                    ? Colors.white.withOpacity(0.6)
-                    : Colors.white.withOpacity(0.3),
+                    ? Colors.black12
+                    : Colors.black.withOpacity(0.05),
                 width: 1.5,
               ),
               boxShadow: _isHovered
                   ? [
                       BoxShadow(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.black.withOpacity(0.05),
                         blurRadius: 10,
                         spreadRadius: 2,
                       )
@@ -98,28 +98,25 @@ class _ModelSelectorButtonState extends State<ModelSelectorButton>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "Model",
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Model",
+                    style: GoogleFonts.outfit(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Colors.black87,
+                    size: 18,
+                  ),
+                ],
               ),
             ),
           ),

@@ -52,39 +52,97 @@ class AgentState(TypedDict):
 def get_llm(model_id: str, temperature: float = 0.3):
     mid = model_id.lower()
 
-    if "groq" in mid:
-        model_name = model_id.split("/")[-1]
-        return ChatGroq(
-            model_name=model_name,
+    # Determine primary LLM
+    if "gemini" in mid:
+        actual_model = "gemini-1.5-pro" if "pro" in mid else "gemini-1.5-flash"
+        primary_llm = ChatGoogleGenerativeAI(
+            model=actual_model,
             temperature=temperature,
-            groq_api_key=os.environ.get("GROQ_API_KEY", "")
+            google_api_key=os.environ.get("GOOGLE_API_KEY", ""),
+            max_output_tokens=8192
         )
-    elif "gemini" in mid:
-        return ChatGoogleGenerativeAI(
-            model=model_id,
+    elif "claude-opus" in mid:
+        primary_llm = ChatOpenAI(
+            model="anthropic/claude-3-opus",
             temperature=temperature,
-            google_api_key=os.environ.get("GOOGLE_API_KEY", "")
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=4096
         )
-    elif "openai" in mid or "anthropic" in mid or "deepseek" in mid:
-        return ChatOpenAI(
+    elif "grok" in mid:
+        primary_llm = ChatOpenAI(
+            model="x-ai/grok-2",
+            temperature=temperature,
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=8192
+        )
+    elif "gpt-latest" in mid:
+        primary_llm = ChatOpenAI(
+            model="openai/gpt-4o",
+            temperature=temperature,
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=16384
+        )
+    elif "deepseek" in mid:
+        primary_llm = ChatOpenAI(
+            model="deepseek/deepseek-chat",
+            temperature=temperature,
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=8192
+        )
+    elif "mistral" in mid:
+        primary_llm = ChatOpenAI(
+            model="mistralai/mistral-nemo",
+            temperature=temperature,
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=8192
+        )
+    elif "groq" in mid or "quantcore" in mid:
+        primary_llm = ChatGroq(
+            model_name="llama-3.1-8b-instant",
+            temperature=temperature,
+            groq_api_key=os.environ.get("GROQ_API_KEY", ""),
+            max_tokens=8192
+        )
+    else:
+        primary_llm = ChatOpenAI(
             model=model_id,
             temperature=temperature,
             openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
             openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=8192
         )
-    else:
-        return ChatGroq(
-            model_name="llama-3.1-8b-instant",
-            temperature=temperature,
-            groq_api_key=os.environ.get("GROQ_API_KEY", "")
-        )
+        
+    # OpenRouter universal fallback for any model failure
+    fallback_llm = ChatOpenAI(
+        model="openai/gpt-4o-mini",
+        temperature=temperature,
+        openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+        openai_api_base="https://openrouter.ai/api/v1",
+        max_tokens=16384
+    )
+    
+    return primary_llm.with_fallbacks([fallback_llm])
 
 def get_fast_llm():
-    return ChatGroq(
+    primary_llm = ChatGroq(
         model_name="llama-3.1-8b-instant",
         temperature=0.0,
-        groq_api_key=os.environ.get("GROQ_API_KEY", "")
+        groq_api_key=os.environ.get("GROQ_API_KEY", ""),
+        max_tokens=4096
     )
+    fallback_llm = ChatOpenAI(
+        model="openai/gpt-4o-mini",
+        temperature=0.0,
+        openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+        openai_api_base="https://openrouter.ai/api/v1",
+        max_tokens=4096
+    )
+    return primary_llm.with_fallbacks([fallback_llm])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -101,9 +159,11 @@ async def search_analyst_node(state: AgentState) -> AgentState:
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", (
-            "You are Agent 1 (Search Analyst). Analyze the user's query and search the internet/web for solutions. "
-            "Use the provided search tools if available. Compile a detailed initial solution."
-            "If the supervisor gave feedback on a previous run, address it."
+            "You are the Gatherer (Agent 1). Analyze the user's query and perform exhaustive, expansive, and deeply researched web analysis. "
+            "Leave no stone unturned. Gather all context, edge cases, best practices, and deep dive into nuances. "
+            "Compile a highly detailed initial solution. Do NOT truncate or cut short your analysis under any circumstances. "
+            "If the user asks for code, provide complete files, comprehensive logic, and architectural reasoning. "
+            "If the supervisor gave feedback on a previous run, address it rigorously and deeply."
         )),
         MessagesPlaceholder(variable_name="messages"),
     ])
@@ -154,14 +214,15 @@ async def error_solver_node(state: AgentState) -> AgentState:
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", (
-            "You are Agent 2 (Error Solver). Your job is to review the data compiled by the Search Analyst. "
-            "Actively look for errors, factual inaccuracies, code bugs, or logical flaws. "
-            "Solve these errors and output a corrected, fully functional solution."
+            "You are the Worker (Agent 2). Your job is to review the deep-researched data compiled by the Gatherer. "
+            "Actively look for multiple potential errors simultaneously: factual inaccuracies, subtle code bugs, unhandled edge cases, security flaws, or logical inconsistencies. "
+            "Improvise and solve every single error you find. Output an expansive, completely corrected, fully functional, and hyper-detailed solution. "
+            "Never truncate code. Output long, detailed explanations, rigorous proofs, and full code blocks where applicable."
         )),
         ("human", (
             f"Original Query: {state['messages'][0].content if state['messages'] else ''}\n\n"
-            f"Search Analyst Data:\n{state.get('search_data', '')}\n\n"
-            f"Please identify any errors and provide the corrected solution."
+            f"Gatherer Data:\n{state.get('search_data', '')}\n\n"
+            f"Please identify all errors and provide the expansive, corrected solution."
         )),
     ])
     chain = prompt | llm
@@ -184,16 +245,17 @@ async def supervisor_node(state: AgentState) -> AgentState:
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", (
-            "You are Agent 4 (Supervisor). You oversee the pipeline to ensure all errors are resolved before final output. "
-            "Review the Error Solver's output against the original query. "
+            "You are the Supervisor (Agent 4). You oversee the pipeline to meticulously ensure all errors are fully resolved before final output. "
+            "Check for multiple errors: syntax, logic, completeness, depth of research, and adherence to user constraints. "
+            "Review the Worker's output against the original query. "
             "Respond ONLY with:\n"
             "VERDICT: approve | retry\n"
-            "NOTES: <your feedback>"
+            "NOTES: <your expansive feedback on multiple errors if any>"
         )),
         ("human", (
             f"Query: {state['messages'][0].content if state['messages'] else ''}\n\n"
-            f"Solved Data:\n{state.get('solved_data', '')}\n\n"
-            f"Is this ready for the user, or are there still unresolved errors?"
+            f"Worker's Solved Data:\n{state.get('solved_data', '')}\n\n"
+            f"Are there any remaining errors (even minor ones), or is this deep, exhaustive, and fully ready?"
         )),
     ])
     chain = prompt | llm
@@ -237,14 +299,16 @@ async def reviewer_producer_node(state: AgentState) -> AgentState:
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", (
-            "You are Agent 3 (Reviewer & Producer). Your task is to review all the answers from the previous agents, "
-            "ensure they directly answer the user's query, and format the final response beautifully using Markdown. "
-            "Do not include meta-commentary about the agents or pipeline. Just print the final generated response."
+            "You are the Reviewer (Agent 3). Your task is to review all the expansive answers from the previous agents, "
+            "ensure they directly, deeply, and comprehensively answer the user's query, and format the final response beautifully using Markdown. "
+            "Synthesize all analysis, deep research, and code into a professional, expansive, and highly detailed response. "
+            "Never truncate your output. If the response is extremely long, output the full length. Leave nothing out. "
+            "Do not include meta-commentary about the agents or pipeline. Just print the final generated expansive response."
         )),
         ("human", (
             f"Original Query: {state['messages'][0].content if state['messages'] else ''}\n\n"
-            f"Final Solved Data:\n{state.get('solved_data', '')}\n\n"
-            f"Please print the final polished response."
+            f"Worker's Final Solved Data:\n{state.get('solved_data', '')}\n\n"
+            f"Please print the final polished, comprehensively detailed response without truncation."
         )),
     ])
 

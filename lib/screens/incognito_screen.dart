@@ -8,7 +8,6 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -21,16 +20,13 @@ import '../core/attachment_model.dart';
 import '../core/config.dart' as app_config;
 import '../services/quant_space_api.dart';
 import '../services/upload_service.dart';
-import 'widgets/attachment_thumbnail.dart';
 import 'animations/animation_effects/infinity_animation_incogonito.dart';
-import 'animations/animation_effects/dotted_loading_animation.dart';
 import 'animations/animation_effects/step_status_text.dart';
 
 // Shared floating MessageBox (same as ChatScreen)
 import 'message_box_pannel/message_box.dart';
 import 'message_box_pannel/message_card.dart';
 import 'message_box_pannel/chat_answers.dart';
-import 'animations/animation_effects/step_status_text.dart';
 import 'animations/animated_buttons/mode_slider_button.dart';
 import 'animations/animation_effects/coming_soon_card.dart';
 

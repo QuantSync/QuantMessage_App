@@ -12,7 +12,7 @@ import '../core/attachment_model.dart';
 import '../core/chat_message.dart';
 import '../core/config.dart' as app_config;
 import 'widgets/attachment_thumbnail.dart';
-import 'message_box_pannel/message_card.dart';
+import 'widgets/model_logo.dart';
 
 class HistoryItem {
   final String conversationId;
@@ -44,8 +44,7 @@ class HistoryItem {
 
   bool get hasAttachments => attachments.isNotEmpty;
 
-  String get modelIcon =>
-      app_config.Config.getModelByName(modelName)?.icon ?? '⚡';
+
 
   String get formattedDate {
     final now = DateTime.now();
@@ -302,8 +301,14 @@ class _HistoryScreenBodyState extends State<_HistoryScreenBody> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(item.modelIcon,
-                                        style: const TextStyle(fontSize: 11)),
+                                    SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: ModelLogo(
+                                        modelId: app_config.Config.getModelByName(item.modelName)?.id ?? '',
+                                        size: 14,
+                                      ),
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       item.modelName,

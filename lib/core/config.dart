@@ -94,7 +94,6 @@ class Config {
     const AiModel(
       name: 'QuantCore',
       id: 'quantcore-native',
-      icon: '⚡',
       description: 'Native Quant Expert',
       category: ModelCategory.native,
       supportsVision: false,
@@ -105,7 +104,6 @@ class Config {
     const AiModel(
       name: 'Google Gemini Pro',
       id: 'gemini-pro-reasoning',
-      icon: '✨',
       description: 'Google highly capable reasoning model',
       category: ModelCategory.reasoning,
       supportsVision: true,
@@ -114,7 +112,6 @@ class Config {
     const AiModel(
       name: 'Google Gemini flash',
       id: 'gemini-flash-reasoning',
-      icon: '⚡',
       description: 'Google fast & versatile reasoning model',
       category: ModelCategory.reasoning,
       supportsVision: true,
@@ -125,7 +122,6 @@ class Config {
     const AiModel(
       name: 'Claude Opus',
       id: 'claude-opus-coding',
-      icon: '🎭',
       description: "Anthropic's most powerful coding model",
       category: ModelCategory.coding,
       supportsVision: true,
@@ -134,7 +130,6 @@ class Config {
     const AiModel(
       name: 'Google Gemini Pro',
       id: 'gemini-pro-coding',
-      icon: '✨',
       description: 'Google highly capable coding model',
       category: ModelCategory.coding,
       supportsVision: true,
@@ -143,7 +138,6 @@ class Config {
     const AiModel(
       name: 'Grok Code Fast',
       id: 'grok-code-fast',
-      icon: '🚀',
       description: 'Fast coding model',
       category: ModelCategory.coding,
       supportsVision: false,
@@ -152,7 +146,6 @@ class Config {
     const AiModel(
       name: 'OpenAi GPT Latest',
       id: 'gpt-latest-coding',
-      icon: '🧠',
       description: 'OpenAI latest multimodal coding model',
       category: ModelCategory.coding,
       supportsVision: true,
@@ -163,7 +156,6 @@ class Config {
     const AiModel(
       name: 'DeepSeek V 3.2',
       id: 'deepseek-v3.2-roleplay',
-      icon: '🤖',
       description: 'DeepSeek chat and roleplay model',
       category: ModelCategory.roleplay,
       supportsVision: false,
@@ -172,7 +164,6 @@ class Config {
     const AiModel(
       name: 'Mistral Nemo',
       id: 'mistral-nemo-roleplay',
-      icon: '🌪️',
       description: 'Mistral roleplay model',
       category: ModelCategory.roleplay,
       supportsVision: false,
@@ -181,7 +172,6 @@ class Config {
     const AiModel(
       name: 'Google Gemini Flash Latest',
       id: 'gemini-flash-roleplay',
-      icon: '⚡',
       description: 'Google fast roleplay model',
       category: ModelCategory.roleplay,
       supportsVision: true,
@@ -273,7 +263,6 @@ enum ModelCategory {
 class AiModel {
   final String name;           // Display name
   final String id;             // API id
-  final String icon;           // Emoji icon
   final String description;    // Short description
   final ModelCategory category;
   final bool supportsVision;   // Can process images
@@ -282,7 +271,6 @@ class AiModel {
   const AiModel({
     required this.name,
     required this.id,
-    required this.icon,
     required this.description,
     this.category = ModelCategory.native,
     this.supportsVision = false,
@@ -294,7 +282,6 @@ class AiModel {
     return {
       'name': name,
       'id': id,
-      'icon': icon,
       'description': description,
       'category': category.name,
       'supportsVision': supportsVision,
@@ -307,7 +294,6 @@ class AiModel {
     return AiModel(
       name: json['name'] as String,
       id: json['id'] as String,
-      icon: json['icon'] as String? ?? '🤖',
       description: json['description'] as String? ?? '',
       category: ModelCategory.values.firstWhere(
             (c) => c.name == json['category'],

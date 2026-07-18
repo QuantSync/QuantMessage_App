@@ -9,6 +9,7 @@ import '../core/app_theme.dart';
 import '../core/config.dart' as app_config;
 import '../providers/attachment_provider.dart';
 import 'widgets/attachment_picker_sheet.dart' show kMaxAttachmentSizeBytes;
+import 'widgets/model_logo.dart';
 
 Future<void> showSettingsPopup(BuildContext context) {
   return showGeneralDialog(
@@ -565,7 +566,7 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
                   ),
                   child: Row(
                     children: [
-                      Text(model.icon, style: const TextStyle(fontSize: 20)),
+                      ModelLogo(modelId: model.id, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

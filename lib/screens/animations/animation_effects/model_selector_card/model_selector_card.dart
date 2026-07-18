@@ -1,12 +1,13 @@
 // lib/screens/animations/animation_effects/model_selector_card/model_selector_card.dart
 //
-// ModelSelectorCard — Glassmorphism overlay card with:
-// • Full-screen blurred background over chat_screen
+// ModelSelectorCard — Premium Glassmorphism overlay card:
+// • Deep-black text throughout
+// • Frosted glass background with strong backdrop blur
+// • Solid 1.5px border with subtle inner glow
+// • Multi-layer shadows for depth
 // • Horizontal ModelSliderButton (tab: Native/Reasoning/Coding/Roleplay)
 // • Vertical list of model buttons per category
-// • Close button (top-right)
-// • Fully responsive, no overflow on resize/orientation change
-// • Safe during live AI generation — no freeze
+// • Fully responsive on mobile + web
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -22,11 +23,11 @@ class ModelSelectorCard extends StatefulWidget {
   final VoidCallback onClose;
 
   const ModelSelectorCard({
-    Key? key,
+    super.key,
     required this.selectedModelName,
     required this.onModelSelected,
     required this.onClose,
-  }) : super(key: key);
+  });
 
   /// Shows the card as a full-screen overlay with blurred background.
   static void show(
@@ -39,7 +40,7 @@ class ModelSelectorCard extends StatefulWidget {
       barrierDismissible: true,
       barrierLabel: 'ModelSelectorCard',
       barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 280),
+      transitionDuration: const Duration(milliseconds: 320),
       pageBuilder: (ctx, anim1, anim2) {
         return ModelSelectorCard(
           selectedModelName: selectedModelName,
@@ -54,7 +55,7 @@ class ModelSelectorCard extends StatefulWidget {
         return FadeTransition(
           opacity: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
           child: ScaleTransition(
-            scale: Tween<double>(begin: 0.92, end: 1.0).animate(
+            scale: Tween<double>(begin: 0.94, end: 1.0).animate(
               CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
             ),
             child: child,
@@ -82,13 +83,15 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
       color: Colors.transparent,
       child: Stack(
         children: [
-          // ── Full-screen blur layer ──────────────────────────────────────
+          // ── Full-screen blurred scrim ───────────────────────────────────
           Positioned.fill(
             child: GestureDetector(
               onTap: widget.onClose,
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child: Container(color: Colors.black.withOpacity(0.55)),
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Container(
+                  color: Colors.black.withOpacity(0.42),
+                ),
               ),
             ),
           ),
@@ -101,8 +104,8 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
                 child: Center(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: 600,
-                      maxHeight: screenSize.height * 0.82,
+                      maxWidth: 560,
+                      maxHeight: screenSize.height * 0.84,
                     ),
                     child: _buildCard(),
                   ),
@@ -117,22 +120,39 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
 
   Widget _buildCard() {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1C1C1C).withOpacity(0.82),
-            borderRadius: BorderRadius.circular(24),
+            // Rich frosted glass — bright with enough opacity to read deep black text
+            color: Colors.white.withOpacity(0.82),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.25),
+              color: Colors.black.withOpacity(0.18),
               width: 1.5,
             ),
             boxShadow: [
+              // Primary deep shadow
               BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 40,
+                color: Colors.black.withOpacity(0.28),
+                blurRadius: 56,
                 spreadRadius: 4,
+                offset: const Offset(0, 16),
+              ),
+              // Mid-range lift
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 20,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
+              ),
+              // Inner top-edge highlight
+              BoxShadow(
+                color: Colors.white.withOpacity(0.9),
+                blurRadius: 0,
+                spreadRadius: 0,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -140,19 +160,59 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Header ─────────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 16, 0),
+              // ── Header ────────────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 22, 16, 14),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.black.withOpacity(0.08),
+                      width: 1,
+                    ),
+                  ),
+                ),
                 child: Row(
                   children: [
-                    Text(
-                      "Select Model",
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                    // Icon accent
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.black.withOpacity(0.12),
+                          width: 1,
+                        ),
                       ),
+                      child: const Icon(
+                        Icons.tune_rounded,
+                        color: Colors.black87,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Select Model",
+                          style: GoogleFonts.outfit(
+                            color: Colors.black,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Text(
+                          "Choose your AI engine",
+                          style: GoogleFonts.outfit(
+                            color: Colors.black.withOpacity(0.45),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
                     ),
                     const Spacer(),
                     _CloseButton(onTap: widget.onClose),
@@ -162,7 +222,7 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
 
               const SizedBox(height: 16),
 
-              // ── Horizontal Category Slider ──────────────────────────────
+              // ── Horizontal Category Slider ─────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _buildSlider(),
@@ -170,26 +230,50 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
 
               const SizedBox(height: 16),
 
-              // ── Divider ─────────────────────────────────────────────────
-              Divider(
-                color: Colors.white.withOpacity(0.1),
-                thickness: 1,
+              // ── Divider ────────────────────────────────────────────────
+              Container(
                 height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.1),
+                      Colors.black.withOpacity(0.1),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-              // ── Model List ──────────────────────────────────────────────
+              // ── Model List ────────────────────────────────────────────
               Flexible(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
                   child: _currentModels.isEmpty
                       ? Center(
-                          child: Text(
-                            "No models available",
-                            style: GoogleFonts.outfit(
-                              color: Colors.white60,
-                              fontSize: 14,
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.inbox_rounded,
+                                  color: Colors.black.withOpacity(0.25),
+                                  size: 36,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  "No models available",
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.black.withOpacity(0.4),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         )
@@ -200,8 +284,7 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
                             children: _currentModels.map((model) {
                               return LlmModelButton(
                                 model: model,
-                                isSelected:
-                                    model.name == widget.selectedModelName,
+                                isSelected: model.name == widget.selectedModelName,
                                 onTap: () {
                                   widget.onModelSelected(model.name);
                                 },
@@ -227,8 +310,7 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
             setState(() => _selectedCategory = cat);
           },
         );
-        // On narrow screens, allow horizontal scroll
-        if (constraints.maxWidth < 420) {
+        if (constraints.maxWidth < 400) {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: slider,
@@ -240,7 +322,7 @@ class _ModelSelectorCardState extends State<ModelSelectorCard> {
   }
 }
 
-// ─── Close Button ────────────────────────────────────────────────────────────
+// ─── Close Button ─────────────────────────────────────────────────────────────
 
 class _CloseButton extends StatefulWidget {
   final VoidCallback onTap;
@@ -262,22 +344,32 @@ class _CloseButtonState extends State<_CloseButton> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(8),
+          duration: const Duration(milliseconds: 160),
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
             color: _isHovered
-                ? Colors.white.withOpacity(0.15)
-                : Colors.white.withOpacity(0.05),
+                ? Colors.black.withOpacity(0.08)
+                : Colors.black.withOpacity(0.04),
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.white.withOpacity(_isHovered ? 0.4 : 0.15),
-              width: 1,
+              color: Colors.black.withOpacity(_isHovered ? 0.22 : 0.10),
+              width: 1.5,
             ),
+            boxShadow: _isHovered
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
           ),
           child: Icon(
             Icons.close_rounded,
-            color: _isHovered ? Colors.white : Colors.white70,
-            size: 18,
+            color: _isHovered ? Colors.black87 : Colors.black54,
+            size: 17,
           ),
         ),
       ),

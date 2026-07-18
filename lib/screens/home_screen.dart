@@ -10,7 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'animations/animated_buttons/google_button.dart';
 import 'animations/animated_buttons/github_button.dart';
 
-import '../core/app_theme.dart';
+
 import '../providers/attachment_provider.dart';
 import '../providers/navigation_provider.dart';
 import 'app_bar.dart';
