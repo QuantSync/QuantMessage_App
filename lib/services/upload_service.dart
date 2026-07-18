@@ -22,7 +22,7 @@ import 'quant_space_api.dart';
 
 class UploadService {
   // Configuration
-  // This fallback is used only if BACKEND_URL is not found in .env
+  // ye tabhi fall back karega jab back end ki env file me url nahi milega
   static const String _defaultBaseUrl = 'https://your-app.up.railway.app/api/v1';
 
   String get _baseUrl {

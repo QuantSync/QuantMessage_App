@@ -1,5 +1,5 @@
 // lib/main.dart
-// QuantMessage.Ai — App bootstrap (Config, Riverpod, routes)
+// QuantMessage.Ai — isme sare states configured hain (Config, Riverpod, routes)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
