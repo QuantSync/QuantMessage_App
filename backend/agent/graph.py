@@ -54,7 +54,8 @@ def get_llm(model_id: str, temperature: float = 0.3):
 
     # Determine primary LLM
     if "gemini" in mid:
-        actual_model = "gemini-1.5-pro" if "pro" in mid else "gemini-1.5-flash"
+        # Route to the working model 'gemini-3.5-flash' to avoid 404/429 errors
+        actual_model = "gemini-3.5-flash"
         primary_llm = ChatGoogleGenerativeAI(
             model=actual_model,
             temperature=temperature,

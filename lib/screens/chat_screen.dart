@@ -597,39 +597,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                           bottom: 16 + keyboardInset,
                           child: _buildMessageBox(),
                         ),
-
+                        
                       // ── Account Dropup Button ──
                       Positioned(
                         bottom: 16 + keyboardInset + 8,
                         right: 16,
                         child: Builder(
-                            builder: (ctx) {
-                              return MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    final box = ctx.findRenderObject() as RenderBox;
-                                    final position = box.localToGlobal(Offset.zero);
-                                    final rect = RelativeRect.fromLTRB(
-                                      position.dx,
-                                      position.dy - 340,
-                                      position.dx + box.size.width,
-                                      position.dy,
-                                    );
-                                    showAccountDropup(
-                                      context,
-                                      rect,
-                                      _userEmail ?? "user@quantsync.ai",
-                                      _handleSignOut,
-                                    );
-                                  },
-                                  child: _buildAvatar(
-                                    _userName?.substring(0, 1).toUpperCase() ?? "U",
-                                    Colors.blueAccent,
-                                  ),
+                          builder: (ctx) {
+                            return MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  final box = ctx.findRenderObject() as RenderBox;
+                                  final position = box.localToGlobal(Offset.zero);
+                                  final rect = RelativeRect.fromLTRB(
+                                    position.dx,
+                                    position.dy - 340,
+                                    position.dx + box.size.width,
+                                    position.dy,
+                                  );
+                                  showAccountDropup(
+                                    context, 
+                                    rect, 
+                                    _userEmail ?? "user@quantsync.ai", 
+                                    _handleSignOut,
+                                  );
+                                },
+                                child: _buildAvatar(
+                                  _userName?.substring(0, 1).toUpperCase() ?? "U",
+                                  Colors.blueAccent,
                                 ),
-                              );
-                            }
+                              ),
+                            );
+                          }
                         ),
                       ),
                     ],
@@ -646,7 +646,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   onSave: _saveDisplayName,
                 ),
               ),
-
+              
             // Coming soon cards for Fly/Jet modes
             if (_currentMode == AppMode.fly || _currentMode == AppMode.jet)
               ComingSoonCard(
@@ -794,47 +794,47 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       },
       blendMode: BlendMode.dstIn,
       child: ClipRect(
-        child: ListView.builder(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-          // Extra bottom padding so last messages clear the floating MessageBox
-          padding: const EdgeInsets.only(top: 70, bottom: 140),
-          itemCount: _messages.length + (_isTyping ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == _messages.length) {
-              // Show dotted loading animation + 4-agent pipeline step status
-              return Align(
-                alignment: Alignment.centerLeft,
-                child: StepStatusText(steps: _agentSteps),
-              );
-            }
-            final msg = _messages[index];
-            return FadeInAnimation(
-              duration: const Duration(milliseconds: 400),
-              child: Column(
-                crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
-                children: [
-                  if (msg.isUser)
-                    MessageCard(
-                      message: msg,
-                      selectedModelName: _selectedModelName,
-                    )
-                  else
-                    ChatAnswerCard(
-                      message: msg,
-                    ),
-                  // Show step status text right below the last user message while typing
-                  if (_isTyping && msg.isUser && index == _messages.length - 1)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: StepStatusText(steps: _agentSteps),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        // Extra bottom padding so last messages clear the floating MessageBox
+        padding: const EdgeInsets.only(top: 70, bottom: 140),
+        itemCount: _messages.length + (_isTyping ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == _messages.length) {
+          // Show dotted loading animation + 4-agent pipeline step status
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: StepStatusText(steps: _agentSteps),
+          );
+        }
+        final msg = _messages[index];
+        return FadeInAnimation(
+          duration: const Duration(milliseconds: 400),
+          child: Column(
+            crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
+            children: [
+              if (msg.isUser)
+                MessageCard(
+                  message: msg,
+                  selectedModelName: _selectedModelName,
+                )
+              else
+                ChatAnswerCard(
+                  message: msg,
+                ),
+              // Show step status text right below the last user message while typing
+              if (_isTyping && msg.isUser && index == _messages.length - 1)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: StepStatusText(steps: _agentSteps),
+                ),
+            ],
+          ),
+        );
+      },
+    ),
+    ),
     );
   }
 

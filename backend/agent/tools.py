@@ -131,35 +131,18 @@ def review_python_code(code: str) -> str:
 def generate_image(prompt: str) -> str:
     """
     Generate an AI image for the given text description.
-    Uses OpenRouter API to access image generation models.
+    Uses Pollinations AI's high-quality keyless image generation service.
     """
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
-    if not api_key:
-        return f"🖼️ [Image placeholder for: '{prompt}'] — Add OPENROUTER_API_KEY to .env to enable real image generation."
-
+    import urllib.parse
+    import random
+    
     try:
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-        # Use OpenRouter's image generation endpoint
-        payload = {
-            "model": "openai/dall-e-3",
-            "prompt": prompt,
-            "n": 1,
-            "size": "1024x1024",
-        }
-        resp = requests.post(
-            "https://openrouter.ai/api/v1/images/generations",
-            headers=headers,
-            json=payload,
-            timeout=60,
-        )
-        if resp.status_code == 200:
-            url = resp.json()["data"][0]["url"]
-            return f"✅ Image generated!\n![Generated Image]({url})"
-        else:
-            return f"Image generation failed ({resp.status_code}): {resp.text[:300]}"
+        # Encode the prompt for URL safety
+        encoded_prompt = urllib.parse.quote(prompt.strip())
+        seed = random.randint(1, 999999)
+        # Use high-quality flux model hosted by Pollinations AI
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={seed}&model=flux"
+        return f"✅ Image generated successfully!\n![Generated Image]({image_url})"
     except Exception as e:
         return f"Image generation error: {str(e)}"
 
