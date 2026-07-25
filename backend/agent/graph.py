@@ -56,14 +56,17 @@ class AgentState(TypedDict):
 #  QUANTCORE: DIRECT HTTPX CALL (Bypasses LangChain's AIMessage validator)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Models tried in order. nemotron-3-ultra returns real content; others are
-# reasoning-only (content: null) but we extract from reasoning_details.
+# Priority order for QuantCore:
+#  1. Groq llama-3.1-8b-instant (free, unlimited daily quota, fastest)
+#  2. OpenRouter free models (50/day shared quota, may be exhausted)
+#  3. openai/gpt-4o-mini via OpenRouter (paid safety net)
+_QUANTCORE_GROQ_MODEL   = "llama-3.1-8b-instant"      # Via Groq API directly
 _QUANTCORE_MODELS = [
     "nvidia/nemotron-3-ultra-550b-a55b:free",
     "cohere/north-mini-code:free",
     "inclusionai/ling-3.0-flash:free",
 ]
-_QUANTCORE_FALLBACK = "openai/gpt-4o-mini"  # Paid safety net
+_QUANTCORE_FALLBACK = "openai/gpt-4o-mini"  # Paid safety net via OpenRouter
 
 
 def _extract_from_raw_response(data: dict) -> str:
@@ -113,18 +116,50 @@ async def _call_quantcore_direct(
     temperature: float = 0.3,
 ) -> str:
     """
-    Calls OpenRouter free models directly via httpx, fully bypassing LangChain.
-    This avoids the AIMessage Pydantic validator that throws when content=null
-    and tool_calls=[] (which reasoning-only free models produce).
-
-    Tries each QuantCore model in sequence; falls back to gpt-4o-mini if all fail.
+    Calls models directly via httpx, fully bypassing LangChain's AIMessage validator.
+    Priority:
+      1. Groq llama-3.1-8b-instant (free, separate rate limit, fastest)
+      2. OpenRouter free models (50/day quota, may be exhausted)
+      3. openai/gpt-4o-mini via OpenRouter (paid, reliable fallback)
     """
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
-    if not api_key:
-        return "[Error: OPENROUTER_API_KEY not configured]"
+    or_key   = os.environ.get("OPENROUTER_API_KEY", "")
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+
+    # ── Step 1: Try Groq first (free, separate unlimited quota) ──────────────
+    if groq_key:
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {groq_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": _QUANTCORE_GROQ_MODEL,
+                        "messages": messages,
+                        "max_tokens": max_tokens,
+                        "temperature": temperature,
+                    }
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
+                    if content.strip():
+                        print(f"   ✅ QuantCore responded via Groq/{_QUANTCORE_GROQ_MODEL}")
+                        return content.strip()
+                elif resp.status_code == 429:
+                    print(f"   ⚠️  Groq rate limited, falling through to OpenRouter...")
+                else:
+                    print(f"   ⚠️  Groq returned {resp.status_code}, falling through...")
+        except Exception as e:
+            print(f"   ⚠️  Groq exception: {e}, falling through to OpenRouter...")
+
+    if not or_key:
+        return "[Error: No API keys configured for QuantCore]"
 
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": f"Bearer {or_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://quantmessage.app",
         "X-Title": "QuantMessage AI",
@@ -132,7 +167,7 @@ async def _call_quantcore_direct(
 
     models_to_try = _QUANTCORE_MODELS + [_QUANTCORE_FALLBACK]
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=90.0) as client:
         for model in models_to_try:
             try:
                 payload = {
@@ -146,18 +181,47 @@ async def _call_quantcore_direct(
                     headers=headers,
                     json=payload,
                 )
+
+                # Handle HTTP-level errors before parsing JSON
+                if resp.status_code == 429:
+                    print(f"   ⚠️  QuantCore {model} → 429 Rate Limited (free quota exhausted), trying next...")
+                    continue
+                if resp.status_code == 401:
+                    print(f"   ❌ QuantCore {model} → 401 Unauthorized. Check OPENROUTER_API_KEY.")
+                    continue
+                if resp.status_code >= 500:
+                    print(f"   ⚠️  QuantCore {model} → {resp.status_code} Server Error, trying next...")
+                    continue
+
                 data = resp.json()
+
+                # Check for error block in successful (200) response
+                error_block = data.get("error")
+                if error_block:
+                    code = error_block.get("code", 0)
+                    msg  = error_block.get("message", "Unknown error")
+                    if code == 429:
+                        print(f"   ⚠️  QuantCore {model} → Rate limited (in body): {msg[:80]}")
+                    else:
+                        print(f"   ⚠️  QuantCore {model} → API error {code}: {msg[:80]}")
+                    continue
+
                 result = _extract_from_raw_response(data)
-                if result and not result.startswith("[OpenRouter error") and not result.startswith("[Error"):
+                if result and not result.startswith("["):
                     print(f"   ✅ QuantCore responded via {model}")
                     return result
                 else:
-                    print(f"   ⚠️  QuantCore {model} returned empty/error: {result[:80]}")
+                    print(f"   ⚠️  QuantCore {model} returned empty output, trying next...")
+
+            except httpx.TimeoutException:
+                print(f"   ⚠️  QuantCore {model} timed out, trying next...")
+                continue
             except Exception as e:
-                print(f"   ⚠️  QuantCore {model} exception: {e}")
+                print(f"   ⚠️  QuantCore {model} exception: {e}, trying next...")
                 continue
 
-    return "[QuantCore: All models failed to generate a response. Please try again.]"
+    return "[QuantCore: All models are currently rate-limited or unavailable. Please try again tomorrow or add credits to your OpenRouter account.]"
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

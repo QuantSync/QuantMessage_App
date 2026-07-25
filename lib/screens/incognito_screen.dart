@@ -259,9 +259,9 @@ class _IncognitoScreenState extends State<IncognitoScreen>
             else
               _buildChatState(),
 
-            // Mode Slider (Positioned below AppBar, left aligned)
+            // Mode Slider (Positioned below AppBar, left aligned, shifted up)
             Positioned(
-              top: 80,
+              top: 66,
               left: 20,
               child: ModeSliderButton(
                 currentMode: _currentMode,
@@ -473,7 +473,7 @@ class _IncognitoScreenState extends State<IncognitoScreen>
 
   PreferredSizeWidget _buildBlurredAppBar() {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(70),
+      preferredSize: const Size.fromHeight(60),
       child: ClipRRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),

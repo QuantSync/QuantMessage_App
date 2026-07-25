@@ -478,84 +478,164 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     children: [
                       const _ParticleBackground(count: 22),
 
-                      // Top bar elements
+                      // Top bar elements (responsive layout with self-adjusting capabilities)
                       Positioned(
                         top: 10,
                         left: 16,
                         right: 16,
-                        child: Wrap(
-                          alignment: WrapAlignment.spaceBetween,
-                          crossAxisAlignment: WrapCrossAlignment.start,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            // Left cluster: Mode + Model selector stacked vertically
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ModeSliderButton(
-                                  currentMode: _currentMode,
-                                  onModeChanged: (mode) {
-                                    setState(() {
-                                      _currentMode = mode;
-                                    });
-                                  },
-                                ),
-                                const SizedBox(height: 8),
-                                ModelSelectorButton(
-                                  onPressed: () {
-                                    ModelSelectorCard.show(
-                                      context,
-                                      selectedModelName: _selectedModelName,
-                                      onModelSelected: (modelName) {
-                                        ref
-                                            .read(selectedModelProvider.notifier)
-                                            .selectByName(modelName);
-                                        final model = app_config.Config
-                                            .getModelByName(modelName);
-                                        if (model == null) return;
-                                        if (mounted) {
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final double screenWidth = MediaQuery.of(context).size.width;
+                            final bool isMobile = screenWidth < 600;
+
+                            if (isMobile) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Row 1: Mode selector and Model selector side-by-side
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      ModeSliderButton(
+                                        currentMode: _currentMode,
+                                        onModeChanged: (mode) {
                                           setState(() {
-                                            _selectedModelName = model.name;
-                                            _selectedModelId = model.id;
+                                            _currentMode = mode;
                                           });
-                                        }
-                                      },
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                            // Right cluster
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                UpgradePlanButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      smoothPageRoute(const PricingScreen()),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(width: 8),
-                                Visibility(
-                                  visible: _messages.isNotEmpty,
-                                  maintainSize: true,
-                                  maintainAnimation: true,
-                                  maintainState: true,
-                                  child: ShareChatButton(
-                                    onTap: () {
-                                      if (_currentConversationId.isNotEmpty) {
-                                        ShareChatCard.show(context, _currentConversationId);
-                                      }
-                                    },
+                                        },
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ModelSelectorButton(
+                                        onPressed: () {
+                                          ModelSelectorCard.show(
+                                            context,
+                                            selectedModelName: _selectedModelName,
+                                            onModelSelected: (modelName) {
+                                              ref
+                                                  .read(selectedModelProvider.notifier)
+                                                  .selectByName(modelName);
+                                              final model = app_config.Config
+                                                  .getModelByName(modelName);
+                                              if (model == null) return;
+                                              if (mounted) {
+                                                setState(() {
+                                                  _selectedModelName = model.name;
+                                                  _selectedModelId = model.id;
+                                                });
+                                              }
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  // Row 2: UpgradePlanButton shifted upward under ModeSliderButton
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      UpgradePlanButton(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            smoothPageRoute(const PricingScreen()),
+                                          );
+                                        },
+                                      ),
+                                      Visibility(
+                                        visible: _messages.isNotEmpty,
+                                        maintainSize: true,
+                                        maintainAnimation: true,
+                                        maintainState: true,
+                                        child: ShareChatButton(
+                                          onTap: () {
+                                            if (_currentConversationId.isNotEmpty) {
+                                              ShareChatCard.show(context, _currentConversationId);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            }
+
+                            // Desktop Layout (Original configuration)
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Left cluster: Mode + Model selector stacked vertically
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ModeSliderButton(
+                                      currentMode: _currentMode,
+                                      onModeChanged: (mode) {
+                                        setState(() {
+                                          _currentMode = mode;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ModelSelectorButton(
+                                      onPressed: () {
+                                        ModelSelectorCard.show(
+                                          context,
+                                          selectedModelName: _selectedModelName,
+                                          onModelSelected: (modelName) {
+                                            ref
+                                                .read(selectedModelProvider.notifier)
+                                                .selectByName(modelName);
+                                            final model = app_config.Config
+                                                .getModelByName(modelName);
+                                            if (model == null) return;
+                                            if (mounted) {
+                                              setState(() {
+                                                _selectedModelName = model.name;
+                                                _selectedModelId = model.id;
+                                              });
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                // Right cluster
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    UpgradePlanButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          smoothPageRoute(const PricingScreen()),
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Visibility(
+                                      visible: _messages.isNotEmpty,
+                                      maintainSize: true,
+                                      maintainAnimation: true,
+                                      maintainState: true,
+                                      child: ShareChatButton(
+                                        onTap: () {
+                                          if (_currentConversationId.isNotEmpty) {
+                                            ShareChatCard.show(context, _currentConversationId);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
 
