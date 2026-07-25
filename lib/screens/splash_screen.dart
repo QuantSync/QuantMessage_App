@@ -40,40 +40,40 @@ class _SplashScreenState extends State<SplashScreen>
 
     _badgeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 150),
     );
     _badgeOpacity = CurvedAnimation(parent: _badgeCtrl, curve: Curves.easeOut);
     _badgeScale = Tween<double>(begin: 0.82, end: 1.0).animate(
-      CurvedAnimation(parent: _badgeCtrl, curve: Curves.easeOutBack),
+      CurvedAnimation(parent: _badgeCtrl, curve: Curves.easeOut),
     );
     _badgeCtrl.forward();
 
     _titleCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 200),
     );
     _titleOpacity = CurvedAnimation(parent: _titleCtrl, curve: Curves.easeOut);
     _titleScale = Tween<double>(begin: 0.95, end: 1.0).animate(
-      CurvedAnimation(parent: _titleCtrl, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _titleCtrl, curve: Curves.easeOut),
     );
     _titleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.10),
+      begin: const Offset(0, 0.05),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _titleCtrl, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _titleCtrl, curve: Curves.easeOut));
 
     // Trigger title animation after badge
-    Future.delayed(const Duration(milliseconds: 350), () {
+    Future.delayed(const Duration(milliseconds: 80), () {
       if (mounted) _titleCtrl.forward();
     });
 
     _shimmerCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2600),
+      duration: const Duration(milliseconds: 1500),
     )..repeat();
 
     _scanlineCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4000),
+      duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
   }
 
@@ -88,16 +88,16 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _startExitSequence() async {
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 100));
     if (!mounted) return;
     setState(() => _isExiting = true);
 
-    await Future.delayed(const Duration(milliseconds: 900));
+    await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 1000),
+        transitionDuration: const Duration(milliseconds: 200),
         pageBuilder: (_, __, ___) => const HomeScreen(),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(
@@ -130,23 +130,20 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           AnimatedBuilder(
             animation: _scanlineCtrl,
-            builder: (_, __) => Opacity(
-              opacity: 0.018 + _scanlineCtrl.value * 0.012,
-              child: CustomPaint(
-                painter: _ScanlinePainter(),
-                size: size,
-              ),
+            builder: (_, __) => CustomPaint(
+              painter: _ScanlinePainter(),
+              size: size,
             ),
           ),
           _buildCornerGlows(),
           Center(
             child: AnimatedScale(
               scale: _isExiting ? 1.06 : 1.0,
-              duration: const Duration(milliseconds: 900),
+              duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
               child: AnimatedOpacity(
                 opacity: _isExiting ? 0.0 : 1.0,
-                duration: const Duration(milliseconds: 900),
+                duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -175,13 +172,13 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 18),
                     FadeInAnimation(
-                      duration: const Duration(milliseconds: 700),
-                      delay: const Duration(milliseconds: 1800), // Delayed until title types
+                      duration: const Duration(milliseconds: 150),
+                      delay: const Duration(milliseconds: 200), // Delayed until title types
                       curve: Curves.easeOut,
                       child: TypingText(
                         text: "< stay tuned >",
-                        typingSpeed: const Duration(milliseconds: 68),
-                        delayBeforeStart: const Duration(milliseconds: 400),
+                        typingSpeed: const Duration(milliseconds: 15),
+                        delayBeforeStart: const Duration(milliseconds: 50),
                         showCursor: true,
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 22,
@@ -246,11 +243,11 @@ class _TypingShimmerTitleState extends State<_TypingShimmerTitle> with SingleTic
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 400), _startTyping);
+    Future.delayed(const Duration(milliseconds: 60), _startTyping);
   }
 
   void _startTyping() {
-    _typingTimer = Timer.periodic(const Duration(milliseconds: 120), (timer) {
+    _typingTimer = Timer.periodic(const Duration(milliseconds: 25), (timer) {
       if (_currentIndex < _fullText.length) {
         setState(() {
           _displayedText += _fullText[_currentIndex];
