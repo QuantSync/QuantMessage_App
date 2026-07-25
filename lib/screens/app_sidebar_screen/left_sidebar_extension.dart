@@ -1,4 +1,4 @@
-// lib/screens/sidebar_panel/left_sidebar_extension.dart
+// lib/screens/app_sidebar_screen/left_sidebar_extension.dart
 
 import 'dart:ui';
 import 'dart:math' as math;

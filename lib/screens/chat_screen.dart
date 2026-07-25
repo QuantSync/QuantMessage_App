@@ -26,7 +26,7 @@ import '../core/config.dart' as app_config;
 import '../providers/attachment_provider.dart';
 import '../services/quant_space_api.dart';
 import '../services/upload_service.dart';
-import 'sidebar_panel/left_sidebar.dart';
+import 'app_sidebar_screen/left_sidebar.dart';
 
 // ✅ IMPORT THE INTEGRATED MESSAGE BOX
 import 'message_box_pannel/message_box.dart';

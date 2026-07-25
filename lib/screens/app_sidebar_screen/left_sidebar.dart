@@ -1,4 +1,4 @@
-// lib/screens/sidebar_panel/left_sidebar.dart
+// lib/screens/app_sidebar_screen/left_sidebar.dart
 //
 
 

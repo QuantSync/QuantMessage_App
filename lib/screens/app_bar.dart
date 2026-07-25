@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/navigation_provider.dart';
+import 'news_screen.dart';
 
 /// Canonical nav items — must stay aligned with [AppTab] / HomeScreen pages.
 List<NavItem> get appNavItems => AppTab.values
@@ -153,16 +154,20 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar>
     ValueChanged<int> onTap,
   ) {
     return Row(
-      children: List.generate(items.length, (index) {
-        return Expanded(
-          child: _NavButton(
-            item: items[index],
-            isSelected: selectedIndex == index,
-            onTap: () => onTap(index),
-            isVertical: false,
-          ),
-        );
-      }),
+      children: [
+        ...List.generate(items.length, (index) {
+          return Expanded(
+            child: _NavButton(
+              item: items[index],
+              isSelected: selectedIndex == index,
+              onTap: () => onTap(index),
+              isVertical: false,
+            ),
+          );
+        }),
+        // News route button — does NOT change the active tab index
+        const _NewsIconButton(isVertical: false),
+      ],
     );
   }
 
@@ -173,18 +178,110 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar>
   ) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(items.length, (index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: _NavButton(
-            item: items[index],
-            isSelected: selectedIndex == index,
-            onTap: () => onTap(index),
-            isVertical: true,
-          ),
-        );
-      }),
+      children: [
+        ...List.generate(items.length, (index) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: _NavButton(
+              item: items[index],
+              isSelected: selectedIndex == index,
+              onTap: () => onTap(index),
+              isVertical: true,
+            ),
+          );
+        }),
+        // News route button — does NOT change the active tab index
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 6),
+          child: _NewsIconButton(isVertical: true),
+        ),
+      ],
     );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// News route button (standalone — does not touch navigation provider)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _NewsIconButton extends StatefulWidget {
+  final bool isVertical;
+  const _NewsIconButton({required this.isVertical});
+
+  @override
+  State<_NewsIconButton> createState() => _NewsIconButtonState();
+}
+
+class _NewsIconButtonState extends State<_NewsIconButton>
+    with SingleTickerProviderStateMixin {
+  bool _isHovered = false;
+  late final AnimationController _scaleCtrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 140),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _scaleCtrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleCtrl.dispose();
+    super.dispose();
+  }
+
+  void _openNews() {
+    Navigator.of(context).push(smoothPageRoute(const NewsScreen()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // For horizontal nav: use Expanded to fill same space as other tabs.
+    // For vertical nav: caller wraps in Padding, so just return the button.
+    final button = MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: (_) => _scaleCtrl.forward(),
+        onTapUp: (_) async {
+          await _scaleCtrl.reverse();
+          _openNews();
+        },
+        onTapCancel: () => _scaleCtrl.reverse(),
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          height: widget.isVertical ? 56 : 64,
+          child: Center(
+            child: ScaleTransition(
+              scale: _scale,
+              child: Tooltip(
+                message: 'News',
+                preferBelow: false,
+                waitDuration: const Duration(milliseconds: 400),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: _isHovered ? 0.85 : 0.45,
+                  child: const Icon(
+                    Icons.newspaper_rounded,
+                    color: Colors.white70,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return widget.isVertical ? button : Expanded(child: button);
   }
 }
 
