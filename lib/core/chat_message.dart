@@ -56,6 +56,10 @@ class ChatMessage {
   /// (e.g., error info, generation params, attachment URLs)
   final Map<String, dynamic>? metadata;
 
+  /// True if the fade-in and typewriter animations have already completed once for this message.
+  /// This prevents animations from replaying when scrolling up and down in lists.
+  bool animationCompleted = false;
+
   ChatMessage({
     this.id,
     required this.conversationId,

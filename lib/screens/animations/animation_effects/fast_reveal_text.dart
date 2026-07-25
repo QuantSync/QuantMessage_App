@@ -8,6 +8,7 @@ class FastRevealText extends StatefulWidget {
   final Widget Function(String) builder;
   final Duration typingDuration;
   final Duration fadeDuration;
+  final bool animate;
 
   const FastRevealText({
     super.key,
@@ -15,6 +16,7 @@ class FastRevealText extends StatefulWidget {
     required this.builder,
     this.typingDuration = const Duration(milliseconds: 15),
     this.fadeDuration = const Duration(milliseconds: 600),
+    this.animate = true,
   });
 
   @override
@@ -39,9 +41,15 @@ class _FastRevealTextState extends State<FastRevealText>
       duration: widget.fadeDuration,
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
-    _fadeCtrl.forward();
 
-    _startAnimation();
+    if (!widget.animate) {
+      _displayedText = widget.text;
+      _currentIndex = widget.text.length;
+      _fadeCtrl.value = 1.0;
+    } else {
+      _fadeCtrl.forward();
+      _startAnimation();
+    }
   }
 
   void _startAnimation() {
@@ -69,6 +77,11 @@ class _FastRevealTextState extends State<FastRevealText>
   @override
   void didUpdateWidget(FastRevealText oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!widget.animate) {
+      _displayedText = widget.text;
+      _currentIndex = widget.text.length;
+      return;
+    }
     if (oldWidget.text != widget.text) {
       if (widget.text.startsWith(_displayedText)) {
         // Continuing stream
@@ -94,6 +107,9 @@ class _FastRevealTextState extends State<FastRevealText>
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.animate) {
+      return widget.builder(widget.text);
+    }
     return FadeTransition(
       opacity: _fadeAnim,
       child: widget.builder(_displayedText),

@@ -531,31 +531,39 @@ class _IncognitoScreenState extends State<IncognitoScreen>
               child: StepStatusText(steps: _agentSteps),
             );
           }
-          final msg = _messages[index];
+        final msg = _messages[index];
+        final childWidget = Column(
+          crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
+          children: [
+            if (msg.isUser)
+              MessageCard(
+                message: msg,
+                selectedModelName: _selectedModelName,
+              )
+            else
+              ChatAnswerCard(
+                message: msg,
+              ),
+            // Show step status text right below the last user message while typing
+            if (_isTyping && msg.isUser && index == _messages.length - 1)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: StepStatusText(steps: _agentSteps),
+              ),
+          ],
+        );
+
+        if (msg.animationCompleted) {
+          return childWidget;
+        } else {
           return FadeInAnimation(
             duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutCubic,
-            child: Column(
-              crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
-              children: [
-                if (msg.isUser)
-                  MessageCard(
-                    message: msg,
-                    selectedModelName: _selectedModelName,
-                  )
-                else
-                  ChatAnswerCard(
-                    message: msg,
-                  ),
-                // Show step status text right below the last user message while typing
-                if (_isTyping && msg.isUser && index == _messages.length - 1)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: StepStatusText(steps: _agentSteps),
-                  ),
-              ],
-            ),
+            onComplete: () {
+              msg.animationCompleted = true;
+            },
+            child: childWidget,
           );
+        }
         },
       ),
     );
@@ -680,6 +688,7 @@ class FadeInAnimation extends StatefulWidget {
   final Duration duration;
   final Duration? delay;
   final Curve curve;
+  final VoidCallback? onComplete;
 
   const FadeInAnimation({
     Key? key,
@@ -687,6 +696,7 @@ class FadeInAnimation extends StatefulWidget {
     this.duration = const Duration(milliseconds: 500),
     this.delay,
     this.curve = Curves.easeIn,
+    this.onComplete,
   }) : super(key: key);
 
   @override
@@ -704,6 +714,11 @@ class _FadeInAnimationState extends State<FadeInAnimation>
     _controller = AnimationController(vsync: this, duration: widget.duration);
     final curve = CurvedAnimation(parent: _controller, curve: widget.curve);
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(curve);
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        widget.onComplete?.call();
+      }
+    });
 
     if (widget.delay != null) {
       Future.delayed(widget.delay!, () {

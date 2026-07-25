@@ -82,6 +82,7 @@ class ChatAnswerCard extends StatelessWidget {
               // Markdown Content wrapped in FastRevealText
               FastRevealText(
                 text: message.text,
+                animate: !message.animationCompleted,
                 builder: (revealedText) => MarkdownBody(
                   data: revealedText,
                   selectable: true,
