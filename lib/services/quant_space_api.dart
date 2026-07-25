@@ -34,9 +34,9 @@ class QuantSpaceApi {
       _BaseOptions(
         baseUrl: '', // We use full URLs for different endpoints
         headers: {'Content-Type': 'application/json'},
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 60),
-        sendTimeout: const Duration(seconds: 60),
+        connectTimeout: const Duration(seconds: 45),
+        receiveTimeout: const Duration(seconds: 240),
+        sendTimeout: const Duration(seconds: 120),
       ),
     );
 
@@ -66,6 +66,10 @@ class QuantSpaceApi {
           'user_id': userId,
           'mode': mode,
         },
+        options: _Options(
+          receiveTimeout: const Duration(seconds: 240),
+          sendTimeout: const Duration(seconds: 120),
+        ),
       );
 
       if (response.data != null && response.data is Map) {

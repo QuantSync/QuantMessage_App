@@ -47,9 +47,9 @@ class UploadService {
         _dio = dio ??
             Dio(
               BaseOptions(
-                connectTimeout: const Duration(seconds: 30),
-                receiveTimeout: const Duration(seconds: 60),
-                sendTimeout: const Duration(seconds: 60),
+                connectTimeout: const Duration(seconds: 45),
+                receiveTimeout: const Duration(seconds: 240),
+                sendTimeout: const Duration(seconds: 120),
               ),
             ),
         _fallbackClient = fallbackClient ?? http.Client(),

@@ -251,13 +251,16 @@ async def error_solver_node(state: AgentState) -> AgentState:
             "Never truncate code. Output long, detailed explanations, rigorous proofs, and full code blocks where applicable."
         )),
         ("human", (
-            f"Original Query: {state['messages'][0].content if state['messages'] else ''}\n\n"
-            f"Gatherer Data:\n{state.get('search_data', '')}\n\n"
-            f"Please identify all errors and provide the expansive, corrected solution."
+            "Original Query: {original_query}\n\n"
+            "Gatherer Data:\n{search_data}\n\n"
+            "Please identify all errors and provide the expansive, corrected solution."
         )),
     ])
     chain = prompt | llm
-    response = await chain.ainvoke({})
+    response = await chain.ainvoke({
+        "original_query": state['messages'][0].content if state['messages'] else '',
+        "search_data": state.get('search_data', '')
+    })
 
     return {
         **state,
@@ -284,13 +287,16 @@ async def supervisor_node(state: AgentState) -> AgentState:
             "NOTES: <your expansive feedback on multiple errors if any>"
         )),
         ("human", (
-            f"Query: {state['messages'][0].content if state['messages'] else ''}\n\n"
-            f"Worker's Solved Data:\n{state.get('solved_data', '')}\n\n"
-            f"Are there any remaining errors (even minor ones), or is this deep, exhaustive, and fully ready?"
+            "Query: {original_query}\n\n"
+            "Worker's Solved Data:\n{solved_data}\n\n"
+            "Are there any remaining errors (even minor ones), or is this deep, exhaustive, and fully ready?"
         )),
     ])
     chain = prompt | llm
-    response = await chain.ainvoke({})
+    response = await chain.ainvoke({
+        "original_query": state['messages'][0].content if state['messages'] else '',
+        "solved_data": state.get('solved_data', '')
+    })
 
     raw = response.content.strip()
     verdict = "approve"
@@ -337,14 +343,17 @@ async def reviewer_producer_node(state: AgentState) -> AgentState:
             "Do not include meta-commentary about the agents or pipeline. Just print the final generated expansive response."
         )),
         ("human", (
-            f"Original Query: {state['messages'][0].content if state['messages'] else ''}\n\n"
-            f"Worker's Final Solved Data:\n{state.get('solved_data', '')}\n\n"
-            f"Please print the final polished, comprehensively detailed response without truncation."
+            "Original Query: {original_query}\n\n"
+            "Worker's Final Solved Data:\n{solved_data}\n\n"
+            "Please print the final polished, comprehensively detailed response without truncation."
         )),
     ])
 
     chain = prompt | llm
-    response = await chain.ainvoke({})
+    response = await chain.ainvoke({
+        "original_query": state['messages'][0].content if state['messages'] else '',
+        "solved_data": state.get('solved_data', '')
+    })
 
     return {
         **state,

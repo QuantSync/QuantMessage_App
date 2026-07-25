@@ -291,9 +291,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
   // TEMP FILE HELPER (used by _handleSend for byte-only attachments)
-  // ═══════════════════════════════════════════════════════════════════════
 
   Future<File?> _writeTempFile(Uint8List bytes, String filename) async {
     try {
