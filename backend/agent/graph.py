@@ -9,13 +9,20 @@ Supervisor-Driven 4-Agent Architecture:
 
 All agents use the API keys from .env and auto-select based on model_id
 from the Flutter app.
+
+FIX: QuantCore uses a direct httpx call to OpenRouter to bypass LangChain's
+     AIMessage Pydantic validator which throws when content=null and tool_calls=[].
+     Reasoning-only free models return content: null, so we extract from the
+     'reasoning' / 'reasoning_details' fields of the raw JSON response.
 """
 
 import os
+import httpx
 from typing import TypedDict, Annotated, Sequence, Optional, List
 from langchain_core.messages import (
     BaseMessage, HumanMessage, AIMessage, FunctionMessage
 )
+from langchain_core.runnables import RunnableLambda
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -39,25 +46,130 @@ class AgentState(TypedDict):
     solved_data:      str   # Agent 2 output
     final_output:     str   # Agent 3 output
     supervisor_verdict: str # "continue" | "retry" | "approve"
-    
+
     # Retry tracking (self-correction loop guard)
     retry_count:      int
     current_agent:    str   # For step tracking
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  LLM FACTORY
+#  QUANTCORE: DIRECT HTTPX CALL (Bypasses LangChain's AIMessage validator)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Models tried in order. nemotron-3-ultra returns real content; others are
+# reasoning-only (content: null) but we extract from reasoning_details.
+_QUANTCORE_MODELS = [
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "cohere/north-mini-code:free",
+    "inclusionai/ling-3.0-flash:free",
+]
+_QUANTCORE_FALLBACK = "openai/gpt-4o-mini"  # Paid safety net
+
+
+def _extract_from_raw_response(data: dict) -> str:
+    """
+    Extract text from an OpenRouter/OpenAI-format JSON response.
+    Handles both normal models (content field) and reasoning-only models
+    (content: null, output in reasoning / reasoning_details).
+    """
+    try:
+        choices = data.get("choices", [])
+        if not choices:
+            return ""
+        msg = choices[0].get("message", {})
+
+        # 1. Normal content field
+        content = msg.get("content") or ""
+        if content.strip():
+            return content.strip()
+
+        # 2. Top-level reasoning field
+        reasoning = msg.get("reasoning") or ""
+        if reasoning.strip():
+            return reasoning.strip()
+
+        # 3. reasoning_details array (OpenRouter format for thinking models)
+        details = msg.get("reasoning_details") or []
+        if details:
+            parts = [d.get("text", "") for d in details if d.get("text")]
+            combined = "\n".join(parts).strip()
+            if combined:
+                return combined
+
+        # 4. Error block from OpenRouter
+        error = data.get("error", {})
+        if error:
+            return f"[OpenRouter error: {error.get('message', 'Unknown error')}]"
+
+    except Exception as e:
+        return f"[Parse error: {e}]"
+
+    return ""
+
+
+async def _call_quantcore_direct(
+    messages: list[dict],
+    max_tokens: int = 4096,
+    temperature: float = 0.3,
+) -> str:
+    """
+    Calls OpenRouter free models directly via httpx, fully bypassing LangChain.
+    This avoids the AIMessage Pydantic validator that throws when content=null
+    and tool_calls=[] (which reasoning-only free models produce).
+
+    Tries each QuantCore model in sequence; falls back to gpt-4o-mini if all fail.
+    """
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not api_key:
+        return "[Error: OPENROUTER_API_KEY not configured]"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://quantmessage.app",
+        "X-Title": "QuantMessage AI",
+    }
+
+    models_to_try = _QUANTCORE_MODELS + [_QUANTCORE_FALLBACK]
+
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        for model in models_to_try:
+            try:
+                payload = {
+                    "model": model,
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                }
+                resp = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                data = resp.json()
+                result = _extract_from_raw_response(data)
+                if result and not result.startswith("[OpenRouter error") and not result.startswith("[Error"):
+                    print(f"   ✅ QuantCore responded via {model}")
+                    return result
+                else:
+                    print(f"   ⚠️  QuantCore {model} returned empty/error: {result[:80]}")
+            except Exception as e:
+                print(f"   ⚠️  QuantCore {model} exception: {e}")
+                continue
+
+    return "[QuantCore: All models failed to generate a response. Please try again.]"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  LLM FACTORY  (for non-QuantCore models — uses LangChain normally)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_llm(model_id: str, temperature: float = 0.3):
     mid = model_id.lower()
 
-    # Determine primary LLM
     if "gemini" in mid:
-        # Route to the working model 'gemini-3.5-flash' to avoid 404/429 errors
-        actual_model = "gemini-3.5-flash"
         primary_llm = ChatGoogleGenerativeAI(
-            model=actual_model,
+            model="gemini-3.5-flash",
             temperature=temperature,
             google_api_key=os.environ.get("GOOGLE_API_KEY", ""),
             max_output_tokens=8192
@@ -102,36 +214,6 @@ def get_llm(model_id: str, temperature: float = 0.3):
             openai_api_base="https://openrouter.ai/api/v1",
             max_tokens=8192
         )
-    elif "quantcore" in mid:
-        primary_llm = ChatOpenAI(
-            model="cohere/north-mini-code:free",
-            temperature=temperature,
-            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-            openai_api_base="https://openrouter.ai/api/v1",
-            max_tokens=8192
-        )
-        fb1 = ChatOpenAI(
-            model="nvidia/nemotron-3.5-content-safety:free",
-            temperature=temperature,
-            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-            openai_api_base="https://openrouter.ai/api/v1",
-            max_tokens=8192
-        )
-        fb2 = ChatOpenAI(
-            model="inclusionai/ling-3.0-flash:free",
-            temperature=temperature,
-            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-            openai_api_base="https://openrouter.ai/api/v1",
-            max_tokens=8192
-        )
-        fb3 = ChatOpenAI(
-            model="nvidia/nemotron-3-ultra-550b-a55b:free",
-            temperature=temperature,
-            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-            openai_api_base="https://openrouter.ai/api/v1",
-            max_tokens=8192
-        )
-        primary_llm = primary_llm.with_fallbacks([fb1, fb2, fb3])
     elif "groq" in mid:
         primary_llm = ChatGroq(
             model_name="llama-3.1-8b-instant",
@@ -147,8 +229,8 @@ def get_llm(model_id: str, temperature: float = 0.3):
             openai_api_base="https://openrouter.ai/api/v1",
             max_tokens=8192
         )
-        
-    # OpenRouter universal fallback for any model failure
+
+    # Universal fallback
     fallback_llm = ChatOpenAI(
         model="openai/gpt-4o-mini",
         temperature=temperature,
@@ -156,10 +238,12 @@ def get_llm(model_id: str, temperature: float = 0.3):
         openai_api_base="https://openrouter.ai/api/v1",
         max_tokens=16384
     )
-    
+
     return primary_llm.with_fallbacks([fallback_llm])
 
+
 def get_fast_llm():
+    """Fast, reliable LLM for the Supervisor node (always Groq)."""
     primary_llm = ChatGroq(
         model_name="llama-3.1-8b-instant",
         temperature=0.0,
@@ -176,56 +260,68 @@ def get_fast_llm():
     return primary_llm.with_fallbacks([fallback_llm])
 
 
+def _is_quantcore(model_id: str) -> bool:
+    return "quantcore" in model_id.lower()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  AGENT 1: SEARCH ANALYST
 # ─────────────────────────────────────────────────────────────────────────────
 async def search_analyst_node(state: AgentState) -> AgentState:
-    llm = get_llm(state["model_id"], temperature=0.4)
     tools = get_tools()
-
-    try:
-        llm_with_tools = llm.bind_tools(tools)
-    except Exception:
-        llm_with_tools = llm
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", (
-            "You are the Gatherer (Agent 1). Analyze the user's query and perform exhaustive, expansive, and deeply researched web analysis. "
-            "Leave no stone unturned. Gather all context, edge cases, best practices, and deep dive into nuances. "
-            "Compile a highly detailed initial solution. Do NOT truncate or cut short your analysis under any circumstances. "
-            "If the user asks for code, provide complete files, comprehensive logic, and architectural reasoning. "
-            "If the supervisor gave feedback on a previous run, address it rigorously and deeply."
-        )),
-        MessagesPlaceholder(variable_name="messages"),
-    ])
-
-    # If retrying, pass the supervisor feedback
-    context_messages = list(state["messages"])
+    tool_desc = ", ".join(t.name for t in tools)
+    original_query = state["messages"][0].content if state["messages"] else ""
+    retry_note = ""
     if state.get("retry_count", 0) > 0 and state.get("supervisor_verdict"):
-        context_messages.append(HumanMessage(content=f"SUPERVISOR FEEDBACK: {state['supervisor_verdict']} - Please improve your search/analysis."))
+        retry_note = f"\n\nSUPERVISOR FEEDBACK (address this): {state['supervisor_verdict']}"
 
-    chain = prompt | llm_with_tools
-    
+    system_prompt = (
+        "You are the Gatherer (Agent 1). Analyze the user's query and produce an exhaustive, "
+        "deeply researched response. Leave no stone unturned. Gather all context, edge cases, "
+        "best practices, and deep dive into nuances. Compile a highly detailed initial solution. "
+        "Do NOT truncate or cut short your analysis under any circumstances. "
+        "If the user asks for code, provide complete files, comprehensive logic, and architectural reasoning. "
+        f"Available capabilities you can reason about: {tool_desc}."
+        + retry_note
+    )
+
     try:
-        response = await chain.ainvoke({"messages": context_messages})
+        if _is_quantcore(state["model_id"]):
+            # Direct httpx call — bypasses LangChain AIMessage validator entirely
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": original_query},
+            ]
+            final_content = await _call_quantcore_direct(messages, max_tokens=4096, temperature=0.4)
+        else:
+            llm = get_llm(state["model_id"], temperature=0.4)
+            try:
+                llm_with_tools = llm.bind_tools(tools)
+            except Exception:
+                llm_with_tools = llm
 
-        # Execute tool calls if any
-        tool_results = []
-        if hasattr(response, "tool_calls") and response.tool_calls:
-            tool_map = {t.name: t for t in tools}
-            for tool_call in response.tool_calls:
-                tool_fn = tool_map.get(tool_call["name"])
-                if tool_fn:
-                    try:
-                        result = await tool_fn.ainvoke(tool_call["args"])
-                        tool_results.append(f"[{tool_call['name']}]: {result}")
-                    except Exception as e:
-                        tool_results.append(f"[{tool_call['name']}]: Error - {str(e)}")
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", system_prompt),
+                MessagesPlaceholder(variable_name="messages"),
+            ])
+            chain = prompt | llm_with_tools
+            response = await chain.ainvoke({"messages": list(state["messages"])})
+            final_content = response.content or ""
 
-        tool_summary = "\n".join(tool_results)
-        final_content = response.content
-        if tool_summary:
-             final_content += f"\n\n--- Tool Results ---\n{tool_summary}"
+            # Execute tool calls if any
+            tool_results = []
+            if hasattr(response, "tool_calls") and response.tool_calls:
+                tool_map = {t.name: t for t in tools}
+                for tool_call in response.tool_calls:
+                    tool_fn = tool_map.get(tool_call["name"])
+                    if tool_fn:
+                        try:
+                            result = await tool_fn.ainvoke(tool_call["args"])
+                            tool_results.append(f"[{tool_call['name']}]: {result}")
+                        except Exception as e:
+                            tool_results.append(f"[{tool_call['name']}]: Error - {str(e)}")
+            if tool_results:
+                final_content += "\n\n--- Tool Results ---\n" + "\n".join(tool_results)
 
     except Exception as e:
         final_content = f"Error during search analysis: {e}"
@@ -241,30 +337,45 @@ async def search_analyst_node(state: AgentState) -> AgentState:
 #  AGENT 2: ERROR SOLVER
 # ─────────────────────────────────────────────────────────────────────────────
 async def error_solver_node(state: AgentState) -> AgentState:
-    llm = get_llm(state["model_id"], temperature=0.2)
+    original_query = state["messages"][0].content if state["messages"] else ""
+    search_data = state.get("search_data", "")
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", (
-            "You are the Worker (Agent 2). Your job is to review the deep-researched data compiled by the Gatherer. "
-            "Actively look for multiple potential errors simultaneously: factual inaccuracies, subtle code bugs, unhandled edge cases, security flaws, or logical inconsistencies. "
-            "Improvise and solve every single error you find. Output an expansive, completely corrected, fully functional, and hyper-detailed solution. "
-            "Never truncate code. Output long, detailed explanations, rigorous proofs, and full code blocks where applicable."
-        )),
-        ("human", (
-            "Original Query: {original_query}\n\n"
-            "Gatherer Data:\n{search_data}\n\n"
-            "Please identify all errors and provide the expansive, corrected solution."
-        )),
-    ])
-    chain = prompt | llm
-    response = await chain.ainvoke({
-        "original_query": state['messages'][0].content if state['messages'] else '',
-        "search_data": state.get('search_data', '')
-    })
+    system_prompt = (
+        "You are the Worker (Agent 2). Your job is to review the deep-researched data compiled by the Gatherer. "
+        "Actively look for multiple potential errors simultaneously: factual inaccuracies, subtle code bugs, "
+        "unhandled edge cases, security flaws, or logical inconsistencies. "
+        "Improvise and solve every single error you find. Output an expansive, completely corrected, "
+        "fully functional, and hyper-detailed solution. "
+        "Never truncate code. Output long, detailed explanations, rigorous proofs, and full code blocks where applicable."
+    )
+    user_prompt = (
+        f"Original Query: {original_query}\n\n"
+        f"Gatherer Data:\n{search_data}\n\n"
+        "Please identify all errors and provide the expansive, corrected solution."
+    )
+
+    try:
+        if _is_quantcore(state["model_id"]):
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            solved = await _call_quantcore_direct(messages, max_tokens=4096, temperature=0.2)
+        else:
+            llm = get_llm(state["model_id"], temperature=0.2)
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", system_prompt),
+                ("human", "{user_prompt}"),
+            ])
+            chain = prompt | llm
+            response = await chain.ainvoke({"user_prompt": user_prompt})
+            solved = response.content or ""
+    except Exception as e:
+        solved = f"Error during error solving: {e}"
 
     return {
         **state,
-        "solved_data": response.content,
+        "solved_data": solved,
         "current_agent": "agent2",
     }
 
@@ -275,7 +386,10 @@ async def error_solver_node(state: AgentState) -> AgentState:
 MAX_RETRIES = 2
 
 async def supervisor_node(state: AgentState) -> AgentState:
+    # Supervisor always uses fast Groq — no QuantCore path needed here
     llm = get_fast_llm()
+    original_query = state["messages"][0].content if state["messages"] else ""
+    solved_data = state.get("solved_data", "")
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", (
@@ -294,11 +408,11 @@ async def supervisor_node(state: AgentState) -> AgentState:
     ])
     chain = prompt | llm
     response = await chain.ainvoke({
-        "original_query": state['messages'][0].content if state['messages'] else '',
-        "solved_data": state.get('solved_data', '')
+        "original_query": original_query,
+        "solved_data": solved_data,
     })
 
-    raw = response.content.strip()
+    raw = (response.content or "").strip()
     verdict = "approve"
     notes = "All errors resolved."
 
@@ -312,7 +426,7 @@ async def supervisor_node(state: AgentState) -> AgentState:
 
     retry_count = state.get("retry_count", 0)
     if verdict == "retry" and retry_count >= MAX_RETRIES:
-        verdict = "approve" # Force approve if max retries hit
+        verdict = "approve"  # Force approve if max retries hit
 
     return {
         **state,
@@ -324,7 +438,7 @@ async def supervisor_node(state: AgentState) -> AgentState:
 def supervisor_router(state: AgentState) -> str:
     verdict = state.get("supervisor_verdict", "approve")
     if verdict != "approve":
-        return "agent1" # Send back to start to research and fix
+        return "agent1"
     return "agent3"
 
 
@@ -332,32 +446,44 @@ def supervisor_router(state: AgentState) -> str:
 #  AGENT 3: REVIEWER & PRODUCER
 # ─────────────────────────────────────────────────────────────────────────────
 async def reviewer_producer_node(state: AgentState) -> AgentState:
-    llm = get_llm(state["model_id"], temperature=0.2)
+    original_query = state["messages"][0].content if state["messages"] else ""
+    solved_data = state.get("solved_data", "")
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", (
-            "You are the Reviewer (Agent 3). Your task is to review all the expansive answers from the previous agents, "
-            "ensure they directly, deeply, and comprehensively answer the user's query, and format the final response beautifully using Markdown. "
-            "Synthesize all analysis, deep research, and code into a professional, expansive, and highly detailed response. "
-            "Never truncate your output. If the response is extremely long, output the full length. Leave nothing out. "
-            "Do not include meta-commentary about the agents or pipeline. Just print the final generated expansive response."
-        )),
-        ("human", (
-            "Original Query: {original_query}\n\n"
-            "Worker's Final Solved Data:\n{solved_data}\n\n"
-            "Please print the final polished, comprehensively detailed response without truncation."
-        )),
-    ])
+    system_prompt = (
+        "You are the Reviewer (Agent 3). Your task is to review all the expansive answers from the previous agents, "
+        "ensure they directly, deeply, and comprehensively answer the user's query, and format the final response beautifully using Markdown. "
+        "Synthesize all analysis, deep research, and code into a professional, expansive, and highly detailed response. "
+        "Never truncate your output. If the response is extremely long, output the full length. Leave nothing out. "
+        "Do not include meta-commentary about the agents or pipeline. Just print the final generated expansive response."
+    )
+    user_prompt = (
+        f"Original Query: {original_query}\n\n"
+        f"Worker's Final Solved Data:\n{solved_data}\n\n"
+        "Please print the final polished, comprehensively detailed response without truncation."
+    )
 
-    chain = prompt | llm
-    response = await chain.ainvoke({
-        "original_query": state['messages'][0].content if state['messages'] else '',
-        "solved_data": state.get('solved_data', '')
-    })
+    try:
+        if _is_quantcore(state["model_id"]):
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            final = await _call_quantcore_direct(messages, max_tokens=4096, temperature=0.2)
+        else:
+            llm = get_llm(state["model_id"], temperature=0.2)
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", system_prompt),
+                ("human", "{user_prompt}"),
+            ])
+            chain = prompt | llm
+            response = await chain.ainvoke({"user_prompt": user_prompt})
+            final = response.content or ""
+    except Exception as e:
+        final = f"Error during review: {e}"
 
     return {
         **state,
-        "final_output": response.content,
+        "final_output": final,
         "current_agent": "agent3",
     }
 
@@ -376,7 +502,7 @@ def build_graph():
     workflow.set_entry_point("agent1")
     workflow.add_edge("agent1", "agent2")
     workflow.add_edge("agent2", "agent4")
-    
+
     workflow.add_conditional_edges(
         "agent4",
         supervisor_router,

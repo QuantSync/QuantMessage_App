@@ -16,7 +16,10 @@ import math
 import requests
 from fpdf import FPDF
 from langchain_core.tools import tool
-from duckduckgo_search import DDGS
+try:
+    from ddgs import DDGS  # new package name (renamed from duckduckgo_search)
+except ImportError:
+    from duckduckgo_search import DDGS  # fallback for older installs
 
 
 # ─────────────────────────────────────────────────────────────────────────────
