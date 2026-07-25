@@ -26,7 +26,6 @@ import '../core/config.dart' as app_config;
 import '../providers/attachment_provider.dart';
 import '../services/quant_space_api.dart';
 import '../services/upload_service.dart';
-import 'animations/animation_effects/infinity_animation.dart';
 import 'sidebar_panel/left_sidebar.dart';
 
 // ✅ IMPORT THE INTEGRATED MESSAGE BOX
@@ -34,6 +33,7 @@ import 'message_box_pannel/message_box.dart';
 import 'message_box_pannel/message_card.dart';
 import 'message_box_pannel/chat_answers.dart';
 import 'widgets/name_onboarding_card.dart';
+import 'widgets/user_greeting.dart';
 import 'animations/animated_buttons/upgrade_plan_button.dart';
 import 'animations/animated_buttons/mode_slider_button.dart';
 import 'animations/animated_buttons/model_selector_button/model_selector_button.dart';
@@ -96,100 +96,7 @@ class _FadeInAnimationState extends State<FadeInAnimation>
     return FadeTransition(opacity: _opacityAnimation, child: widget.child);
   }
 }
-
-class TypingText extends StatefulWidget {
-  final String text;
-  final TextStyle? style;
-  final Duration typingSpeed;
-  final Duration cursorSpeed;
-  final bool showCursor;
-  final VoidCallback? onComplete;
-  final Duration delayBeforeStart;
-  const TypingText({
-    super.key,
-    required this.text,
-    this.style,
-    this.typingSpeed = const Duration(milliseconds: 20),
-    this.cursorSpeed = const Duration(milliseconds: 500),
-    this.showCursor = true,
-    this.onComplete,
-    this.delayBeforeStart = Duration.zero,
-  });
-
-  @override
-  State<TypingText> createState() => _TypingTextState();
-}
-
-class _TypingTextState extends State<TypingText> {
-  String _displayedText = "";
-  int _currentIndex = 0;
-  bool _cursorVisible = true;
-  Timer? _typingTimer;
-  Timer? _cursorTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _startAnimation();
-    _startCursorBlink();
-  }
-
-  void _startAnimation() {
-    Future.delayed(widget.delayBeforeStart, () {
-      if (!mounted) return;
-      _typingTimer = Timer.periodic(widget.typingSpeed, (timer) {
-        if (_currentIndex < widget.text.length) {
-          setState(() {
-            _displayedText += widget.text[_currentIndex];
-            _currentIndex++;
-          });
-        } else {
-          timer.cancel();
-          if (widget.onComplete != null) widget.onComplete!();
-        }
-      });
-    });
-  }
-
-  void _startCursorBlink() {
-    _cursorTimer = Timer.periodic(widget.cursorSpeed, (timer) {
-      if (mounted) setState(() => _cursorVisible = !_cursorVisible);
-    });
-  }
-
-  @override
-  void dispose() {
-    _typingTimer?.cancel();
-    _cursorTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return RichText(
-      text: TextSpan(
-        children: [
-          TextSpan(
-            text: _displayedText,
-            style: widget.style ?? DefaultTextStyle.of(context).style,
-          ),
-          if (widget.showCursor)
-            WidgetSpan(
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: _cursorVisible ? 1.0 : 0.0,
-                child: Container(
-                  width: 2,
-                  height: (widget.style?.fontSize ?? 14) * 1.2,
-                  color: widget.style?.color ?? Colors.black,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
+// TypingText widget has been moved to widgets/user_greeting.dart as GreetingTypingText
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN CHAT SCREEN
@@ -690,39 +597,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                           bottom: 16 + keyboardInset,
                           child: _buildMessageBox(),
                         ),
-                        
+
                       // ── Account Dropup Button ──
                       Positioned(
                         bottom: 16 + keyboardInset + 8,
                         right: 16,
                         child: Builder(
-                          builder: (ctx) {
-                            return MouseRegion(
-                              cursor: SystemMouseCursors.click,
-                              child: GestureDetector(
-                                onTap: () {
-                                  final box = ctx.findRenderObject() as RenderBox;
-                                  final position = box.localToGlobal(Offset.zero);
-                                  final rect = RelativeRect.fromLTRB(
-                                    position.dx,
-                                    position.dy - 340,
-                                    position.dx + box.size.width,
-                                    position.dy,
-                                  );
-                                  showAccountDropup(
-                                    context, 
-                                    rect, 
-                                    _userEmail ?? "user@quantsync.ai", 
-                                    _handleSignOut,
-                                  );
-                                },
-                                child: _buildAvatar(
-                                  _userName?.substring(0, 1).toUpperCase() ?? "U",
-                                  Colors.blueAccent,
+                            builder: (ctx) {
+                              return MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    final box = ctx.findRenderObject() as RenderBox;
+                                    final position = box.localToGlobal(Offset.zero);
+                                    final rect = RelativeRect.fromLTRB(
+                                      position.dx,
+                                      position.dy - 340,
+                                      position.dx + box.size.width,
+                                      position.dy,
+                                    );
+                                    showAccountDropup(
+                                      context,
+                                      rect,
+                                      _userEmail ?? "user@quantsync.ai",
+                                      _handleSignOut,
+                                    );
+                                  },
+                                  child: _buildAvatar(
+                                    _userName?.substring(0, 1).toUpperCase() ?? "U",
+                                    Colors.blueAccent,
+                                  ),
                                 ),
-                              ),
-                            );
-                          }
+                              );
+                            }
                         ),
                       ),
                     ],
@@ -739,7 +646,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   onSave: _saveDisplayName,
                 ),
               ),
-              
+
             // Coming soon cards for Fly/Jet modes
             if (_currentMode == AppMode.fly || _currentMode == AppMode.jet)
               ComingSoonCard(
@@ -761,7 +668,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ═══════════════════════════════════════════════════════════════════════
 
   Widget _buildEmptyState() {
-    // Greeting sits in the upper band; MessageBox is centered via Stack overlay
+    // Greeting sits in the upper band; MessageBox is centered via Stack overlay.
+    // UserGreeting is defined in widgets/user_greeting.dart and is fully
+    // responsive — no overflow even on narrow browser windows.
     return FadeTransition(
       opacity: _emptyOpacity,
       child: ScaleTransition(
@@ -769,8 +678,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         child: Align(
           alignment: const Alignment(0, -0.55),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _buildGreeting(),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: UserGreeting(userName: _userName),
           ),
         ),
       ),
@@ -863,133 +772,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // TIME-BASED GREETING HELPER
+  // GREETING — delegated to widgets/user_greeting.dart → UserGreeting
   // ═══════════════════════════════════════════════════════════════════════
-
-  /// Returns a witty, time-aware greeting message based on the current hour.
-  Map<String, String> _getTimeBasedGreeting() {
-    final hour = DateTime.now().hour;
-
-    if (hour >= 5 && hour < 12) {
-      // Morning: 5 AM – 11:59 AM
-      return {
-        'greeting': 'Hi, Good Morning! ☀️',
-        'subtitle': 'Ready to conquer the day? Let\'s get started.',
-        'color': '#F59E0B', // amber
-      };
-    } else if (hour >= 12 && hour < 17) {
-      // Afternoon: 12 PM – 4:59 PM
-      return {
-        'greeting': 'Good Afternoon, Sir! 🧠',
-        'subtitle': 'Midday hustle mode — what shall we tackle next?',
-        'color': '#3B82F6', // blue
-      };
-    } else if (hour >= 17 && hour < 21) {
-      // Evening: 5 PM – 8:59 PM
-      return {
-        'greeting': 'Good Evening! Had Your Tea? ☕',
-        'subtitle': 'Wind down and let me handle the heavy lifting.',
-        'color': '#8B5CF6', // violet
-      };
-    } else {
-      // Night: 9 PM – 4:59 AM
-      return {
-        'greeting': 'Up Late? Champ! 🌙',
-        'subtitle': 'The night owls get the best ideas — what\'s on your mind?',
-        'color': '#06B6D4', // cyan
-      };
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // GREETING — With InfinityAnimation, responsive, no overflow
-  // ═══════════════════════════════════════════════════════════════════════
-
-  Widget _buildGreeting() {
-    final userName = _userName;
-    final timeGreeting = _getTimeBasedGreeting();
-    final greetingText = timeGreeting['greeting']!;
-    final subtitleText = timeGreeting['subtitle']!;
-    final accentColorHex = timeGreeting['color']!;
-
-    // Parse hex color string to Color
-    final accentColor = Color(
-      int.parse(accentColorHex.replaceFirst('#', '0xFF')),
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double fontSize =
-        (constraints.maxWidth * 0.08).clamp(24.0, 48.0);
-        final double animationSize =
-        (constraints.maxWidth * 0.15).clamp(60.0, 100.0);
-
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Infinity animation + greeting row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: animationSize,
-                  height: animationSize * 0.5,
-                  child: InfinityAnimation(
-                    size: animationSize,
-                    color: accentColor,
-                    duration: const Duration(seconds: 5),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '< Hey "${userName ?? 'there'}" >',
-                      style: GoogleFonts.outfit(
-                        color: const Color(0xFFE8E8E8),
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // Time-based greeting message — animated typewriter effect
-            TypingText(
-              key: ValueKey(greetingText),
-              text: greetingText,
-              typingSpeed: const Duration(milliseconds: 40),
-              showCursor: true,
-              style: GoogleFonts.outfit(
-                color: accentColor,
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
-              ),
-            ),
-            const SizedBox(height: 6),
-            // Subtitle — fades in after typing completes
-            Text(
-              subtitleText,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                color: AppTheme.textSecondary.withValues(alpha: 0.5),
-                fontSize: 15,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  //
+  // All time-based logic, typewriter animation, and responsive sizing
+  // now live in UserGreeting. This screen only passes the user name.
 
   // ═══════════════════════════════════════════════════════════════════════
   // CHAT THREAD
@@ -1007,47 +794,47 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       },
       blendMode: BlendMode.dstIn,
       child: ClipRect(
-      child: ListView.builder(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        // Extra bottom padding so last messages clear the floating MessageBox
-        padding: const EdgeInsets.only(top: 70, bottom: 140),
-        itemCount: _messages.length + (_isTyping ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _messages.length) {
-          // Show dotted loading animation + 4-agent pipeline step status
-          return Align(
-            alignment: Alignment.centerLeft,
-            child: StepStatusText(steps: _agentSteps),
-          );
-        }
-        final msg = _messages[index];
-        return FadeInAnimation(
-          duration: const Duration(milliseconds: 400),
-          child: Column(
-            crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
-            children: [
-              if (msg.isUser)
-                MessageCard(
-                  message: msg,
-                  selectedModelName: _selectedModelName,
-                )
-              else
-                ChatAnswerCard(
-                  message: msg,
-                ),
-              // Show step status text right below the last user message while typing
-              if (_isTyping && msg.isUser && index == _messages.length - 1)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: StepStatusText(steps: _agentSteps),
-                ),
-            ],
-          ),
-        );
-      },
-    ),
-    ),
+        child: ListView.builder(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          // Extra bottom padding so last messages clear the floating MessageBox
+          padding: const EdgeInsets.only(top: 70, bottom: 140),
+          itemCount: _messages.length + (_isTyping ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == _messages.length) {
+              // Show dotted loading animation + 4-agent pipeline step status
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: StepStatusText(steps: _agentSteps),
+              );
+            }
+            final msg = _messages[index];
+            return FadeInAnimation(
+              duration: const Duration(milliseconds: 400),
+              child: Column(
+                crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
+                children: [
+                  if (msg.isUser)
+                    MessageCard(
+                      message: msg,
+                      selectedModelName: _selectedModelName,
+                    )
+                  else
+                    ChatAnswerCard(
+                      message: msg,
+                    ),
+                  // Show step status text right below the last user message while typing
+                  if (_isTyping && msg.isUser && index == _messages.length - 1)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: StepStatusText(steps: _agentSteps),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
