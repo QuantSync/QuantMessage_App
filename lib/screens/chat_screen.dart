@@ -863,11 +863,60 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════════════
+  // TIME-BASED GREETING HELPER
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// Returns a witty, time-aware greeting message based on the current hour.
+  Map<String, String> _getTimeBasedGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 5 && hour < 12) {
+      // Morning: 5 AM – 11:59 AM
+      return {
+        'greeting': 'Hi, Good Morning! ☀️',
+        'subtitle': 'Ready to conquer the day? Let\'s get started.',
+        'color': '#F59E0B', // amber
+      };
+    } else if (hour >= 12 && hour < 17) {
+      // Afternoon: 12 PM – 4:59 PM
+      return {
+        'greeting': 'Good Afternoon, Sir! 🧠',
+        'subtitle': 'Midday hustle mode — what shall we tackle next?',
+        'color': '#3B82F6', // blue
+      };
+    } else if (hour >= 17 && hour < 21) {
+      // Evening: 5 PM – 8:59 PM
+      return {
+        'greeting': 'Good Evening! Had Your Tea? ☕',
+        'subtitle': 'Wind down and let me handle the heavy lifting.',
+        'color': '#8B5CF6', // violet
+      };
+    } else {
+      // Night: 9 PM – 4:59 AM
+      return {
+        'greeting': 'Up Late? Champ! 🌙',
+        'subtitle': 'The night owls get the best ideas — what\'s on your mind?',
+        'color': '#06B6D4', // cyan
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
   // GREETING — With InfinityAnimation, responsive, no overflow
   // ═══════════════════════════════════════════════════════════════════════
 
   Widget _buildGreeting() {
     final userName = _userName;
+    final timeGreeting = _getTimeBasedGreeting();
+    final greetingText = timeGreeting['greeting']!;
+    final subtitleText = timeGreeting['subtitle']!;
+    final accentColorHex = timeGreeting['color']!;
+
+    // Parse hex color string to Color
+    final accentColor = Color(
+      int.parse(accentColorHex.replaceFirst('#', '0xFF')),
+    );
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final double fontSize =
@@ -888,7 +937,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   height: animationSize * 0.5,
                   child: InfinityAnimation(
                     size: animationSize,
-                    color: const Color(0xFF22C55E),
+                    color: accentColor,
                     duration: const Duration(seconds: 5),
                   ),
                 ),
@@ -911,13 +960,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            // Time-based greeting message — animated typewriter effect
+            TypingText(
+              key: ValueKey(greetingText),
+              text: greetingText,
+              typingSpeed: const Duration(milliseconds: 40),
+              showCursor: true,
+              style: GoogleFonts.outfit(
+                color: accentColor,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Subtitle — fades in after typing completes
             Text(
-              "How can I help you today?",
+              subtitleText,
               textAlign: TextAlign.center,
               style: GoogleFonts.outfit(
                 color: AppTheme.textSecondary.withValues(alpha: 0.5),
-                fontSize: 18,
+                fontSize: 15,
                 fontWeight: FontWeight.w300,
               ),
             ),
