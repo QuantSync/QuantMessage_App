@@ -102,7 +102,37 @@ def get_llm(model_id: str, temperature: float = 0.3):
             openai_api_base="https://openrouter.ai/api/v1",
             max_tokens=8192
         )
-    elif "groq" in mid or "quantcore" in mid:
+    elif "quantcore" in mid:
+        primary_llm = ChatOpenAI(
+            model="cohere/north-mini-code:free",
+            temperature=temperature,
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=8192
+        )
+        fb1 = ChatOpenAI(
+            model="nvidia/nemotron-3.5-content-safety:free",
+            temperature=temperature,
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=8192
+        )
+        fb2 = ChatOpenAI(
+            model="inclusionai/ling-3.0-flash:free",
+            temperature=temperature,
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=8192
+        )
+        fb3 = ChatOpenAI(
+            model="nvidia/nemotron-3-ultra-550b-a55b:free",
+            temperature=temperature,
+            openai_api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+            openai_api_base="https://openrouter.ai/api/v1",
+            max_tokens=8192
+        )
+        primary_llm = primary_llm.with_fallbacks([fb1, fb2, fb3])
+    elif "groq" in mid:
         primary_llm = ChatGroq(
             model_name="llama-3.1-8b-instant",
             temperature=temperature,

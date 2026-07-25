@@ -611,6 +611,8 @@ class _ModelDropdownOverlay extends StatelessWidget {
     switch (cat) {
       case app_config.ModelCategory.native:
         return 'Native';
+      case app_config.ModelCategory.free:
+        return 'Free';
       case app_config.ModelCategory.reasoning:
         return 'Reasoning';
       case app_config.ModelCategory.coding:

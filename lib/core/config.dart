@@ -94,10 +94,44 @@ class Config {
     const AiModel(
       name: 'QuantCore',
       id: 'quantcore-native',
-      description: 'Native Quant Expert',
+      description: 'Native Quant Expert (Free via OpenRouter)',
       category: ModelCategory.native,
       supportsVision: false,
       maxContextLength: 131072,
+    ),
+    
+    // --- FREE MODELS ---
+    const AiModel(
+      name: 'North Mini Code',
+      id: 'cohere/north-mini-code:free',
+      description: 'North Mini Code absolutely free version',
+      category: ModelCategory.free,
+      supportsVision: false,
+      maxContextLength: 128000,
+    ),
+    const AiModel(
+      name: 'Nemotron 3.5 content safety',
+      id: 'nvidia/nemotron-3.5-content-safety:free',
+      description: 'NVIDIA Nemotron 3.5 content safety free',
+      category: ModelCategory.free,
+      supportsVision: false,
+      maxContextLength: 4096,
+    ),
+    const AiModel(
+      name: 'Ling - 3.0 - flash free',
+      id: 'inclusionai/ling-3.0-flash:free',
+      description: 'inclusionAI Ling-3.0-flash free model',
+      category: ModelCategory.free,
+      supportsVision: false,
+      maxContextLength: 4096,
+    ),
+    const AiModel(
+      name: 'Nemotron 3 ultra free',
+      id: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+      description: 'NVIDIA Nemotron 3 Ultra 550B free model',
+      category: ModelCategory.free,
+      supportsVision: false,
+      maxContextLength: 4096,
     ),
     
     // --- REASONING ---
@@ -251,6 +285,7 @@ class Config {
 
 enum ModelCategory {
   native,
+  free,
   reasoning,
   coding,
   roleplay,

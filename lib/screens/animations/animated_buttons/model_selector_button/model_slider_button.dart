@@ -24,6 +24,7 @@ class ModelSliderButton extends StatefulWidget {
 class _ModelSliderButtonState extends State<ModelSliderButton> {
   final List<cfg.ModelCategory> _categories = [
     cfg.ModelCategory.native,
+    cfg.ModelCategory.free,
     cfg.ModelCategory.reasoning,
     cfg.ModelCategory.coding,
     cfg.ModelCategory.roleplay,
@@ -33,6 +34,8 @@ class _ModelSliderButtonState extends State<ModelSliderButton> {
     switch (category) {
       case cfg.ModelCategory.native:
         return "Native";
+      case cfg.ModelCategory.free:
+        return "Free";
       case cfg.ModelCategory.reasoning:
         return "Reasoning";
       case cfg.ModelCategory.coding:
