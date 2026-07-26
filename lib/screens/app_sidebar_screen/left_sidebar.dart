@@ -1,9 +1,10 @@
 // lib/screens/app_sidebar_screen/left_sidebar.dart
 //
 
-
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'left_sidebar_extension.dart';
+import '../animations/animated_dropdown/profile_account_overlay.dart';
 
 class LeftSidebar extends StatefulWidget {
   final VoidCallback? onNewChat;
@@ -14,6 +15,13 @@ class LeftSidebar extends StatefulWidget {
   final VoidCallback? onBook;
   final VoidCallback? onDownload;
 
+  /// Profile menu integration
+  final String? userEmail;
+  final String? userInitials;
+  final VoidCallback? onSignOut;
+  final VoidCallback? onMenuOpened;
+  final VoidCallback? onMenuClosed;
+
   const LeftSidebar({
     Key? key,
     this.onNewChat,
@@ -23,6 +31,11 @@ class LeftSidebar extends StatefulWidget {
     this.onCustomise,
     this.onBook,
     this.onDownload,
+    this.userEmail,
+    this.userInitials,
+    this.onSignOut,
+    this.onMenuOpened,
+    this.onMenuClosed,
   }) : super(key: key);
 
   @override
@@ -38,6 +51,11 @@ class _LeftSidebarState extends State<LeftSidebar>
   late final Animation<double>   _arrowRotation;
 
   bool _extensionOpen = false;
+
+  // Profile menu
+  final LayerLink _profileLayerLink = LayerLink();
+  bool _profileMenuOpen = false;
+  bool _profileHovered = false;
 
   @override
   void initState() {
@@ -61,6 +79,35 @@ class _LeftSidebarState extends State<LeftSidebar>
 
   void _setSelectedIndex(int index) {
     setState(() => _selectedIndex = index);
+  }
+
+  void _toggleProfileMenu() {
+    if (_profileMenuOpen) {
+      ProfileAccountOverlay.dismiss(
+        onClosed: () {
+          if (mounted) {
+            setState(() => _profileMenuOpen = false);
+            widget.onMenuClosed?.call();
+          }
+        },
+      );
+    } else {
+      setState(() => _profileMenuOpen = true);
+      ProfileAccountOverlay.show(
+        context: context,
+        layerLink: _profileLayerLink,
+        profileIconSize: const Size(32, 32),
+        email: widget.userEmail ?? 'user@quantsync.ai',
+        onSignOut: widget.onSignOut ?? () {},
+        onOpened: widget.onMenuOpened,
+        onClosed: () {
+          if (mounted) {
+            setState(() => _profileMenuOpen = false);
+            widget.onMenuClosed?.call();
+          }
+        },
+      );
+    }
   }
 
   void _toggleExtension() {
@@ -227,21 +274,46 @@ class _LeftSidebarState extends State<LeftSidebar>
           ),
           const SizedBox(height: 24),
 
-          // Profile avatar
-          Container(
-            width:  28,
-            height: 28,
-            decoration: const BoxDecoration(
-              color: Color(0xFFD3D3D3),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Text(
-                'AS',
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+          // ── Profile icon — opens account menu ──────────────────
+          CompositedTransformTarget(
+            link: _profileLayerLink,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => setState(() => _profileHovered = true),
+              onExit: (_) => setState(() => _profileHovered = false),
+              child: GestureDetector(
+                onTap: _toggleProfileMenu,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _profileMenuOpen
+                        ? const Color(0xFFD3D3D3)
+                        : (_profileHovered
+                            ? const Color(0xFFBBBBBB)
+                            : const Color(0xFFD3D3D3)),
+                    shape: BoxShape.circle,
+                    boxShadow: _profileMenuOpen
+                        ? [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      widget.userInitials ?? 'U',
+                      style: GoogleFonts.outfit(
+                        color: Colors.black87,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

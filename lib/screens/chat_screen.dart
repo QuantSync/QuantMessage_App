@@ -43,7 +43,6 @@ import 'widgets/share_chat_card.dart';
 import 'animations/animation_effects/step_status_text.dart';
 import 'animations/animation_effects/coming_soon_card.dart';
 import 'pricing_screen/pricing_screen.dart';
-import 'animations/animated_dropdown/account_dropup.dart';
 import 'app_bar.dart' show smoothPageRoute;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -155,6 +154,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   // State for the Global Blur Effect (when MessageBox is hovered)
   bool _isMessageBoxHovered = false;
+
+  // State for the Profile Menu blur
+  bool _isProfileMenuOpen = false;
 
   // ── Model Selection synced from shared provider ──
   late String _selectedModelName;
@@ -463,7 +465,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             _buildBlurredBackground(),
 
             // GLOBAL BLUR LAYER (when MessageBox is hovered)
-            if (_isMessageBoxHovered)
+            if (_isMessageBoxHovered || _isProfileMenuOpen)
               Positioned.fill(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -480,6 +482,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                       _generateConversationId();
                       _emptyCtrl.forward(from: 0.0);
                     });
+                  },
+                  userEmail: _userEmail,
+                  userInitials: _userName?.substring(0, 1).toUpperCase() ?? 'U',
+                  onSignOut: _handleSignOut,
+                  onMenuOpened: () {
+                    if (mounted) setState(() => _isProfileMenuOpen = true);
+                  },
+                  onMenuClosed: () {
+                    if (mounted) setState(() => _isProfileMenuOpen = false);
                   },
                 ),
                 Expanded(
@@ -684,41 +695,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                           bottom: 16 + keyboardInset,
                           child: _buildMessageBox(),
                         ),
-                        
-                      // ── Account Dropup Button ──
-                      Positioned(
-                        bottom: 16 + keyboardInset + 8,
-                        right: 16,
-                        child: Builder(
-                          builder: (ctx) {
-                            return MouseRegion(
-                              cursor: SystemMouseCursors.click,
-                              child: GestureDetector(
-                                onTap: () {
-                                  final box = ctx.findRenderObject() as RenderBox;
-                                  final position = box.localToGlobal(Offset.zero);
-                                  final rect = RelativeRect.fromLTRB(
-                                    position.dx,
-                                    position.dy - 340,
-                                    position.dx + box.size.width,
-                                    position.dy,
-                                  );
-                                  showAccountDropup(
-                                    context, 
-                                    rect, 
-                                    _userEmail ?? "user@quantsync.ai", 
-                                    _handleSignOut,
-                                  );
-                                },
-                                child: _buildAvatar(
-                                  _userName?.substring(0, 1).toUpperCase() ?? "U",
-                                  Colors.blueAccent,
-                                ),
-                              ),
-                            );
-                          }
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -934,20 +910,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
   }
 
-  // Typing indicator is now handled by StepStatusText inline in _buildChatThread
-
-  Widget _buildAvatar(String icon, Color color) {
-    return Container(
-      height: 32,
-      width: 32,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Center(child: Text(icon, style: const TextStyle(fontSize: 14))),
-    );
-  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // SUGGESTION PILLS
