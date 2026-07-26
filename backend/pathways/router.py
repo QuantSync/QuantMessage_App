@@ -109,8 +109,9 @@ async def route_chat(
             "Path 1 (LiteLLM)",
         )
         if result.get("output", "").strip():
-            result["path_used"] = "LiteLLM (Primary)"
-            print("[PathwayRouter] SUCCESS: PATH 1 (LiteLLM) succeeded.")
+            protocol_name = result.get("path", "litellm").replace("_", " ").title()
+            result["path_used"] = f"LiteLLM ({protocol_name} Protocol)"
+            print(f"[PathwayRouter] SUCCESS: PATH 1 (LiteLLM - {protocol_name}) succeeded.")
             return result
         raise ValueError("LiteLLM returned empty output")
     except Exception as e:

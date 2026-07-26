@@ -6,16 +6,12 @@
 // ------------------------------------------------------------------------------
 
 import 'dart:async';
-import 'dart:io' show File;
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -25,7 +21,6 @@ import '../core/attachment_model.dart';
 import '../core/config.dart' as app_config;
 import '../providers/attachment_provider.dart';
 import '../services/quant_space_api.dart';
-import '../services/upload_service.dart';
 import 'app_sidebar_screen/left_sidebar.dart';
 
 // ✅ IMPORT THE INTEGRATED MESSAGE BOX
@@ -38,8 +33,6 @@ import 'animations/animated_buttons/upgrade_plan_button.dart';
 import 'animations/animated_buttons/mode_slider_button.dart';
 import 'animations/animated_buttons/model_selector_button/model_selector_button.dart';
 import 'animations/animation_effects/model_selector_card/model_selector_card.dart';
-import 'animations/animated_buttons/share_chat_button.dart';
-import 'widgets/share_chat_card.dart';
 import 'animations/animation_effects/step_status_text.dart';
 import 'animations/animation_effects/coming_soon_card.dart';
 import 'pricing_screen/pricing_screen.dart';
@@ -116,7 +109,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     with TickerProviderStateMixin {
   // ── Services & Controllers ──
   final QuantSpaceApi _api = QuantSpaceApi();
-  final UploadService _uploadService = UploadService();
   final SupabaseClient _supabase = Supabase.instance.client;
 
   final ScrollController _scrollController = ScrollController();
@@ -360,12 +352,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           ? "Please analyze the attached files."
           : text.trim();
 
+      String effectiveMode = 'autopilot';
+      if (_selectedModeName.toLowerCase().contains('deep')) {
+        effectiveMode = 'deep_search';
+      } else if (_selectedModeName.toLowerCase().contains('quick')) {
+        effectiveMode = 'quick_answer';
+      }
+
       final fullRes = await _api.getAIResponseFull(
         promptText,
         userId,
         modelId: _selectedModelId,
         conversationId: _currentConversationId,
-        mode: _currentMode.name,
+        mode: effectiveMode,
       );
 
       final responseText = fullRes['response'] as String;
@@ -621,6 +620,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                             child: Column(
                               children: [
                                 const Spacer(flex: 3),
+                                _buildAdviceBanner(),
                                 _buildMessageBox(),
                                 const SizedBox(height: 12),
                                 _buildSuggestionPills(),
@@ -635,7 +635,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                         left: 20,
                         right: 20,
                         bottom: 16 + keyboardInset,
-                        child: _buildMessageBox(),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildAdviceBanner(),
+                            _buildMessageBox(),
+                          ],
+                        ),
                       ),
                   ],
                 );
@@ -765,6 +771,63 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           );
         }
       },
+    );
+  }
+
+  Widget _buildAdviceBanner() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF28282A).withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.35),
+                  width: 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: Color(0xFF60A5FA),
+                    size: 15,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      "Deep Search Feature Consumes more model credits so utilise accordingly",
+                      style: GoogleFonts.outfit(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.2,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
