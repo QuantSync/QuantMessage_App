@@ -91,9 +91,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ? Stack(
               children: [
                 Positioned.fill(
-                  child: _ShellPageHost(
-                    currentIndex: currentIndex,
-                    pages: _pages,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 80),
+                    child: _ShellPageHost(
+                      currentIndex: currentIndex,
+                      pages: _pages,
+                    ),
                   ),
                 ),
                 Positioned(
