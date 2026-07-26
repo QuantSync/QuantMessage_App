@@ -132,6 +132,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   bool _showNameOnboarding = false;
   bool _onboardingChecked = false;
   AppMode _currentMode = AppMode.drive;
+  String _selectedModeName = "Autopilot mode";
 
   // State for the Global Blur Effect (when MessageBox is hovered)
   bool _isMessageBoxHovered = false;
@@ -772,6 +773,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       controller: _controller,
       focusNode: _inputFocus,
       selectedModelName: _selectedModelName,
+      selectedMode: _selectedModeName,
+      onModeChanged: (mode) {
+        if (mounted) {
+          setState(() {
+            _selectedModeName = mode;
+          });
+        }
+      },
       isGenerating: _isTyping,
       onSend: (text, attachments) => _handleSend(text, attachments),
       onLogout: _handleSignOut,

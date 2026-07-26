@@ -18,6 +18,7 @@ import '../../core/attachment_model.dart';
 import '../widgets/attachment_picker_sheet.dart';
 import '../widgets/attachment_preview.dart';
 import '../widgets/model_logo.dart';
+import 'chat_configuration_button.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MessageBox
@@ -28,6 +29,8 @@ class MessageBox extends StatefulWidget {
   final FocusNode focusNode;
   final String hintText;
   final String selectedModelName;
+  final String selectedMode;
+  final Function(String)? onModeChanged;
 
   /// Whether the LLM is currently generating a response.
   /// When true, the send button becomes non-interactive and visually dimmed.
@@ -44,6 +47,8 @@ class MessageBox extends StatefulWidget {
     required this.focusNode,
     this.hintText = "Type a message...",
     required this.selectedModelName,
+    this.selectedMode = "Autopilot mode",
+    this.onModeChanged,
     this.isGenerating = false,
     required this.onSend,
     required this.onModelChanged,
@@ -282,6 +287,12 @@ class _MessageBoxState extends State<MessageBox>
                                 icon: Icons.add,
                                 tooltip: "Add attachment",
                                 onTap: _handleAttachmentClick,
+                                isHovered: _isHovered,
+                              ),
+                              const SizedBox(width: 6),
+                              ChatConfigurationButton(
+                                selectedMode: widget.selectedMode,
+                                onModeChanged: widget.onModeChanged,
                                 isHovered: _isHovered,
                               ),
                               const Spacer(),
