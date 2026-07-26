@@ -610,28 +610,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
                     // Input Panel (Floating MessageBox at bottom)
                     if (_messages.isEmpty)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          ignoring: false,
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              isMobile ? 12 : 20,
-                              0,
-                              isMobile ? 12 : 20,
-                              keyboardInset > 0 ? keyboardInset : (isMobile ? 10 : 24),
-                            ),
-                            child: Column(
-                              children: [
-                                Spacer(flex: isMobile ? 6 : 3),
-                                _buildAdviceBanner(),
-                                SizedBox(height: isMobile ? 4 : 8),
-                                _buildMessageBox(),
-                                SizedBox(height: isMobile ? 8 : 12),
-                                _buildSuggestionPills(),
-                                Spacer(flex: isMobile ? 1 : 2),
-                              ],
-                            ),
-                          ),
+                      Positioned(
+                        left: isMobile ? 12 : 20,
+                        right: isMobile ? 12 : 20,
+                        bottom: (isMobile ? 10 : 24) + keyboardInset,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildSuggestionPills(),
+                            SizedBox(height: isMobile ? 8 : 14),
+                            _buildAdviceBanner(),
+                            SizedBox(height: isMobile ? 4 : 8),
+                            _buildMessageBox(),
+                          ],
                         ),
                       )
                     else
