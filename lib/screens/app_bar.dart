@@ -60,7 +60,6 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar>
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = screenWidth > 600;
     final navItems = appNavItems;
     final watched = ref.watch(navigationIndexProvider);
@@ -69,6 +68,11 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar>
         rawIndex < 0
             ? 0
             : (rawIndex >= navItems.length ? navItems.length - 1 : rawIndex);
+
+    // Total items in vertical nav: navItems + 1 News button
+    // Each item occupies: 56px (button) + 12px (vertical padding × 2) = 68px
+    const double itemExtent = 68.0;
+    final int totalItems = navItems.length + 1; // +1 for News
 
     return Padding(
       padding: EdgeInsets.only(
@@ -99,52 +103,83 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar>
                 ),
               ],
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Smooth sliding selection pill
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 320),
-                  curve: Curves.easeOutCubic,
-                  left: isDesktop
-                      ? 8
-                      : (screenWidth - 24) / navItems.length * safeIndex +
-                          ((screenWidth - 24) / navItems.length - 44) / 2,
-                  top: isDesktop
-                      ? _desktopIndicatorTop(screenHeight, navItems.length, safeIndex)
-                      : 10,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeOutCubic,
-                    width: isDesktop ? 52 : 44,
-                    height: isDesktop ? 52 : 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
+            child: isDesktop
+                ? LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Use actual nav bar height for precise pill placement
+                      final navHeight = constraints.maxHeight;
+                      final totalNavHeight = itemExtent * totalItems;
+                      // Center offset of the items column within the nav bar
+                      final columnStart = (navHeight - totalNavHeight) / 2;
+                      // Pill top = start of column + (index * itemExtent) + centering within item
+                      final pillTop = columnStart + (safeIndex * itemExtent) +
+                          (itemExtent - 52) / 2;
+
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Smooth sliding selection pill (desktop vertical)
+                          AnimatedPositioned(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                            left: 8,
+                            top: pillTop,
+                            child: Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          _buildVerticalNav(navItems, safeIndex, _handleTap),
+                        ],
+                      );
+                    },
+                  )
+                : Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Smooth sliding selection pill (mobile horizontal)
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        left: _horizontalPillLeft(
+                            screenWidth, navItems.length, safeIndex),
+                        top: 10,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.12),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      _buildHorizontalNav(
+                          context, navItems, safeIndex, _handleTap),
+                    ],
                   ),
-                ),
-                isDesktop
-                    ? _buildVerticalNav(navItems, safeIndex, _handleTap)
-                    : _buildHorizontalNav(
-                        context, navItems, safeIndex, _handleTap),
-              ],
-            ),
           ),
         ),
       ),
     );
   }
 
-  double _desktopIndicatorTop(double screenHeight, int count, int index) {
-    // Approximate centered column spacing for vertical rail
-    const itemExtent = 68.0;
-    final total = itemExtent * count;
-    final start = (screenHeight - 40 - total) / 2;
-    return start + (itemExtent * index) + 8;
+  /// Calculates the horizontal pill left offset for mobile nav.
+  double _horizontalPillLeft(double screenWidth, int count, int index) {
+    // Nav bar width = screenWidth - left(12) - right(12) = screenWidth - 24
+    // Each slot width = (screenWidth - 24) / count
+    // Pill is centered within its slot: slot * index + (slot - 44) / 2
+    final slotWidth = (screenWidth - 24) / count;
+    return slotWidth * index + (slotWidth - 44) / 2;
   }
 
   Widget _buildHorizontalNav(
