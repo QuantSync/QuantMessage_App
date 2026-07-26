@@ -52,17 +52,14 @@ import 'app_bar.dart' show smoothPageRoute;
 class FadeInAnimation extends StatefulWidget {
   final Widget child;
   final Duration duration;
-  final Duration? delay;
-  final Curve curve;
   final VoidCallback? onComplete;
+
   const FadeInAnimation({
-    Key? key,
+    super.key,
     required this.child,
-    this.duration = const Duration(milliseconds: 500),
-    this.delay,
-    this.curve = Curves.easeIn,
+    this.duration = const Duration(milliseconds: 400),
     this.onComplete,
-  }) : super(key: key);
+  });
 
   @override
   State<FadeInAnimation> createState() => _FadeInAnimationState();
@@ -71,26 +68,22 @@ class FadeInAnimation extends StatefulWidget {
 class _FadeInAnimationState extends State<FadeInAnimation>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _opacityAnimation;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _slide;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
-    final curve = CurvedAnimation(parent: _controller, curve: widget.curve);
-    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(curve);
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        widget.onComplete?.call();
-      }
+    _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0.0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+
+    _controller.forward().then((_) {
+      widget.onComplete?.call();
     });
-    if (widget.delay != null) {
-      Future.delayed(widget.delay!, () {
-        if (mounted) _controller.forward();
-      });
-    } else {
-      _controller.forward();
-    }
   }
 
   @override
@@ -101,13 +94,15 @@ class _FadeInAnimationState extends State<FadeInAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(opacity: _opacityAnimation, child: widget.child);
+    return FadeTransition(
+      opacity: _opacity,
+      child: SlideTransition(position: _slide, child: widget.child),
+    );
   }
 }
-// TypingText widget has been moved to widgets/user_greeting.dart as GreetingTypingText
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MAIN CHAT SCREEN
+// MAIN CHAT SCREEN WIDGET
 // ═══════════════════════════════════════════════════════════════════════════
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -119,27 +114,13 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen>
     with TickerProviderStateMixin {
-  // ── Supabase Auth ──
-  final SupabaseClient _supabase = Supabase.instance.client;
-
-  User? get _currentUser => _supabase.auth.currentUser;
-  String? get _userEmail => _currentUser?.email;
-
-  /// Prefer onboarding / settings display name, then auth metadata, then email.
-  String? get _userName {
-    if (_displayName != null && _displayName!.trim().isNotEmpty) {
-      return _displayName!.trim();
-    }
-    final meta = _currentUser?.userMetadata?['full_name'] as String?;
-    if (meta != null && meta.trim().isNotEmpty) return meta.trim();
-    return _currentUser?.email?.split('@').first;
-  }
-
-  // ── Controllers & Services ──
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  // ── Services & Controllers ──
   final QuantSpaceApi _api = QuantSpaceApi();
   final UploadService _uploadService = UploadService();
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _controller = TextEditingController();
   final FocusNode _inputFocus = FocusNode();
 
   // ── State ──
@@ -155,7 +136,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // State for the Global Blur Effect (when MessageBox is hovered)
   bool _isMessageBoxHovered = false;
 
-  // State for the Profile Menu & Mobile Sidebar blur
+  // State for Profile Menu & Mobile Sidebar Blur
   bool _isProfileMenuOpen = false;
   bool _isMobileSidebarOpen = false;
 
@@ -196,237 +177,230 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   StreamSubscription<AuthState>? _authSub;
 
-  /// First-time account: show name card until onboarding is complete.
-  Future<void> _checkNameOnboarding() async {
-    final user = _currentUser;
-    if (user == null) {
-      if (mounted) {
-        setState(() {
-          _onboardingChecked = true;
-          _showNameOnboarding = false;
-          _displayName = null;
-        });
-      }
-      return;
-    }
-
-    final meta = user.userMetadata ?? {};
-    final metaFlag = meta['onboarding_complete'];
-    final existing = (meta['full_name'] as String?)?.trim();
-
-    bool? profileFlag;
-    String? profileName = existing;
-    try {
-      final row = await _supabase
-          .from('profiles')
-          .select('full_name, onboarding_complete')
-          .eq('id', user.id)
-          .maybeSingle();
-      if (row != null) {
-        profileFlag = row['onboarding_complete'] as bool?;
-        final pn = (row['full_name'] as String?)?.trim();
-        if (pn != null && pn.isNotEmpty) profileName = pn;
-      }
-    } catch (_) {
-      // profiles.onboarding_complete may not exist yet — auth metadata is enough
-    }
-
-    final explicitComplete =
-        metaFlag == true || profileFlag == true;
-    final explicitIncomplete =
-        metaFlag == false || profileFlag == false;
-    final hasName = profileName != null && profileName.isNotEmpty;
-
-    // New signups set onboarding_complete: false → always show the card.
-    // Legacy users who already have a name → skip the card.
-    final shouldShow = !explicitComplete &&
-        (explicitIncomplete || !hasName);
-
-    if (!mounted) return;
-    setState(() {
-      _displayName = profileName;
-      _onboardingChecked = true;
-      _showNameOnboarding = shouldShow;
-    });
-  }
-
-  Future<void> _saveDisplayName(String name) async {
-    final user = _currentUser;
-    if (user == null) return;
-
-    final trimmed = name.trim();
-
-    await _supabase.auth.updateUser(
-      UserAttributes(data: {
-        'full_name': trimmed,
-        'onboarding_complete': true,
-      }),
-    );
-
-    try {
-      await _supabase.from('profiles').upsert({
-        'id': user.id,
-        'full_name': trimmed,
-        'onboarding_complete': true,
-        'email': user.email,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('Profile upsert warning: $e');
-      // Auth metadata already saved — greeting still works
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _displayName = trimmed;
-      _showNameOnboarding = false;
-    });
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    _scrollController.dispose();
+    _controller.dispose();
+    _inputFocus.dispose();
+    _emptyCtrl.dispose();
+    super.dispose();
   }
 
   void _generateConversationId() {
     _currentConversationId = const Uuid().v4();
   }
 
-  @override
-  void dispose() {
-    _authSub?.cancel();
-    _controller.dispose();
-    _scrollController.dispose();
-    _inputFocus.dispose();
-    _emptyCtrl.dispose();
-    super.dispose();
+  String? get _userEmail => _supabase.auth.currentUser?.email;
+
+  String? get _userName {
+    final meta = _supabase.auth.currentUser?.userMetadata;
+    final fullName = meta?['full_name'] as String?;
+    if (fullName != null && fullName.trim().isNotEmpty) {
+      return fullName.trim();
+    }
+    return _displayName;
+  }
+
+  Future<void> _checkNameOnboarding() async {
+    final user = _supabase.auth.currentUser;
+
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _displayName = null;
+          _showNameOnboarding = false;
+          _onboardingChecked = true;
+        });
+      }
+      return;
+    }
+
+    final meta = user.userMetadata ?? {};
+    final fullName = meta['full_name'] as String?;
+    final onboardingDone = meta['onboarding_complete'] == true;
+
+    if (fullName != null && fullName.trim().isNotEmpty && onboardingDone) {
+      if (mounted) {
+        setState(() {
+          _displayName = fullName.trim();
+          _showNameOnboarding = false;
+          _onboardingChecked = true;
+        });
+      }
+      return;
+    }
+
+    try {
+      final res = await _supabase
+          .from('profiles')
+          .select('full_name, onboarding_complete')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (res != null) {
+        final profileName = res['full_name'] as String?;
+        final profileComplete = res['onboarding_complete'] == true;
+
+        if (profileName != null && profileName.trim().isNotEmpty && profileComplete) {
+          if (mounted) {
+            setState(() {
+              _displayName = profileName.trim();
+              _showNameOnboarding = false;
+              _onboardingChecked = true;
+            });
+          }
+          return;
+        }
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _displayName = fullName?.trim();
+        _showNameOnboarding = true;
+        _onboardingChecked = true;
+      });
+    }
+  }
+
+  Future<void> _saveDisplayName(String name) async {
+    final user = _supabase.auth.currentUser;
+
+    if (user == null) {
+      if (mounted) {
+        setState(() {
+          _displayName = name.trim();
+          _showNameOnboarding = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      await _supabase.auth.updateUser(
+        UserAttributes(data: {
+          'full_name': name.trim(),
+          'onboarding_complete': true,
+        }),
+      );
+
+      try {
+        await _supabase.from('profiles').upsert({
+          'id': user.id,
+          'full_name': name.trim(),
+          'onboarding_complete': true,
+          'email': user.email,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      } catch (_) {
+        await _supabase
+            .from('profiles')
+            .update({
+          'full_name': name.trim(),
+          'onboarding_complete': true,
+        })
+            .eq('id', user.id);
+      }
+    } catch (e) {
+      debugPrint('Save Name Error: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _displayName = name.trim();
+        _showNameOnboarding = false;
+      });
+    }
   }
 
   Future<void> _handleSignOut() async {
     await _supabase.auth.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
-  }
-
-  // TEMP FILE HELPER (used by _handleSend for byte-only attachments)
-
-  Future<File?> _writeTempFile(Uint8List bytes, String filename) async {
-    try {
-      final dir = await getTemporaryDirectory();
-      final tempFile = File(p.join(dir.path, filename));
-      await tempFile.writeAsBytes(bytes, flush: true);
-      return tempFile;
-    } catch (_) {
-      return null;
+    if (mounted) {
+      setState(() {
+        _messages.clear();
+        _displayName = null;
+        _showNameOnboarding = false;
+        _onboardingChecked = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Signed out successfully')),
+      );
     }
   }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // SEND LOGIC — Receives text + attachments FROM the MessageBox
-  // ═══════════════════════════════════════════════════════════════════════
 
   Future<void> _handleSend(String text, List<Attachment> attachments) async {
-    final hasAttachments = attachments.isNotEmpty;
-    if ((text.isEmpty && !hasAttachments) || _isTyping) return;
+    if (text.trim().isEmpty && attachments.isEmpty) return;
 
-    final userId = _currentUser?.id ?? "guest_user";
-    _emptyCtrl.reset();
+    final user = _supabase.auth.currentUser;
+    final userId = user?.id ?? "guest";
 
-    // Prepare each attachment — ensure localFile exists for uploading
-    final List<Attachment> preparedAttachments = [];
-    for (final att in attachments) {
-      if (att.localFile != null) {
-        preparedAttachments.add(att);
-      } else if (att.bytes != null) {
-        final file = await _writeTempFile(att.bytes!, att.filename);
-        preparedAttachments.add(
-          file != null ? att.copyWith(localFile: file) : att,
-        );
-      } else {
-        preparedAttachments.add(att);
-      }
-    }
-
-    // Create user ChatMessage
     final userMsg = ChatMessage(
+      id: const Uuid().v4(),
+      conversationId: _currentConversationId,
       text: text,
       isUser: true,
-      conversationId: _currentConversationId,
       senderId: userId,
       createdAt: DateTime.now(),
-      attachments: preparedAttachments,
-      modelName: _selectedModelName,
+      attachments: List.from(attachments),
     );
 
     setState(() {
       _messages.add(userMsg);
       _isTyping = true;
+      _agentSteps = [];
     });
+
+    _controller.clear();
     _scrollToBottom();
 
     try {
-      String finalPrompt = text;
+      final promptText = text.trim().isEmpty
+          ? "Please analyze the attached files."
+          : text.trim();
 
-      // Upload each file to Supabase via UploadService
-      for (final att in preparedAttachments) {
-        if (att.localFile != null) {
-          final uploaded = await _uploadService.uploadFile(
-            file: att.localFile!,
-            conversationId: _currentConversationId,
-          );
-          finalPrompt += uploaded.promptFragment;
-        }
-      }
-
-      // Save messages to Supabase only when user is properly authenticated
-      final isGuest = _currentUser == null;
-      if (!isGuest) {
-        await _supabase.from('chat_messages').insert(userMsg.toMap());
-      }
-
-      // Get AI response via the 4-Agent Pipeline Backend
-      final result = await _api.getAIResponseFull(
-        finalPrompt,
+      final fullRes = await _api.getAIResponseFull(
+        promptText,
         userId,
         modelId: _selectedModelId,
         conversationId: _currentConversationId,
         mode: _currentMode.name,
       );
 
-      final responseText  = result['response'] as String;
-      final steps         = (result['steps'] as List?)?.cast<String>() ?? [];
-
-      if (mounted) setState(() => _agentSteps = steps);
-
-      final aiMsg = ChatMessage(
-        text: responseText,
-        isUser: false,
-        conversationId: _currentConversationId,
-        senderId: 'agent',
-        createdAt: DateTime.now(),
-        modelName: _selectedModelName,
-      );
-
-      // Save AI message to Supabase only for authenticated users
-      if (!isGuest) {
-        await _supabase.from('chat_messages').insert(aiMsg.toMap());
-      }
+      final responseText = fullRes['response'] as String;
+      final steps = fullRes['steps'] as List<String>? ?? [];
 
       if (!mounted) return;
+
       setState(() {
-        _messages.add(aiMsg);
+        _agentSteps = steps;
+        _messages.add(ChatMessage(
+          id: const Uuid().v4(),
+          conversationId: _currentConversationId,
+          text: responseText,
+          isUser: false,
+          senderId: 'system',
+          createdAt: DateTime.now(),
+        ));
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _messages.add(ChatMessage(
-        text: "🚨 Error: ${e.toString()}",
-        isUser: false,
-        conversationId: _currentConversationId,
-        senderId: 'system',
-        createdAt: DateTime.now(),
-      )));
+
+      setState(() {
+        _messages.add(ChatMessage(
+          id: const Uuid().v4(),
+          conversationId: _currentConversationId,
+          text: "Sorry, I ran into an error processing your request: $e",
+          isUser: false,
+          senderId: 'system',
+          createdAt: DateTime.now(),
+        ));
+      });
     } finally {
       if (mounted) setState(() => _isTyping = false);
       _scrollToBottom();
     }
   }
-
-  // Model selection is handled by the floating MessageBox dropdown.
 
   void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -458,14 +432,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
-      // Manual keyboard offset via the floating MessageBox
       resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Stack(
           children: [
             _buildBlurredBackground(),
 
-            // GLOBAL BLUR LAYER (when MessageBox is hovered, profile menu open, or mobile sidebar drawer open)
+            // GLOBAL BLUR LAYER
             if (_isMessageBoxHovered || _isProfileMenuOpen || _isMobileSidebarOpen)
               Positioned.fill(
                 child: GestureDetector(
@@ -505,219 +478,164 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   },
                 );
 
-                Widget mainChatView = Expanded(
-                  child: Stack(
-                    children: [
-                      const _ParticleBackground(count: 22),
+                Widget mainChatView = Stack(
+                  children: [
+                    const _ParticleBackground(count: 22),
 
-                      // Top bar elements (responsive layout with self-adjusting capabilities)
-                      Positioned(
-                        top: 10,
-                        left: 16,
-                        right: 16,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final double screenWidth = MediaQuery.of(context).size.width;
-                            final bool isMobile = screenWidth < 600;
+                    // Top bar elements
+                    Positioned(
+                      top: 10,
+                      left: 16,
+                      right: 16,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final double width = MediaQuery.of(context).size.width;
+                          final bool isCompact = width < 600;
 
-                            if (isMobile) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Row 1: Mode selector and Model selector side-by-side
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      // Mobile 3-line hamburger menu button to toggle sidebar
-                                      IconButton(
-                                        icon: const Icon(Icons.menu, color: Colors.white70, size: 24),
-                                        onPressed: () {
-                                          setState(() => _isMobileSidebarOpen = !_isMobileSidebarOpen);
-                                        },
-                                        tooltip: 'Open Sidebar',
-                                      ),
-                                      const SizedBox(width: 6),
-                                      ModeSliderButton(
-                                        currentMode: _currentMode,
-                                        onModeChanged: (mode) {
-                                          setState(() {
-                                            _currentMode = mode;
-                                          });
-                                        },
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ModelSelectorButton(
-                                        onPressed: () {
-                                          ModelSelectorCard.show(
-                                            context,
-                                            selectedModelName: _selectedModelName,
-                                            onModelSelected: (modelName) {
-                                              ref
-                                                  .read(selectedModelProvider.notifier)
-                                                  .selectByName(modelName);
-                                              final model = app_config.Config
-                                                  .getModelByName(modelName);
-                                              if (model == null) return;
-                                              if (mounted) {
-                                                setState(() {
-                                                  _selectedModelName = model.name;
-                                                  _selectedModelId = model.id;
-                                                });
-                                              }
-                                            },
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  // Row 2: UpgradePlanButton shifted upward under ModeSliderButton
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      UpgradePlanButton(
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            smoothPageRoute(const PricingScreen()),
-                                          );
-                                        },
-                                      ),
-                                      Visibility(
-                                        visible: _messages.isNotEmpty,
-                                        maintainSize: true,
-                                        maintainAnimation: true,
-                                        maintainState: true,
-                                        child: ShareChatButton(
-                                          onTap: () {
-                                            if (_currentConversationId.isNotEmpty) {
-                                              ShareChatCard.show(context, _currentConversationId);
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              );
-                            }
-
-                            // Desktop Layout (Original configuration)
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          if (isCompact) {
+                            return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Left cluster: Mode + Model selector stacked vertically
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.menu, color: Colors.white70, size: 24),
+                                      onPressed: () {
+                                        setState(() => _isMobileSidebarOpen = !_isMobileSidebarOpen);
+                                      },
+                                      tooltip: 'Open Sidebar',
+                                    ),
+                                    const SizedBox(width: 6),
                                     ModeSliderButton(
                                       currentMode: _currentMode,
                                       onModeChanged: (mode) {
-                                        setState(() {
-                                          _currentMode = mode;
-                                        });
-                                      },
-                                    ),
-                                    const SizedBox(height: 8),
-                                    ModelSelectorButton(
-                                      onPressed: () {
-                                        ModelSelectorCard.show(
-                                          context,
-                                          selectedModelName: _selectedModelName,
-                                          onModelSelected: (modelName) {
-                                            ref
-                                                .read(selectedModelProvider.notifier)
-                                                .selectByName(modelName);
-                                            final model = app_config.Config
-                                                .getModelByName(modelName);
-                                            if (model == null) return;
-                                            if (mounted) {
-                                              setState(() {
-                                                _selectedModelName = model.name;
-                                                _selectedModelId = model.id;
-                                              });
-                                            }
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                                // Right cluster
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    UpgradePlanButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          smoothPageRoute(const PricingScreen()),
-                                        );
+                                        setState(() => _currentMode = mode);
                                       },
                                     ),
                                     const SizedBox(width: 8),
-                                    Visibility(
-                                      visible: _messages.isNotEmpty,
-                                      maintainSize: true,
-                                      maintainAnimation: true,
-                                      maintainState: true,
-                                      child: ShareChatButton(
-                                        onTap: () {
-                                          if (_currentConversationId.isNotEmpty) {
-                                            ShareChatCard.show(context, _currentConversationId);
-                                          }
-                                        },
-                                      ),
+                                    ModelSelectorButton(
+                                      onPressed: _openModelSelectorCard,
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: UpgradePlanButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        smoothPageRoute(const PricingScreen()),
+                                      );
+                                    },
+                                  ),
+                                ),
                               ],
                             );
-                          },
-                        ),
-                      ),
+                          }
 
-                      if (_messages.isEmpty)
-                        _buildEmptyState()
-                      else
-                        _buildChatState(),
-
-                      // MessageBox — vertical center when empty, bottom dock when chatting
-                      if (_messages.isEmpty)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            ignoring: false,
-                            child: Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                20,
-                                0,
-                                20,
-                                keyboardInset > 0 ? keyboardInset : 24,
+                          return Row(
+                            children: [
+                              ModeSliderButton(
+                                currentMode: _currentMode,
+                                onModeChanged: (mode) {
+                                  setState(() => _currentMode = mode);
+                                },
                               ),
-                              child: Column(
-                                children: [
-                                  const Spacer(flex: 3),
-                                  _buildMessageBox(),
-                                  const SizedBox(height: 12),
-                                  _buildSuggestionPills(),
-                                  const Spacer(flex: 2),
-                                ],
+                              const SizedBox(width: 12),
+                              ModelSelectorButton(
+                                onPressed: _openModelSelectorCard,
+                              ),
+                              const Spacer(),
+                              UpgradePlanButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    smoothPageRoute(const PricingScreen()),
+                                  );
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+
+                    // Chat messages scroll view
+                    Positioned.fill(
+                      top: 80,
+                      bottom: 120,
+                      child: _buildChatThread(),
+                    ),
+
+                    // Empty state center content
+                    if (_messages.isEmpty)
+                      Positioned.fill(
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: ScaleTransition(
+                            scale: _emptyScale,
+                            child: FadeTransition(
+                              opacity: _emptyOpacity,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    UserGreeting(userName: _displayName),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'The night owls get the best ideas — what\'s on your mind?',
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white.withValues(alpha: 0.45),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
+                                        letterSpacing: 0.2,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        )
-                      else
-                        Positioned(
-                          left: 20,
-                          right: 20,
-                          bottom: 16 + keyboardInset,
-                          child: _buildMessageBox(),
                         ),
-                    ],
-                  ),
+                      ),
+
+                    // Input Panel (Floating MessageBox at bottom)
+                    if (_messages.isEmpty)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          ignoring: false,
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              20,
+                              0,
+                              20,
+                              keyboardInset > 0 ? keyboardInset : 24,
+                            ),
+                            child: Column(
+                              children: [
+                                const Spacer(flex: 3),
+                                _buildMessageBox(),
+                                const SizedBox(height: 12),
+                                _buildSuggestionPills(),
+                                const Spacer(flex: 2),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Positioned(
+                        left: 20,
+                        right: 20,
+                        bottom: 16 + keyboardInset,
+                        child: _buildMessageBox(),
+                      ),
+                  ],
                 );
 
                 if (isMobile) {
@@ -738,7 +656,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 return Row(
                   children: [
                     sidebarWidget,
-                    mainChatView,
+                    Expanded(child: mainChatView),
                   ],
                 );
               },
@@ -752,7 +670,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   onSave: _saveDisplayName,
                 ),
               ),
-              
+
             // Coming soon cards for Fly/Jet modes
             if (_currentMode == AppMode.fly || _currentMode == AppMode.jet)
               ComingSoonCard(
@@ -769,153 +687,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // EMPTY STATE — Welcome screen with centered content
-  // ═══════════════════════════════════════════════════════════════════════
-
-  Widget _buildEmptyState() {
-    // Greeting sits in the upper band; MessageBox is centered via Stack overlay.
-    // UserGreeting is defined in widgets/user_greeting.dart and is fully
-    // responsive — no overflow even on narrow browser windows.
-    return FadeTransition(
-      opacity: _emptyOpacity,
-      child: ScaleTransition(
-        scale: _emptyScale,
-        child: Align(
-          alignment: const Alignment(0, -0.55),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: UserGreeting(userName: _userName),
-          ),
-        ),
-      ),
+  void _openModelSelectorCard() {
+    ModelSelectorCard.show(
+      context,
+      selectedModelName: _selectedModelName,
+      onModelSelected: (modelName) {
+        ref
+            .read(selectedModelProvider.notifier)
+            .selectByName(modelName);
+        final model = app_config.Config
+            .getModelByName(modelName);
+        if (model == null) return;
+        if (mounted) {
+          setState(() {
+            _selectedModelName = model.name;
+            _selectedModelId = model.id;
+          });
+        }
+      },
     );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // CHAT STATE — Message thread (MessageBox floats above via Stack)
-  // ═══════════════════════════════════════════════════════════════════════
-
-  Widget _buildChatState() {
-    return _buildChatThread();
   }
 
   Widget _buildBlurredBackground() {
     return Container(
       decoration: const BoxDecoration(
         gradient: RadialGradient(
-          center: Alignment(-0.5, -0.5),
-          radius: 1.5,
-          colors: [Color(0xFF1A0A0A), AppTheme.backgroundBlack],
+          center: Alignment(0.0, -0.3),
+          radius: 1.2,
+          colors: [
+            Color(0xFF1F1F1F),
+            AppTheme.backgroundBlack,
+          ],
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.3,
-              child: Image.network(
-                'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1500&q=80',
-                fit: BoxFit.cover,
-                errorBuilder: (c, e, s) =>
-                    Container(color: AppTheme.backgroundBlack),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(color: Colors.black.withValues(alpha: 0.6)),
-            ),
-          ),
-        ],
       ),
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // INTEGRATED MESSAGE BOX (Single source of truth for attachments)
-  // ═══════════════════════════════════════════════════════════════════════
-
-  Widget _buildMessageBox() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        MessageBox(
-          controller: _controller,
-          focusNode: _inputFocus,
-          selectedModelName: _selectedModelName,
-          isGenerating: _isTyping,
-          hintText: "Type a message...",
-          onSend: _handleSend,
-          onLogout: _handleSignOut,
-          onHoverChanged: (hovered) {
-            if (mounted) setState(() => _isMessageBoxHovered = hovered);
-          },
-          onModelChanged: (modelName) {
-            ref.read(selectedModelProvider.notifier).selectByName(modelName);
-            final model = app_config.Config.getModelByName(modelName);
-            if (model == null) return;
-            setState(() {
-              _selectedModelName = model.name;
-              _selectedModelId = model.id;
-            });
-          },
-        ),
-        if (_messages.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text(
-            "QuantSync can make mistakes. Please double check responses.",
-            style: GoogleFonts.outfit(
-              color: Colors.white38,
-              fontSize: 10,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ],
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // GREETING — delegated to widgets/user_greeting.dart → UserGreeting
-  // ═══════════════════════════════════════════════════════════════════════
-  //
-  // All time-based logic, typewriter animation, and responsive sizing
-  // now live in UserGreeting. This screen only passes the user name.
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // CHAT THREAD
-  // ═══════════════════════════════════════════════════════════════════════
 
   Widget _buildChatThread() {
-    return ShaderMask(
-      shaderCallback: (Rect rect) {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.transparent, Colors.black, Colors.black, Colors.black],
-          stops: [0.0, 0.1, 0.9, 1.0],
-        ).createShader(rect);
-      },
-      blendMode: BlendMode.dstIn,
-      child: ClipRect(
-      child: ListView.builder(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        // Extra bottom padding so last messages clear the floating MessageBox
-        padding: const EdgeInsets.only(top: 70, bottom: 140),
-        itemCount: _messages.length + (_isTyping ? 1 : 0),
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      itemCount: _messages.length,
       itemBuilder: (context, index) {
-        if (index == _messages.length) {
-          // Show dotted loading animation + 4-agent pipeline step status
-          return Align(
-            alignment: Alignment.centerLeft,
-            child: StepStatusText(steps: _agentSteps),
-          );
-        }
         final msg = _messages[index];
-        final childWidget = Column(
+
+        Widget childWidget = Column(
           crossAxisAlignment: msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.center,
           children: [
             if (msg.isUser)
@@ -927,7 +743,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               ChatAnswerCard(
                 message: msg,
               ),
-            // Show step status text right below the last user message while typing
             if (_isTyping && msg.isUser && index == _messages.length - 1)
               Align(
                 alignment: Alignment.centerLeft,
@@ -948,15 +763,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           );
         }
       },
-    ),
-    ),
     );
   }
 
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // SUGGESTION PILLS
-  // ═══════════════════════════════════════════════════════════════════════
+  Widget _buildMessageBox() {
+    return MessageBox(
+      controller: _controller,
+      focusNode: _inputFocus,
+      selectedModelName: _selectedModelName,
+      isGenerating: _isTyping,
+      onSend: (text, attachments) => _handleSend(text, attachments),
+      onLogout: _handleSignOut,
+      onHoverChanged: (isHovered) {
+        if (mounted) {
+          setState(() {
+            _isMessageBoxHovered = isHovered;
+          });
+        }
+      },
+      onModelChanged: (modelName) {
+        ref.read(selectedModelProvider.notifier).selectByName(modelName);
+        final model = app_config.Config.getModelByName(modelName);
+        if (model == null) return;
+        if (mounted) {
+          setState(() {
+            _selectedModelName = model.name;
+            _selectedModelId = model.id;
+          });
+        }
+      },
+    );
+  }
 
   Widget _buildSuggestionPills() {
     return Wrap(
@@ -973,12 +810,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
   }
 }
-
-// _AnimatedMessageRow replaced by MessageCard (from message_box_pannel/message_card.dart)
-
-// ═══════════════════════════════════════════════════════════════════════════
-// UI HELPER WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════
 
 class _SuggestionPill extends StatefulWidget {
   final IconData icon;
@@ -1028,8 +859,6 @@ class _SuggestionPillState extends State<_SuggestionPill> {
     );
   }
 }
-
-// _ThinkingDots replaced by StepStatusText (from animations/animation_effects/step_status_text.dart)
 
 class _ParticleBackground extends StatelessWidget {
   final int count;
