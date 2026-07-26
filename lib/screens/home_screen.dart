@@ -220,6 +220,10 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final isCompact = screenHeight < 720;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -244,110 +248,152 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
               size: Size(MediaQuery.of(context).size.width, MediaQuery.of(context).size.height),
             ),
           ),
-          Center(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 60),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FadeTransition(
-                    opacity: _titleOpacity,
-                    child: SlideTransition(
-                      position: _titleSlide,
-                      child: _ShimmerText(
-                        controller: _shimmerCtrl,
-                        text: "< Welcome to QUANTMESSAGE >",
-                        style: GoogleFonts.tinos(
-                          fontSize: 45,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 1.2,
-                        ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(), // Single screen — no scrolling
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                        maxHeight: constraints.maxHeight,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  FadeTransition(
-                    opacity: _subtitleOpacity,
-                    child: SlideTransition(
-                      position: _subtitleSlide,
-                      child: Text("< Messaging in Modern Era >", style: GoogleFonts.jetBrainsMono(fontSize: 16, color: Colors.white.withOpacity(0.45), letterSpacing: 4, fontWeight: FontWeight.w300)),
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                  FadeTransition(
-                    opacity: _gridOpacity,
-                    child: ScaleTransition(scale: _gridScale, child: _FeatureGrid()),
-                  ),
-                  const SizedBox(height: 48),
-                  FadeTransition(
-                    opacity: _btnOpacity,
-                    child: SlideTransition(
-                      position: _btnSlide,
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          _LaunchChatButton(
-                            btnCtrl: _btnCtrl,
-                            btnScale: _btnScale,
-                            onTap: widget.onStartChat,
-                            label: " < GUEST USER >",
-                          ),
-                          const SizedBox(height: 16),
-                          // Responsive auth buttons — no overflow
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final rowWidth = math.min(
-                                340.0,
-                                constraints.maxWidth > 0
-                                    ? constraints.maxWidth
-                                    : 340.0,
-                              );
-                              return SizedBox(
-                                width: rowWidth,
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: GoogleButton(
-                                        label: 'Google',
-                                        height: 48,
-                                        borderRadius: 14,
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            smoothPageRoute(
-                                                const SignInScreen()),
-                                          );
-                                        },
+                          // 1. Header & Subtitle
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FadeTransition(
+                                opacity: _titleOpacity,
+                                child: SlideTransition(
+                                  position: _titleSlide,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: _ShimmerText(
+                                      controller: _shimmerCtrl,
+                                      text: "< Welcome to QUANTMESSAGE >",
+                                      style: GoogleFonts.tinos(
+                                        fontSize: isCompact ? 26 : 38,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: 1.0,
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: GithubButton.dark(
-                                        label: 'GitHub',
-                                        height: 48,
-                                        borderRadius: 14,
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            smoothPageRoute(
-                                                const SignInScreen()),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                              );
-                            },
+                              ),
+                              const SizedBox(height: 4),
+                              FadeTransition(
+                                opacity: _subtitleOpacity,
+                                child: SlideTransition(
+                                  position: _subtitleSlide,
+                                  child: Text(
+                                    "< Messaging in Modern Era >",
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: isCompact ? 11 : 13,
+                                      color: Colors.white.withOpacity(0.45),
+                                      letterSpacing: 2.5,
+                                      fontWeight: FontWeight.w300,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          _SettingsButton(btnCtrl: _btnCtrl, btnScale: _btnScale),
+
+                          // 2. Feature Grid (Compact 2x2 Grid)
+                          FadeTransition(
+                            opacity: _gridOpacity,
+                            child: ScaleTransition(
+                              scale: _gridScale,
+                              child: _FeatureGrid(isCompact: isCompact),
+                            ),
+                          ),
+
+                          // 3. Action Buttons Section
+                          FadeTransition(
+                            opacity: _btnOpacity,
+                            child: SlideTransition(
+                              position: _btnSlide,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _LaunchChatButton(
+                                    btnCtrl: _btnCtrl,
+                                    btnScale: _btnScale,
+                                    onTap: widget.onStartChat,
+                                    label: " < GUEST USER >",
+                                    height: isCompact ? 46 : 52,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // Responsive auth buttons
+                                  LayoutBuilder(
+                                    builder: (context, authConstraints) {
+                                      final rowWidth = math.min(
+                                        320.0,
+                                        authConstraints.maxWidth > 0
+                                            ? authConstraints.maxWidth
+                                            : 320.0,
+                                      );
+                                      return SizedBox(
+                                        width: rowWidth,
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: GoogleButton(
+                                                label: 'Google',
+                                                height: isCompact ? 38 : 42,
+                                                borderRadius: 12,
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    smoothPageRoute(
+                                                        const SignInScreen()),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: GithubButton.dark(
+                                                label: 'GitHub',
+                                                height: isCompact ? 38 : 42,
+                                                borderRadius: 12,
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    smoothPageRoute(
+                                                        const SignInScreen()),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _SettingsButton(
+                                    btnCtrl: _btnCtrl,
+                                    btnScale: _btnScale,
+                                    height: isCompact ? 42 : 48,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -368,8 +414,16 @@ class _LaunchChatButton extends StatelessWidget {
   final AnimationController btnCtrl;
   final Animation<double> btnScale;
   final VoidCallback onTap;
-  final String label; // ADDED: label parameter for customization
-  const _LaunchChatButton({required this.btnCtrl, required this.btnScale, required this.onTap, required this.label});
+  final String label;
+  final double height;
+
+  const _LaunchChatButton({
+    required this.btnCtrl,
+    required this.btnScale,
+    required this.onTap,
+    required this.label,
+    this.height = 54,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -383,22 +437,28 @@ class _LaunchChatButton extends StatelessWidget {
       child: ScaleTransition(
         scale: btnScale,
         child: Container(
-          width: 220, height: 60,
+          width: 220,
+          height: height,
           decoration: BoxDecoration(
             gradient: const LinearGradient(colors: [Color(0xFF6A11CB), Color(0xFF257BFA)]),
             borderRadius: BorderRadius.circular(15),
-            boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
+            boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 8))],
           ),
           child: Center(
-            child: Text(label, style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            child: Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: height < 50 ? 15 : 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 }
-
-// ... [Rest of the UI helpers: _ShimmerText, _FeatureGrid, _GlassCard, _SettingsButton, _ParticlePainter, _Particle remain identical to original] ...
 
 class _ShimmerText extends AnimatedWidget {
   final String text;
@@ -422,6 +482,9 @@ class _ShimmerText extends AnimatedWidget {
 }
 
 class _FeatureGrid extends StatefulWidget {
+  final bool isCompact;
+  const _FeatureGrid({this.isCompact = false});
+
   @override
   State<_FeatureGrid> createState() => _FeatureGridState();
 }
@@ -454,12 +517,22 @@ class _FeatureGridState extends State<_FeatureGrid> with TickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 20, runSpacing: 20, alignment: WrapAlignment.center,
+      spacing: widget.isCompact ? 10 : 16,
+      runSpacing: widget.isCompact ? 10 : 16,
+      alignment: WrapAlignment.center,
       children: List.generate(_cards.length, (i) {
         final (icon, title, desc) = _cards[i];
         return FadeTransition(
           opacity: _opacities[i],
-          child: SlideTransition(position: _slides[i], child: _GlassCard(icon: icon, title: title, desc: desc)),
+          child: SlideTransition(
+            position: _slides[i],
+            child: _GlassCard(
+              icon: icon,
+              title: title,
+              desc: desc,
+              isCompact: widget.isCompact,
+            ),
+          ),
         );
       }),
     );
@@ -470,7 +543,15 @@ class _GlassCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final String desc;
-  const _GlassCard({required this.icon, required this.title, required this.desc});
+  final bool isCompact;
+
+  const _GlassCard({
+    required this.icon,
+    required this.title,
+    required this.desc,
+    this.isCompact = false,
+  });
+
   @override
   State<_GlassCard> createState() => _GlassCardState();
 }
@@ -479,16 +560,25 @@ class _GlassCardState extends State<_GlassCard> with SingleTickerProviderStateMi
   late final AnimationController _hoverCtrl;
   late final Animation<double> _glow;
   bool _pressed = false;
+
   @override
   void initState() {
     super.initState();
     _hoverCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     _glow = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _hoverCtrl, curve: Curves.easeOut));
   }
+
   @override
-  void dispose() { _hoverCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _hoverCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final double cardWidth = widget.isCompact ? 140.0 : 160.0;
+    final double paddingVal = widget.isCompact ? 12.0 : 18.0;
+
     return MouseRegion(
       onEnter: (_) => _hoverCtrl.forward(),
       onExit: (_) => _hoverCtrl.reverse(),
@@ -504,25 +594,42 @@ class _GlassCardState extends State<_GlassCard> with SingleTickerProviderStateMi
               scale: _pressed ? 0.96 : 1.0,
               duration: const Duration(milliseconds: 140),
               child: SizedBox(
-                width: 160,
+                width: cardWidth,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(20),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                     child: Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.all(paddingVal),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.05 + t * 0.04),
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white.withOpacity(0.10 + t * 0.14)),
                       ),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(widget.icon, color: Colors.white, size: 30),
-                          const SizedBox(height: 15),
-                          Text(widget.title, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 8),
-                          Text(widget.desc, textAlign: TextAlign.center, style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+                          Icon(widget.icon, color: Colors.white, size: widget.isCompact ? 22 : 28),
+                          SizedBox(height: widget.isCompact ? 8 : 12),
+                          Text(
+                            widget.title,
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: widget.isCompact ? 13 : 15,
+                            ),
+                          ),
+                          SizedBox(height: widget.isCompact ? 4 : 6),
+                          Text(
+                            widget.desc,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              color: Colors.white.withOpacity(0.5),
+                              fontSize: widget.isCompact ? 10 : 12,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -540,7 +647,14 @@ class _GlassCardState extends State<_GlassCard> with SingleTickerProviderStateMi
 class _SettingsButton extends StatelessWidget {
   final AnimationController btnCtrl;
   final Animation<double> btnScale;
-  const _SettingsButton({required this.btnCtrl, required this.btnScale});
+  final double height;
+
+  const _SettingsButton({
+    required this.btnCtrl,
+    required this.btnScale,
+    this.height = 50,
+  });
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -553,15 +667,27 @@ class _SettingsButton extends StatelessWidget {
       child: ScaleTransition(
         scale: btnScale,
         child: Container(
-          width: 220, height: 60,
-          decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white.withOpacity(0.2))),
+          width: 220,
+          height: height,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.white.withOpacity(0.2)),
+          ),
           child: Center(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.settings_outlined, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Text("App Settings", style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                Icon(Icons.settings_outlined, color: Colors.white, size: height < 46 ? 18 : 20),
+                const SizedBox(width: 8),
+                Text(
+                  "App Settings",
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: height < 46 ? 15 : 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
