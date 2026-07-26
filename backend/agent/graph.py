@@ -1,23 +1,22 @@
 """
-QuantMessage Multi-Agent Backend – graph.py
-============================================
-Supervisor-Driven 4-Agent Architecture:
+QuantMessage Multi-Agent Backend – agent/graph.py
+==================================================
+Supervisor-Driven 4-Agent Architecture (PATH 2 — LangGraph Fallback):
   1. Agent 1 (Search Analyst): Analyzes query and searches the internet.
   2. Agent 2 (Error Solver): Reviews the search data for errors/inaccuracies and solves them.
   3. Agent 3 (Reviewer & Producer): Reviews all answers and formats the final response.
   4. Agent 4 (Supervisor): Orchestrates the pipeline and ensures all errors are resolved.
 
-All agents use the API keys from .env and auto-select based on model_id
-from the Flutter app.
+This is PATH 2 in the tri-path priority waterfall:
+  PATH 1 (LiteLLM)    → litellm_path/client.py       [fastest, primary]
+  PATH 2 (LangGraph)  → agent/graph.py (this file)    [fallback]
+  PATH 3 (OpenRouter) → openrouter_path/client.py     [last resort / QuantCore]
 
-FIX: QuantCore uses a direct httpx call to OpenRouter to bypass LangChain's
-     AIMessage Pydantic validator which throws when content=null and tool_calls=[].
-     Reasoning-only free models return content: null, so we extract from the
-     'reasoning' / 'reasoning_details' fields of the raw JSON response.
+QuantCore direct httpx calls are now centralized in openrouter_path/client.py
+and imported here to avoid code duplication.
 """
 
 import os
-import httpx
 from typing import TypedDict, Annotated, Sequence, Optional, List
 from langchain_core.messages import (
     BaseMessage, HumanMessage, AIMessage, FunctionMessage
@@ -30,6 +29,10 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from agent.tools import get_tools
+
+# QuantCore direct httpx calls are centralized in openrouter_path/client.py
+# Import here so agent nodes can use _call_quantcore_direct unchanged.
+from openrouter_path.client import call_quantcore_direct as _call_quantcore_direct
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  STATE DEFINITION
@@ -53,174 +56,12 @@ class AgentState(TypedDict):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  QUANTCORE: DIRECT HTTPX CALL (Bypasses LangChain's AIMessage validator)
+#  QUANTCORE NOTE
+#  _call_quantcore_direct is imported from openrouter_path/client.py above.
+#  All QuantCore constants and logic live there to avoid duplication.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Priority order for QuantCore:
-#  1. Groq llama-3.1-8b-instant (free, unlimited daily quota, fastest)
-#  2. OpenRouter free models (50/day shared quota, may be exhausted)
-#  3. openai/gpt-4o-mini via OpenRouter (paid safety net)
-_QUANTCORE_GROQ_MODEL   = "llama-3.1-8b-instant"      # Via Groq API directly
-_QUANTCORE_MODELS = [
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
-    "cohere/north-mini-code:free",
-    "inclusionai/ling-3.0-flash:free",
-]
-_QUANTCORE_FALLBACK = "openai/gpt-4o-mini"  # Paid safety net via OpenRouter
 
-
-def _extract_from_raw_response(data: dict) -> str:
-    """
-    Extract text from an OpenRouter/OpenAI-format JSON response.
-    Handles both normal models (content field) and reasoning-only models
-    (content: null, output in reasoning / reasoning_details).
-    """
-    try:
-        choices = data.get("choices", [])
-        if not choices:
-            return ""
-        msg = choices[0].get("message", {})
-
-        # 1. Normal content field
-        content = msg.get("content") or ""
-        if content.strip():
-            return content.strip()
-
-        # 2. Top-level reasoning field
-        reasoning = msg.get("reasoning") or ""
-        if reasoning.strip():
-            return reasoning.strip()
-
-        # 3. reasoning_details array (OpenRouter format for thinking models)
-        details = msg.get("reasoning_details") or []
-        if details:
-            parts = [d.get("text", "") for d in details if d.get("text")]
-            combined = "\n".join(parts).strip()
-            if combined:
-                return combined
-
-        # 4. Error block from OpenRouter
-        error = data.get("error", {})
-        if error:
-            return f"[OpenRouter error: {error.get('message', 'Unknown error')}]"
-
-    except Exception as e:
-        return f"[Parse error: {e}]"
-
-    return ""
-
-
-async def _call_quantcore_direct(
-    messages: list[dict],
-    max_tokens: int = 4096,
-    temperature: float = 0.3,
-) -> str:
-    """
-    Calls models directly via httpx, fully bypassing LangChain's AIMessage validator.
-    Priority:
-      1. Groq llama-3.1-8b-instant (free, separate rate limit, fastest)
-      2. OpenRouter free models (50/day quota, may be exhausted)
-      3. openai/gpt-4o-mini via OpenRouter (paid, reliable fallback)
-    """
-    or_key   = os.environ.get("OPENROUTER_API_KEY", "")
-    groq_key = os.environ.get("GROQ_API_KEY", "")
-
-    # ── Step 1: Try Groq first (free, separate unlimited quota) ──────────────
-    if groq_key:
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
-                    "https://api.groq.com/openai/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {groq_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": _QUANTCORE_GROQ_MODEL,
-                        "messages": messages,
-                        "max_tokens": max_tokens,
-                        "temperature": temperature,
-                    }
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
-                    if content.strip():
-                        print(f"   ✅ QuantCore responded via Groq/{_QUANTCORE_GROQ_MODEL}")
-                        return content.strip()
-                elif resp.status_code == 429:
-                    print(f"   ⚠️  Groq rate limited, falling through to OpenRouter...")
-                else:
-                    print(f"   ⚠️  Groq returned {resp.status_code}, falling through...")
-        except Exception as e:
-            print(f"   ⚠️  Groq exception: {e}, falling through to OpenRouter...")
-
-    if not or_key:
-        return "[Error: No API keys configured for QuantCore]"
-
-    headers = {
-        "Authorization": f"Bearer {or_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://quantmessage.app",
-        "X-Title": "QuantMessage AI",
-    }
-
-    models_to_try = _QUANTCORE_MODELS + [_QUANTCORE_FALLBACK]
-
-    async with httpx.AsyncClient(timeout=90.0) as client:
-        for model in models_to_try:
-            try:
-                payload = {
-                    "model": model,
-                    "messages": messages,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                }
-                resp = await client.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers=headers,
-                    json=payload,
-                )
-
-                # Handle HTTP-level errors before parsing JSON
-                if resp.status_code == 429:
-                    print(f"   ⚠️  QuantCore {model} → 429 Rate Limited (free quota exhausted), trying next...")
-                    continue
-                if resp.status_code == 401:
-                    print(f"   ❌ QuantCore {model} → 401 Unauthorized. Check OPENROUTER_API_KEY.")
-                    continue
-                if resp.status_code >= 500:
-                    print(f"   ⚠️  QuantCore {model} → {resp.status_code} Server Error, trying next...")
-                    continue
-
-                data = resp.json()
-
-                # Check for error block in successful (200) response
-                error_block = data.get("error")
-                if error_block:
-                    code = error_block.get("code", 0)
-                    msg  = error_block.get("message", "Unknown error")
-                    if code == 429:
-                        print(f"   ⚠️  QuantCore {model} → Rate limited (in body): {msg[:80]}")
-                    else:
-                        print(f"   ⚠️  QuantCore {model} → API error {code}: {msg[:80]}")
-                    continue
-
-                result = _extract_from_raw_response(data)
-                if result and not result.startswith("["):
-                    print(f"   ✅ QuantCore responded via {model}")
-                    return result
-                else:
-                    print(f"   ⚠️  QuantCore {model} returned empty output, trying next...")
-
-            except httpx.TimeoutException:
-                print(f"   ⚠️  QuantCore {model} timed out, trying next...")
-                continue
-            except Exception as e:
-                print(f"   ⚠️  QuantCore {model} exception: {e}, trying next...")
-                continue
-
-    return "[QuantCore: All models are currently rate-limited or unavailable. Please try again tomorrow or add credits to your OpenRouter account.]"
 
 
 

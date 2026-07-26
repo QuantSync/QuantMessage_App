@@ -2,7 +2,12 @@
 QuantMessage Multi-Agent Backend – main.py
 ==========================================
 FastAPI server — receives requests from the Flutter app,
-pre-processes attachments/PDFs, then runs the 4-agent pipeline.
+pre-processes attachments/PDFs, then routes through the
+tri-path priority waterfall:
+
+  PATH 1 (Primary):     LiteLLM unified gateway    → litellm_path/client.py
+  PATH 2 (Fallback):    LangChain + LangGraph       → agent/graph.py
+  PATH 3 (Last Resort): OpenRouter / QuantCore      → openrouter_path/client.py
 
 Backend location:  QuantMessage_App/backend/main.py
 Run with:          python main.py
@@ -16,12 +21,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import litellm
 
-from agent.graph import run_agent_graph
+from pathways.router import route_chat
 from utils.parsers import parse_pdf_from_url
+from litellm_path.models_catalogue import get_all_models, get_models_by_group
 
 # ── Load .env keys ─────────────────────────────────────────────────────────
 load_dotenv()
+litellm.set_verbose = False  # suppress LiteLLM debug logs
 
 # Constant for identifying guest/anonymous users
 GUEST_USER_ID = "guest_user"
@@ -29,12 +37,14 @@ GUEST_USER_ID = "guest_user"
 app = FastAPI(
     title="QuantMessage Multi-Agent Backend",
     description=(
-        "4-Agent LangGraph pipeline: Search Analyst → Error Solver → Supervisor → Reviewer & Producer.\n"
-        "Supports Groq, Gemini, OpenRouter models.\n"
-        "Features: web search, math, code review, image gen, PDF/MD creation.\n"
+        "Tri-Path AI Pipeline:\n"
+        "  PATH 1: LiteLLM unified gateway (primary — fastest)\n"
+        "  PATH 2: LangChain + LangGraph 4-agent pipeline (fallback)\n"
+        "  PATH 3: OpenRouter / QuantCore direct httpx (last resort)\n\n"
+        "Supports Groq, Gemini, OpenRouter, Anthropic, DeepSeek, xAI models.\n"
         "Guest users are fully supported — their messages are not persisted."
     ),
-    version="3.0.0",
+    version="4.0.0",
 )
 
 # Allow the Flutter app (any origin on dev) to call this API
@@ -58,10 +68,12 @@ class ChatRequest(BaseModel):
     user_id:         str   = GUEST_USER_ID   # "guest_user" for non-authenticated
     mode:            str   = "drive"         # "drive" | "fly" | "jet"
 
+
 class ChatResponse(BaseModel):
     response:    str
     agent_steps: list[str] = []
-    is_guest:    bool = False   # Frontend can use this to show "Sign in to save history"
+    is_guest:    bool = False
+    path_used:   str  = ""   # Which pathway served this response
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -80,11 +92,29 @@ def _is_guest(user_id: str) -> bool:
 @app.get("/")
 def health():
     return {
-        "status":  "🟢 Online",
-        "version": "3.0.0",
-        "agents":  ["Search Analyst", "Error Solver", "Supervisor", "Reviewer & Producer"],
-        "models":  ["Groq", "Gemini", "OpenRouter"],
+        "status":    "🟢 Online",
+        "version":   "4.0.0",
+        "paths": {
+            "primary":    "LiteLLM Unified Gateway",
+            "fallback":   "LangChain + LangGraph 4-Agent Pipeline",
+            "last_resort":"OpenRouter / QuantCore Direct",
+        },
+        "providers":   ["Groq", "Gemini", "OpenRouter", "Anthropic", "DeepSeek", "xAI"],
         "guest_support": True,
+    }
+
+
+@app.get("/api/v1/models")
+def get_models():
+    """
+    Returns the full model catalogue organized by provider group.
+    The Flutter model selector fetches this endpoint on startup to
+    stay in sync with the backend's supported models automatically.
+    """
+    return {
+        "models":         get_all_models(),
+        "models_by_group": get_models_by_group(),
+        "total":          len(get_all_models()),
     }
 
 
@@ -114,8 +144,8 @@ async def chat_endpoint(req: ChatRequest):
         if parsed_parts:
             query += "".join(parsed_parts)
 
-        # ── Run the 4-agent pipeline ─────────────────────────────────────────
-        result = await run_agent_graph(
+        # ── Run the tri-path waterfall via the PathwayRouter ─────────────────
+        result = await route_chat(
             query=query,
             model_id=req.model_id,
             mode=req.mode,
@@ -124,18 +154,20 @@ async def chat_endpoint(req: ChatRequest):
             is_guest=guest,
         )
 
-        print(f"   ✅ Pipeline complete. Steps: {len(result.get('steps', []))}")
+        path_used = result.get("path_used", result.get("path", "unknown"))
+        print(f"   ✅ Response ready. Path: {path_used}  Steps: {len(result.get('steps', []))}")
 
         return ChatResponse(
             response=result["output"],
             agent_steps=result.get("steps", []),
             is_guest=guest,
+            path_used=path_used,
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"   ❌ Pipeline error: {e}")
+        print(f"   ❌ Router error: {e}")
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
 
 
@@ -144,9 +176,10 @@ async def chat_endpoint(req: ChatRequest):
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("\n🚀 QuantMessage Multi-Agent Backend starting...")
+    print("\n🚀 QuantMessage Backend (v4.0) starting...")
     print("   📁 Location: QuantMessage_App/backend/main.py")
     print("   🌐 URL:      http://0.0.0.0:8000")
     print("   📖 Docs:     http://127.0.0.1:8000/docs")
+    print("   🔀 Paths:    LiteLLM → LangGraph → OpenRouter")
     print("   👤 Guest support: ENABLED\n")
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

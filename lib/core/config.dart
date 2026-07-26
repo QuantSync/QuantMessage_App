@@ -89,129 +89,159 @@ class Config {
   static List<AiModel> get models => _models;
 
   /// Internal list (cached for performance)
+  /// Model IDs use LiteLLM routing format:
+  ///   groq/model-name       → Groq API
+  ///   gemini/model-name     → Google Gemini API
+  ///   openrouter/org/model  → OpenRouter API
+  ///   quantcore/auto        → QuantCore direct httpx path
   static final List<AiModel> _models = [
-    // --- NATIVE ---
+    // ── NATIVE (QuantCore) ─────────────────────────────────────────────────
     const AiModel(
-      name: 'QuantCore',
-      id: 'quantcore-native',
-      description: 'Native Quant Expert (Free via OpenRouter)',
+      name: 'QuantCore Auto',
+      id: 'quantcore/auto',
+      description: 'QuantMessage proprietary multi-model auto-router. Free. Uses Groq → OpenRouter chain.',
       category: ModelCategory.native,
       supportsVision: false,
       maxContextLength: 131072,
     ),
-    
-    // --- FREE MODELS ---
+
+    // ── FREE (Groq — fastest, generous free quota) ─────────────────────────
     const AiModel(
-      name: 'North Mini Code',
-      id: 'cohere/north-mini-code:free',
-      description: 'North Mini Code absolutely free version',
+      name: 'Llama 3.1 8B Instant',
+      id: 'groq/llama-3.1-8b-instant',
+      description: 'Meta\'s Llama 3.1 8B. Fastest Groq model. Free tier with generous quota.',
       category: ModelCategory.free,
       supportsVision: false,
-      maxContextLength: 128000,
+      maxContextLength: 131072,
     ),
     const AiModel(
-      name: 'Nemotron 3.5 content safety',
-      id: 'nvidia/nemotron-3.5-content-safety:free',
-      description: 'NVIDIA Nemotron 3.5 content safety free',
+      name: 'Llama 3.3 70B Versatile',
+      id: 'groq/llama-3.3-70b-versatile',
+      description: 'Meta\'s Llama 3.3 70B. Best quality on Groq. Free tier.',
       category: ModelCategory.free,
       supportsVision: false,
-      maxContextLength: 4096,
+      maxContextLength: 131072,
     ),
     const AiModel(
-      name: 'Ling - 3.0 - flash free',
-      id: 'inclusionai/ling-3.0-flash:free',
-      description: 'inclusionAI Ling-3.0-flash free model',
+      name: 'Mixtral 8x7B',
+      id: 'groq/mixtral-8x7b-32768',
+      description: 'Mistral\'s Mixtral MoE model. Great for reasoning. Free tier.',
       category: ModelCategory.free,
       supportsVision: false,
-      maxContextLength: 4096,
+      maxContextLength: 32768,
     ),
     const AiModel(
-      name: 'Nemotron 3 ultra free',
-      id: 'nvidia/nemotron-3-ultra-550b-a55b:free',
-      description: 'NVIDIA Nemotron 3 Ultra 550B free model',
+      name: 'Gemma 2 9B IT',
+      id: 'groq/gemma2-9b-it',
+      description: 'Google\'s Gemma 2 9B instruction-tuned. Compact and capable. Free tier.',
       category: ModelCategory.free,
       supportsVision: false,
-      maxContextLength: 4096,
+      maxContextLength: 8192,
     ),
-    
-    // --- REASONING ---
+
+    // ── REASONING (Gemini — large context, multimodal) ─────────────────────
     const AiModel(
-      name: 'Google Gemini Pro',
-      id: 'gemini-pro-reasoning',
-      description: 'Google highly capable reasoning model',
-      category: ModelCategory.reasoning,
-      supportsVision: true,
-      maxContextLength: 2097152,
-    ),
-    const AiModel(
-      name: 'Google Gemini flash',
-      id: 'gemini-flash-reasoning',
-      description: 'Google fast & versatile reasoning model',
+      name: 'Gemini 2.0 Flash',
+      id: 'gemini/gemini-2.0-flash',
+      description: 'Google\'s latest multimodal model. Fast, capable, generous free quota.',
       category: ModelCategory.reasoning,
       supportsVision: true,
       maxContextLength: 1048576,
     ),
-
-    // --- CODING ---
     const AiModel(
-      name: 'Claude Opus',
-      id: 'claude-opus-coding',
-      description: "Anthropic's most powerful coding model",
+      name: 'Gemini 2.0 Flash Lite',
+      id: 'gemini/gemini-2.0-flash-lite',
+      description: 'Google\'s ultra-fast, lightweight Gemini 2.0 variant.',
+      category: ModelCategory.reasoning,
+      supportsVision: true,
+      maxContextLength: 1048576,
+    ),
+    const AiModel(
+      name: 'Gemini 1.5 Flash',
+      id: 'gemini/gemini-1.5-flash',
+      description: 'Google\'s fast 1M-context model. Free tier.',
+      category: ModelCategory.reasoning,
+      supportsVision: true,
+      maxContextLength: 1048576,
+    ),
+    const AiModel(
+      name: 'Gemini 1.5 Pro',
+      id: 'gemini/gemini-1.5-pro',
+      description: 'Google\'s 1M-context pro model. Excellent for long documents.',
+      category: ModelCategory.reasoning,
+      supportsVision: true,
+      maxContextLength: 2097152,
+    ),
+
+    // ── CODING (Premium OpenRouter models) ────────────────────────────────
+    const AiModel(
+      name: 'Claude 3.5 Sonnet',
+      id: 'openrouter/anthropic/claude-3.5-sonnet',
+      description: 'Anthropic\'s most capable model. Superior reasoning and coding.',
       category: ModelCategory.coding,
       supportsVision: true,
       maxContextLength: 200000,
     ),
     const AiModel(
-      name: 'Google Gemini Pro',
-      id: 'gemini-pro-coding',
-      description: 'Google highly capable coding model',
-      category: ModelCategory.coding,
-      supportsVision: true,
-      maxContextLength: 2097152,
-    ),
-    const AiModel(
-      name: 'Grok Code Fast',
-      id: 'grok-code-fast',
-      description: 'Fast coding model',
-      category: ModelCategory.coding,
-      supportsVision: false,
-      maxContextLength: 32768,
-    ),
-    const AiModel(
-      name: 'OpenAi GPT Latest',
-      id: 'gpt-latest-coding',
-      description: 'OpenAI latest multimodal coding model',
+      name: 'GPT-4o',
+      id: 'openrouter/openai/gpt-4o',
+      description: 'OpenAI\'s flagship multimodal model. Best for complex tasks.',
       category: ModelCategory.coding,
       supportsVision: true,
       maxContextLength: 128000,
     ),
-
-    // --- ROLEPLAY ---
     const AiModel(
-      name: 'DeepSeek V 3.2',
-      id: 'deepseek-v3.2-roleplay',
-      description: 'DeepSeek chat and roleplay model',
+      name: 'GPT-4o Mini',
+      id: 'openrouter/openai/gpt-4o-mini',
+      description: 'OpenAI\'s cost-efficient model. Great balance of speed and quality.',
+      category: ModelCategory.coding,
+      supportsVision: true,
+      maxContextLength: 128000,
+    ),
+    const AiModel(
+      name: 'DeepSeek R1',
+      id: 'openrouter/deepseek/deepseek-r1',
+      description: 'DeepSeek\'s reasoning model. Rivals GPT-o1 on benchmarks.',
+      category: ModelCategory.coding,
+      supportsVision: false,
+      maxContextLength: 65536,
+    ),
+
+    // ── ROLEPLAY (Creative / conversational models) ────────────────────────
+    const AiModel(
+      name: 'DeepSeek Chat',
+      id: 'openrouter/deepseek/deepseek-chat',
+      description: 'DeepSeek\'s latest chat model. Excellent for creative writing.',
       category: ModelCategory.roleplay,
       supportsVision: false,
-      maxContextLength: 64000,
+      maxContextLength: 65536,
+    ),
+    const AiModel(
+      name: 'Grok 2',
+      id: 'openrouter/x-ai/grok-2',
+      description: 'xAI\'s Grok 2 with real-time knowledge.',
+      category: ModelCategory.roleplay,
+      supportsVision: false,
+      maxContextLength: 131072,
     ),
     const AiModel(
       name: 'Mistral Nemo',
-      id: 'mistral-nemo-roleplay',
-      description: 'Mistral roleplay model',
+      id: 'openrouter/mistralai/mistral-nemo',
+      description: 'Mistral\'s efficient 12B model. Great multilingual support.',
       category: ModelCategory.roleplay,
       supportsVision: false,
-      maxContextLength: 32768,
+      maxContextLength: 131072,
     ),
     const AiModel(
-      name: 'Google Gemini Flash Latest',
-      id: 'gemini-flash-roleplay',
-      description: 'Google fast roleplay model',
+      name: 'Claude 3 Haiku',
+      id: 'openrouter/anthropic/claude-3-haiku',
+      description: 'Anthropic\'s fastest Claude. Cost-effective creative companion.',
       category: ModelCategory.roleplay,
       supportsVision: true,
-      maxContextLength: 1048576,
+      maxContextLength: 200000,
     ),
   ];
+
 
   /// Default model (first in list)
   static AiModel get defaultModel => _models.first;

@@ -4,7 +4,10 @@ pydantic
 python-multipart
 python-dotenv
 
-# LangChain / LangGraph
+# LiteLLM — Unified LLM Gateway (Primary AI Path)
+litellm>=1.40.0
+
+# LangChain / LangGraph (Fallback Path)
 langchain
 langchain-community
 langchain-core
