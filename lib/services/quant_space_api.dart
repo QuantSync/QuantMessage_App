@@ -1,8 +1,11 @@
 // lib/services/quant_space_api.dart
 //
-// QuantMessage — Backend API client (Integrated with Flowise AI & Supabase)
+// QuantMessage — Backend API client
+// Dual-Backend Failover:
+//   1. PRIMARY  → Railway  (fastest, always tried first)
+//   2. BACKUP   → Render   (auto-failover on Railway down/timeout)
+//   3. FALLBACK → Localhost (development only)
 
-import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
@@ -11,11 +14,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/config.dart' as app_config;
+
 // ── Convenience type aliases for cleaner code ───────
 typedef _Dio                       = dio_pkg.Dio;
 typedef _BaseOptions               = dio_pkg.BaseOptions;
 typedef _Options                   = dio_pkg.Options;
-typedef _FormData                  = dio_pkg.FormData;
 typedef _DioException              = dio_pkg.DioException;
 typedef _RequestOptions            = dio_pkg.RequestOptions;
 typedef _RequestInterceptorHandler = dio_pkg.RequestInterceptorHandler;
@@ -24,77 +28,151 @@ typedef _ErrorInterceptorHandler   = dio_pkg.ErrorInterceptorHandler;
 class QuantSpaceApi {
   late final _Dio _dio;
 
-  // ye vo credentails hgain jo env file se pull kiye hain
-  // Local python backend url
-  String get multiAgentUrl => dotenv.env['MULTI_AGENT_URL'] ?? 'http://127.0.0.1:8000/api/v1/chat';
+  // ── Derived endpoint URLs ─────────────────────────────────────────────────
+  String get _primaryChatUrl  =>
+      '${app_config.Config.primaryBackendUrl}${app_config.Config.chatEndpointPath}';
+  String get _backupChatUrl   =>
+      '${app_config.Config.backupBackendUrl}${app_config.Config.chatEndpointPath}';
+  String get _localChatUrl    =>
+      '${app_config.Config.localBackendUrl}${app_config.Config.chatEndpointPath}';
+
+  // Legacy getter kept for old code that reads dotenv directly
+  String get multiAgentUrl =>
+      dotenv.env['MULTI_AGENT_URL'] ?? _localChatUrl;
+
   String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
 
   QuantSpaceApi() {
     _dio = _Dio(
       _BaseOptions(
-        baseUrl: '', // We use full URLs for different endpoints
+        baseUrl: '',
         headers: {'Content-Type': 'application/json'},
-        connectTimeout: const Duration(seconds: 45),
+        connectTimeout: const Duration(seconds: 15),  // shorter for fast failover
         receiveTimeout: const Duration(seconds: 240),
-        sendTimeout: const Duration(seconds: 120),
+        sendTimeout:    const Duration(seconds: 120),
       ),
     );
-
-    // Attach the Supabase Auth Interceptor to all Dio requests
     _dio.interceptors.add(_AuthInterceptor());
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  //  CORE AI INTEGRATION (4-Agent Pipeline Backend)
+  //  CORE AI INTEGRATION — Dual-Backend Failover
   // ──────────────────────────────────────────────────────────────────────────
 
-  /// Returns a structured map with 'response' (string) and 'steps' (list).
+  /// Returns a structured map with 'response' (string), 'steps' (list),
+  /// 'is_guest' (bool), and 'backend_used' (string) for diagnostics.
+  ///
+  /// Routing waterfall:
+  ///   1. Railway (Primary)  — 15 s connect timeout
+  ///   2. Render  (Backup)   — 20 s connect timeout
+  ///   3. Localhost (Dev)    — final safety net
   Future<Map<String, dynamic>> getAIResponseFull(
     String message,
     String userId, {
-    String modelId = 'groq/llama-3.1-8b-instant',
-    String conversationId = 'default',
-    String mode = 'drive',
+    String modelId         = 'groq/llama-3.1-8b-instant',
+    String conversationId  = 'default',
+    String mode            = 'drive',
   }) async {
+    final payload = {
+      'message':         message,
+      'model_id':        modelId,
+      'conversation_id': conversationId,
+      'user_id':         userId,
+      'mode':            mode,
+    };
+
+    // ── 1. PRIMARY: Railway ──────────────────────────────────────────────────
     try {
-      final response = await _dio.post(
-        multiAgentUrl,
-        data: {
-          'message': message,
-          'model_id': modelId,
-          'conversation_id': conversationId,
-          'user_id': userId,
-          'mode': mode,
-        },
+      debugPrint('[DualBackend] Trying PRIMARY (Railway): $_primaryChatUrl');
+      final res = await _dio.post(
+        _primaryChatUrl,
+        data: payload,
         options: _Options(
-          receiveTimeout: const Duration(seconds: 240),
-          sendTimeout: const Duration(seconds: 120),
+          connectTimeout:  const Duration(seconds: 15),
+          receiveTimeout:  const Duration(seconds: 240),
         ),
       );
-
-      if (response.data != null && response.data is Map) {
-        final text    = response.data['response']?.toString() ?? 'No response received';
-        final steps   = (response.data['agent_steps'] as List?)?.cast<String>() ?? [];
-        final isGuest = response.data['is_guest'] as bool? ?? false;
-        return {'response': text, 'steps': steps, 'is_guest': isGuest};
+      if (res.data != null && res.data is Map) {
+        return _parseResponse(res.data, backendLabel: 'Railway (Primary)');
       }
-      return {'response': response.data.toString(), 'steps': <String>[], 'is_guest': false};
     } on _DioException catch (e) {
-      debugPrint('[QuantSpace API] Backend Error: ${e.response?.data ?? e.message}');
-      if (e.type == dio_pkg.DioExceptionType.connectionError &&
-          multiAgentUrl.contains('127.0.0.1')) {
+      debugPrint('[DualBackend] PRIMARY failed: ${e.type} — ${e.message}. Trying BACKUP...');
+    } catch (e) {
+      debugPrint('[DualBackend] PRIMARY unexpected error: $e. Trying BACKUP...');
+    }
+
+    // ── 2. BACKUP: Render ────────────────────────────────────────────────────
+    try {
+      debugPrint('[DualBackend] Trying BACKUP (Render): $_backupChatUrl');
+      final res = await _dio.post(
+        _backupChatUrl,
+        data: payload,
+        options: _Options(
+          connectTimeout:  const Duration(seconds: 20),
+          receiveTimeout:  const Duration(seconds: 240),
+        ),
+      );
+      if (res.data != null && res.data is Map) {
+        return _parseResponse(res.data, backendLabel: 'Render (Backup)');
+      }
+    } on _DioException catch (e) {
+      debugPrint('[DualBackend] BACKUP failed: ${e.type} — ${e.message}. Trying LOCALHOST...');
+    } catch (e) {
+      debugPrint('[DualBackend] BACKUP unexpected error: $e. Trying LOCALHOST...');
+    }
+
+    // ── 3. FALLBACK: Localhost (dev / offline) ───────────────────────────────
+    try {
+      debugPrint('[DualBackend] Trying FALLBACK (Localhost): $_localChatUrl');
+      final res = await _dio.post(
+        _localChatUrl,
+        data: payload,
+        options: _Options(
+          connectTimeout:  const Duration(seconds: 5),
+          receiveTimeout:  const Duration(seconds: 240),
+        ),
+      );
+      if (res.data != null && res.data is Map) {
+        return _parseResponse(res.data, backendLabel: 'Localhost (Dev)');
+      }
+    } on _DioException catch (e) {
+      debugPrint('[DualBackend] LOCALHOST also failed: ${e.message}');
+      if (e.type == dio_pkg.DioExceptionType.connectionError) {
         return {
-          'response': '🚨 Cannot connect to the local backend.\n\n'
-              'Please make sure the Python server is running:\n'
+          'response': '⚠️ All backends unreachable.\n\n'
+              'Please check your internet connection or start the local backend:\n'
               '```\ncd backend\npython main.py\n```',
           'steps': <String>[],
+          'is_guest': true,
+          'backend_used': 'None — all backends failed',
         };
       }
-      return {'response': '🚨 AI Error: ${e.message ?? "Unknown error"}', 'steps': <String>[]};
     } catch (e) {
-      debugPrint('[QuantSpace API] Unexpected Error: $e');
-      return {'response': '🚨 System Error: $e', 'steps': <String>[]};
+      debugPrint('[DualBackend] All backends failed: $e');
     }
+
+    return {
+      'response': '⚠️ Service temporarily unavailable. Please try again in a moment.',
+      'steps': <String>[],
+      'is_guest': true,
+      'backend_used': 'None — all backends failed',
+    };
+  }
+
+  /// Parses the raw API response into a standardised result map.
+  Map<String, dynamic> _parseResponse(dynamic data, {required String backendLabel}) {
+    final text    = data['response']?.toString() ?? 'No response received';
+    final steps   = (data['agent_steps'] as List?)?.cast<String>() ?? <String>[];
+    final isGuest = data['is_guest'] as bool? ?? false;
+    final pathUsed = data['path_used']?.toString() ?? '';
+    debugPrint('[DualBackend] SUCCESS via $backendLabel | path=$pathUsed');
+    return {
+      'response':     text,
+      'steps':        steps,
+      'is_guest':     isGuest,
+      'path_used':    pathUsed,
+      'backend_used': backendLabel,
+    };
   }
 
   /// Simple string-only wrapper kept for backward compatibility.

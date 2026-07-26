@@ -70,12 +70,28 @@ class Config {
       flowiseUrl.isNotEmpty && flowiseApiKey.isNotEmpty;
 
   // ═══════════════════════════════════════════════════════════════════════
-  // 🌐 BACKEND API (Railway/Custom Server)
+  // 🌐 BACKEND API — Dual-Backend Routing (Railway Primary + Render Backup)
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// Used by UploadService for transcription and custom API endpoints.
-  static String get backendUrl =>
-      dotenv.env['BACKEND_URL'] ?? 'https://your-app.up.railway.app/api/v1';
+  /// PRIMARY backend (Railway) — fastest cold start, always tried first.
+  static String get primaryBackendUrl =>
+      dotenv.env['RAILWAY_BACKEND_URL'] ??
+          'https://quantmessage-backend-production.up.railway.app';
+
+  /// BACKUP backend (Render) — auto-failover if Railway is down or rate-limited.
+  static String get backupBackendUrl =>
+      dotenv.env['RENDER_BACKEND_URL'] ??
+          'https://quantmessage-backend-backup.onrender.com';
+
+  /// LOCAL backend (development) — localhost fallback.
+  static String get localBackendUrl =>
+      dotenv.env['LOCAL_BACKEND_URL'] ?? 'http://127.0.0.1:8000';
+
+  /// The canonical chat endpoint path (appended to any base URL).
+  static const String chatEndpointPath = '/api/v1/chat';
+
+  /// Backwards-compatible alias (used by UploadService).
+  static String get backendUrl => primaryBackendUrl;
 
   // ═══════════════════════════════════════════════════════════════════════
   // 🛠️ UTILITIES & PLATFORM
