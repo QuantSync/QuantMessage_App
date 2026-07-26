@@ -574,7 +574,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     if (_messages.isEmpty)
                       Positioned.fill(
                         child: Align(
-                          alignment: Alignment.center,
+                          alignment: const Alignment(0.0, -0.45),
                           child: ScaleTransition(
                             scale: _emptyScale,
                             child: FadeTransition(
@@ -582,6 +582,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                                 child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     UserGreeting(userName: _displayName),

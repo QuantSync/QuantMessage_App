@@ -298,19 +298,33 @@ class _AccountMenuCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Email header ──────────────────────────────────────
+            // ── Email header with close button ──────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-              child: Text(
-                email,
-                style: GoogleFonts.outfit(
-                  color: Colors.white54,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.1,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              padding: const EdgeInsets.fromLTRB(18, 14, 8, 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      email,
+                      style: GoogleFonts.outfit(
+                        color: Colors.white54,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                    onPressed: onClose,
+                    splashRadius: 16,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ),
             ),
 
@@ -441,9 +455,9 @@ class _LanguageCardInlineState extends State<_LanguageCardInline> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header with back button
+            // Header with back and close button
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(4, 8, 8, 4),
               child: Row(
                 children: [
                   IconButton(
@@ -456,13 +470,22 @@ class _LanguageCardInlineState extends State<_LanguageCardInline> {
                     constraints: const BoxConstraints(),
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    'Language',
-                    style: GoogleFonts.outfit(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Text(
+                      'Language',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                    onPressed: widget.onDismissAll,
+                    splashRadius: 16,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
