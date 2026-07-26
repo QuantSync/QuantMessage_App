@@ -290,55 +290,81 @@ class _MessageBoxState extends State<MessageBox>
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              _CircleIconButton(
-                                icon: Icons.add,
-                                tooltip: "Add attachment",
-                                onTap: _handleAttachmentClick,
-                                isHovered: _isHovered,
-                              ),
-                              const SizedBox(width: 6),
-                              ChatConfigurationButton(
-                                selectedMode: widget.selectedMode,
-                                onModeChanged: widget.onModeChanged,
-                                isHovered: _isHovered,
-                              ),
-                              const Spacer(),
-                              _ModelDropdown(
-                                currentModel: widget.selectedModelName,
-                                onChanged: widget.onModelChanged,
-                                isHovered: _isHovered,
-                              ),
-                              const SizedBox(width: 6),
-                              _CircleIconButton(
-                                icon: Icons.mic_none,
-                                tooltip: "Voice input",
-                                onTap: () {},
-                                isHovered: _isHovered,
-                              ),
-                              const SizedBox(width: 6),
-                              _CircleIconButton(
-                                icon: Icons.graphic_eq,
-                                tooltip: "Audio settings",
-                                onTap: () {},
-                                isHovered: _isHovered,
-                              ),
-                              const SizedBox(width: 10),
-                              _SendButton(
-                                onTap: _triggerSend,
-                                isHovered: _isHovered,
-                                isGenerating: widget.isGenerating,
-                              ),
-                              const SizedBox(width: 6),
-                              _CircleIconButton(
-                                icon: Icons.logout_rounded,
-                                tooltip: "Logout",
-                                onTap: widget.onLogout,
-                                isHovered: _isHovered,
-                              ),
-                            ],
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final bool isNarrow = constraints.maxWidth < 520;
+
+                              return SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          _CircleIconButton(
+                                            icon: Icons.add,
+                                            tooltip: "Add attachment",
+                                            onTap: _handleAttachmentClick,
+                                            isHovered: _isHovered,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          ChatConfigurationButton(
+                                            selectedMode: widget.selectedMode,
+                                            onModeChanged: widget.onModeChanged,
+                                            isHovered: _isHovered,
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          _ModelDropdown(
+                                            currentModel: widget.selectedModelName,
+                                            onChanged: widget.onModelChanged,
+                                            isHovered: _isHovered,
+                                          ),
+                                          if (!isNarrow) ...[
+                                            const SizedBox(width: 4),
+                                            _CircleIconButton(
+                                              icon: Icons.mic_none,
+                                              tooltip: "Voice input",
+                                              onTap: () {},
+                                              isHovered: _isHovered,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            _CircleIconButton(
+                                              icon: Icons.graphic_eq,
+                                              tooltip: "Audio settings",
+                                              onTap: () {},
+                                              isHovered: _isHovered,
+                                            ),
+                                          ],
+                                          const SizedBox(width: 6),
+                                          _SendButton(
+                                            onTap: _triggerSend,
+                                            isHovered: _isHovered,
+                                            isGenerating: widget.isGenerating,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          _CircleIconButton(
+                                            icon: Icons.logout_rounded,
+                                            tooltip: "Logout",
+                                            onTap: widget.onLogout,
+                                            isHovered: _isHovered,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

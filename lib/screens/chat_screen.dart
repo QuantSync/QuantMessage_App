@@ -465,6 +465,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                       _messages.clear();
                       _generateConversationId();
                       _emptyCtrl.forward(from: 0.0);
+                      if (isMobile) {
+                        _isMobileSidebarOpen = false;
+                      }
                     });
                   },
                   userEmail: _userEmail,
@@ -650,13 +653,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   return Stack(
                     children: [
                       Positioned.fill(child: mainChatView),
-                      if (_isMobileSidebarOpen)
+                      if (_isMobileSidebarOpen) ...[
+                        // Backdrop tap listener: clicking anywhere outside closes the sidebar
+                        Positioned.fill(
+                          child: GestureDetector(
+                            onTap: () {
+                              if (mounted) {
+                                setState(() {
+                                  _isMobileSidebarOpen = false;
+                                });
+                              }
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                              child: Container(
+                                color: Colors.black.withValues(alpha: 0.45),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Sidebar overlay
                         Positioned(
                           top: 0,
                           bottom: 0,
                           left: 0,
                           child: sidebarWidget,
                         ),
+                      ],
                     ],
                   );
                 }
