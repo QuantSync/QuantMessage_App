@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Import the custom buttons
 import 'animations/animated_buttons/google_button.dart';
 import 'animations/animated_buttons/github_button.dart';
+import 'animations/animated_buttons/app_settings_button.dart';
 
 
 import '../providers/attachment_provider.dart';
@@ -87,20 +88,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: isDesktop
-          ? Row(
+          ? Stack(
               children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 80),
-                    child: _ShellPageHost(
-                      currentIndex: currentIndex,
-                      pages: _pages,
-                    ),
+                Positioned.fill(
+                  child: _ShellPageHost(
+                    currentIndex: currentIndex,
+                    pages: _pages,
                   ),
                 ),
-                CustomAppBar(
-                  selectedIndex: currentIndex,
-                  onItemSelected: _onItemSelected,
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: CustomAppBar(
+                    selectedIndex: currentIndex,
+                    onItemSelected: _onItemSelected,
+                  ),
                 ),
               ],
             )
@@ -380,10 +383,11 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
                                     },
                                   ),
                                   const SizedBox(height: 8),
-                                  _SettingsButton(
-                                    btnCtrl: _btnCtrl,
-                                    btnScale: _btnScale,
+                                  AppSettingsButton(
                                     height: isCompact ? 42 : 48,
+                                    onPressed: () {
+                                      showSettingsPopup(context);
+                                    },
                                   ),
                                 ],
                               ),
@@ -638,59 +642,6 @@ class _GlassCardState extends State<_GlassCard> with SingleTickerProviderStateMi
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsButton extends StatelessWidget {
-  final AnimationController btnCtrl;
-  final Animation<double> btnScale;
-  final double height;
-
-  const _SettingsButton({
-    required this.btnCtrl,
-    required this.btnScale,
-    this.height = 50,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => btnCtrl.forward(),
-      onTapUp: (_) async {
-        await btnCtrl.reverse();
-        showSettingsPopup(context);
-      },
-      onTapCancel: () => btnCtrl.reverse(),
-      child: ScaleTransition(
-        scale: btnScale,
-        child: Container(
-          width: 220,
-          height: height,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
-          ),
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.settings_outlined, color: Colors.white, size: height < 46 ? 18 : 20),
-                const SizedBox(width: 8),
-                Text(
-                  "App Settings",
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: height < 46 ? 15 : 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
