@@ -4,10 +4,10 @@
 // AttachmentPickerSheet, Config, ChatMessage
 
 import 'dart:io' show File;
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -250,33 +250,43 @@ class _MessageBoxState extends State<MessageBox>
                                   (MediaQuery.sizeOf(context).height * 0.5)
                                       .clamp(180.0, 520.0),
                             ),
-                            child: TextField(
-                              controller: widget.controller,
-                              focusNode: widget.focusNode,
-                              // Capacity: up to 5000 lines (scrolls within viewport)
-                              maxLines: 5000,
-                              minLines: 1,
-                              keyboardType: TextInputType.multiline,
-                              textInputAction: TextInputAction.newline,
-                              style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontSize: 16,
-                                height: 1.4,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: widget.hintText,
-                                hintStyle: GoogleFonts.outfit(
-                                  color: Colors.white38,
+                            child: KeyboardListener(
+                              focusNode: FocusNode(),
+                              onKeyEvent: (KeyEvent event) {
+                                if (event is KeyDownEvent &&
+                                    event.logicalKey == LogicalKeyboardKey.enter) {
+                                  if (!HardwareKeyboard.instance.isShiftPressed) {
+                                    _triggerSend();
+                                  }
+                                }
+                              },
+                              child: TextField(
+                                controller: widget.controller,
+                                focusNode: widget.focusNode,
+                                maxLines: 5000,
+                                minLines: 1,
+                                keyboardType: TextInputType.multiline,
+                                textInputAction: TextInputAction.send,
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white,
                                   fontSize: 16,
+                                  height: 1.4,
                                 ),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 6,
-                                  horizontal: 2,
+                                decoration: InputDecoration(
+                                  hintText: widget.hintText,
+                                  hintStyle: GoogleFonts.outfit(
+                                    color: Colors.white38,
+                                    fontSize: 16,
+                                  ),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                    horizontal: 2,
+                                  ),
                                 ),
+                                onSubmitted: (_) => _triggerSend(),
                               ),
-                              onSubmitted: (_) => _triggerSend(),
                             ),
                           ),
                           const SizedBox(height: 8),
