@@ -73,12 +73,13 @@ class Config {
   // 🌐 BACKEND API — Dual-Backend Routing (Railway Primary + Render Backup)
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// PRIMARY backend (Railway) — fastest cold start, always tried first.
+  /// PRIMARY backend (Railway) — fastest, always tried first.
+  /// Reads from .env in dev; falls back to the live Railway URL on Vercel/prod.
   static String get primaryBackendUrl =>
       dotenv.env['RAILWAY_BACKEND_URL'] ??
-          'https://quantmessage-backend-production.up.railway.app';
+          'https://web-production-aa98e.up.railway.app';
 
-  /// BACKUP backend (Render) — auto-failover if Railway is down or rate-limited.
+  /// BACKUP backend (Render) — auto-failover if Railway is down.
   static String get backupBackendUrl =>
       dotenv.env['RENDER_BACKEND_URL'] ??
           'https://quantmessage-backend-backup.onrender.com';
