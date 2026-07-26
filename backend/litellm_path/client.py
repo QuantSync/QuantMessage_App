@@ -228,66 +228,68 @@ async def _agent2_error_detector(query: str, gathered_data: str, is_deep_search:
     return await _litellm_call(model_id, messages, temperature=0.2, max_tokens=4096)
 
 
-# ?? AGENT 3: Validator ??????????????????????????????????????????????????????
+# ── AGENT 3: Validator ──────────────────────────────────────────────────────
 async def _agent3_validator(query: str, solved_data: str, is_deep_search: bool, model_id: str) -> str:
     """
     Agent 3 verifies completeness and logical consistency.
-    Returns validation report and quality metrics (Confidence % and Completeness %).
+    Returns refined factual points for Agent 4.
     """
     system_prompt = (
         "You are AGENT 3 (Validator).\n"
-        "Your objective: Rigorously validate the error detector's output.\n"
-        "1. Verify completeness: Are all key angles of the query addressed?\n"
-        "2. Check logical consistency and correctness.\n"
-        "3. Generate quality metrics (Confidence % and Completeness %).\n"
-        "Respond with VALIDATION_STATUS: PASS | FAIL, COMPLETENESS_SCORE: <0-100>, CONFIDENCE_SCORE: <0-100>."
+        "Your objective: Validate and refine the factual solution data for the user.\n"
+        "1. Ensure all parts of the user query are completely answered.\n"
+        "2. Remove any internal meta-commentary, quality scores, report titles, or system guidelines.\n"
+        "3. Output ONLY the validated, direct factual content ready for final synthesis."
     )
     user_prompt = (
         f"User Query: {query}\n\n"
         f"Agent 2 Solved Data:\n{solved_data}\n\n"
-        "Provide your validation report and metrics."
+        "Refine and output the validated content directly."
     )
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": user_prompt},
+        {"role": "user", "content": user_prompt},
     ]
     return await _litellm_call(model_id, messages, temperature=0.1, max_tokens=2048)
 
 
-# ?? AGENT 4: Output Generator ??????????????????????????????????????????????
+# ── AGENT 4: Output Generator ──────────────────────────────────────────────
 async def _agent4_output_generator(query: str, validated_data: str, is_deep_search: bool, model_id: str) -> str:
     """
-    Agent 4 synthesizes the final response.
-    Quick Answer: Concise 1-3 paragraphs with 1-2 sources.
+    Agent 4 synthesizes the final response for the user.
+    Quick Answer: Concise 1-3 paragraphs with key sources.
     Deep Search: Comprehensive structured sections, key takeaways, full bibliography.
+    STRICT RULE: Never output meta-commentary about reports, validation scores, or agent steps.
     """
     if is_deep_search:
         system_prompt = (
             "You are AGENT 4 (Output Generator - Deep Search Mode).\n"
-            "Synthesize a master-level, highly comprehensive response in Markdown.\n"
-            "Requirements:\n"
-            "1. Deep structured sections (Executive Summary, Detailed Analysis, Technical Nuances, Edge Cases).\n"
-            "2. Bulleted 'Key Takeaways' section.\n"
-            "3. Full Bibliography & Citations section with source links.\n"
-            "4. Never truncate your output."
+            "Synthesize a polished, highly comprehensive response for the user in Markdown.\n"
+            "STRICT RULES:\n"
+            "1. Answer the user query directly and thoroughly.\n"
+            "2. DO NOT include meta-commentary, validation scores, report titles (e.g. 'Validation Report Summary', 'ERROR DETECTION MATRIX'), or mentions of agents.\n"
+            "3. Structure with Markdown sections: Executive Summary, Detailed Analysis, Key Takeaways, and Sources.\n"
+            "4. Produce direct user-facing content only."
         )
         max_tokens = 8192
     else:
         system_prompt = (
             "You are AGENT 4 (Output Generator - Quick Answer Mode).\n"
             "Generate a concise, direct, and hyper-accurate answer in 1-3 paragraphs.\n"
-            "Include 1-2 key sources/citations at the bottom. Format for rapid reading."
+            "STRICT RULES:\n"
+            "1. Answer the user's question directly. Do not write about validation scores, report summaries, or agent processes.\n"
+            "2. Include 1-2 key sources/citations at the bottom. Format for rapid reading."
         )
         max_tokens = 2048
 
     user_prompt = (
         f"User Query: {query}\n\n"
-        f"Validated Solution Data:\n{validated_data}\n\n"
-        "Generate the final polished response."
+        f"Validated Data:\n{validated_data}\n\n"
+        "Generate the direct user-facing Markdown response."
     )
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user",   "content": user_prompt},
+        {"role": "user", "content": user_prompt},
     ]
     return await _litellm_call(model_id, messages, temperature=0.2, max_tokens=max_tokens)
 
