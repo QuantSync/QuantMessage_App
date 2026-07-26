@@ -231,7 +231,7 @@ class _MessageBoxState extends State<MessageBox>
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(14.0),
+                      padding: EdgeInsets.all(MediaQuery.of(context).size.width < 800 ? 10.0 : 14.0),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -245,10 +245,10 @@ class _MessageBoxState extends State<MessageBox>
                           ],
                           ConstrainedBox(
                             constraints: BoxConstraints(
-                              minHeight: 28,
+                              minHeight: MediaQuery.of(context).size.width < 800 ? 22 : 28,
                               maxHeight:
-                                  (MediaQuery.sizeOf(context).height * 0.5)
-                                      .clamp(180.0, 520.0),
+                                  (MediaQuery.sizeOf(context).height * 0.4)
+                                      .clamp(140.0, 520.0),
                             ),
                             child: KeyboardListener(
                               focusNode: FocusNode(),
@@ -269,19 +269,19 @@ class _MessageBoxState extends State<MessageBox>
                                 textInputAction: TextInputAction.send,
                                 style: GoogleFonts.outfit(
                                   color: Colors.white,
-                                  fontSize: 16,
-                                  height: 1.4,
+                                  fontSize: MediaQuery.of(context).size.width < 800 ? 14 : 16,
+                                  height: 1.35,
                                 ),
                                 decoration: InputDecoration(
                                   hintText: widget.hintText,
                                   hintStyle: GoogleFonts.outfit(
                                     color: Colors.white38,
-                                    fontSize: 16,
+                                    fontSize: MediaQuery.of(context).size.width < 800 ? 14 : 16,
                                   ),
                                   border: InputBorder.none,
                                   isDense: true,
                                   contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 6,
+                                    vertical: 4,
                                     horizontal: 2,
                                   ),
                                 ),

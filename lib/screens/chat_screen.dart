@@ -577,7 +577,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     if (_messages.isEmpty)
                       Positioned.fill(
                         child: Align(
-                          alignment: const Alignment(0.0, -0.45),
+                          alignment: isMobile ? const Alignment(0.0, -0.65) : const Alignment(0.0, -0.45),
                           child: ScaleTransition(
                             scale: _emptyScale,
                             child: FadeTransition(
@@ -589,12 +589,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     UserGreeting(userName: _displayName),
-                                    const SizedBox(height: 12),
+                                    SizedBox(height: isMobile ? 6 : 12),
                                     Text(
                                       'The night owls get the best ideas — what\'s on your mind?',
                                       style: GoogleFonts.outfit(
                                         color: Colors.white.withValues(alpha: 0.45),
-                                        fontSize: 14,
+                                        fontSize: isMobile ? 12 : 14,
                                         fontWeight: FontWeight.w400,
                                         letterSpacing: 0.2,
                                       ),
@@ -615,19 +615,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                           ignoring: false,
                           child: Padding(
                             padding: EdgeInsets.fromLTRB(
-                              20,
+                              isMobile ? 12 : 20,
                               0,
-                              20,
-                              keyboardInset > 0 ? keyboardInset : 24,
+                              isMobile ? 12 : 20,
+                              keyboardInset > 0 ? keyboardInset : (isMobile ? 10 : 24),
                             ),
                             child: Column(
                               children: [
-                                const Spacer(flex: 3),
+                                Spacer(flex: isMobile ? 6 : 3),
                                 _buildAdviceBanner(),
+                                SizedBox(height: isMobile ? 4 : 8),
                                 _buildMessageBox(),
-                                const SizedBox(height: 12),
+                                SizedBox(height: isMobile ? 8 : 12),
                                 _buildSuggestionPills(),
-                                const Spacer(flex: 2),
+                                Spacer(flex: isMobile ? 1 : 2),
                               ],
                             ),
                           ),
@@ -635,13 +636,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                       )
                     else
                       Positioned(
-                        left: 20,
-                        right: 20,
-                        bottom: 16 + keyboardInset,
+                        left: isMobile ? 12 : 20,
+                        right: isMobile ? 12 : 20,
+                        bottom: (isMobile ? 8 : 16) + keyboardInset,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _buildAdviceBanner(),
+                            SizedBox(height: isMobile ? 4 : 8),
                             _buildMessageBox(),
                           ],
                         ),
@@ -799,15 +801,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Widget _buildAdviceBanner() {
+    final bool isMobile = MediaQuery.of(context).size.width < 800;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: EdgeInsets.only(bottom: isMobile ? 4.0 : 8.0),
       child: Center(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 10 : 14,
+                vertical: isMobile ? 4 : 6,
+              ),
               decoration: BoxDecoration(
                 color: const Color(0xFF28282A).withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(20),
@@ -826,18 +832,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline_rounded,
-                    color: Color(0xFF60A5FA),
-                    size: 15,
+                    color: const Color(0xFF60A5FA),
+                    size: isMobile ? 12 : 15,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: isMobile ? 6 : 8),
                   Flexible(
                     child: Text(
                       "Deep Search Feature Consumes more model credits so utilise accordingly",
                       style: GoogleFonts.outfit(
                         color: Colors.white70,
-                        fontSize: 12,
+                        fontSize: isMobile ? 10 : 12,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.2,
                       ),
