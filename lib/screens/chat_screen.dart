@@ -155,8 +155,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // State for the Global Blur Effect (when MessageBox is hovered)
   bool _isMessageBoxHovered = false;
 
-  // State for the Profile Menu blur
+  // State for the Profile Menu & Mobile Sidebar blur
   bool _isProfileMenuOpen = false;
+  bool _isMobileSidebarOpen = false;
 
   // ── Model Selection synced from shared provider ──
   late String _selectedModelName;
@@ -464,18 +465,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           children: [
             _buildBlurredBackground(),
 
-            // GLOBAL BLUR LAYER (when MessageBox is hovered)
-            if (_isMessageBoxHovered || _isProfileMenuOpen)
+            // GLOBAL BLUR LAYER (when MessageBox is hovered, profile menu open, or mobile sidebar drawer open)
+            if (_isMessageBoxHovered || _isProfileMenuOpen || _isMobileSidebarOpen)
               Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(color: Colors.black.withValues(alpha: 0.4)),
+                child: GestureDetector(
+                  onTap: () {
+                    if (_isMobileSidebarOpen) {
+                      setState(() => _isMobileSidebarOpen = false);
+                    }
+                  },
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(color: Colors.black.withValues(alpha: 0.45)),
+                  ),
                 ),
               ),
 
-            Row(
-              children: [
-                LeftSidebar(
+            Builder(
+              builder: (context) {
+                final double screenWidth = MediaQuery.of(context).size.width;
+                final bool isMobile = screenWidth < 800;
+
+                Widget sidebarWidget = LeftSidebar(
                   onNewChat: () {
                     setState(() {
                       _messages.clear();
@@ -492,8 +503,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   onMenuClosed: () {
                     if (mounted) setState(() => _isProfileMenuOpen = false);
                   },
-                ),
-                Expanded(
+                );
+
+                Widget mainChatView = Expanded(
                   child: Stack(
                     children: [
                       const _ParticleBackground(count: 22),
@@ -517,6 +529,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                   Row(
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
+                                      // Mobile 3-line hamburger menu button to toggle sidebar
+                                      IconButton(
+                                        icon: const Icon(Icons.menu, color: Colors.white70, size: 24),
+                                        onPressed: () {
+                                          setState(() => _isMobileSidebarOpen = !_isMobileSidebarOpen);
+                                        },
+                                        tooltip: 'Open Sidebar',
+                                      ),
+                                      const SizedBox(width: 6),
                                       ModeSliderButton(
                                         currentMode: _currentMode,
                                         onModeChanged: (mode) {
@@ -697,8 +718,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                         ),
                     ],
                   ),
-                ),
-              ],
+                );
+
+                if (isMobile) {
+                  return Stack(
+                    children: [
+                      Positioned.fill(child: mainChatView),
+                      if (_isMobileSidebarOpen)
+                        Positioned(
+                          top: 0,
+                          bottom: 0,
+                          left: 0,
+                          child: sidebarWidget,
+                        ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    sidebarWidget,
+                    mainChatView,
+                  ],
+                );
+              },
             ),
 
             // First-time name onboarding (blur + glass card)

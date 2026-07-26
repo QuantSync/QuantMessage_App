@@ -116,15 +116,20 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
               bool isMobile = constraints.maxWidth < 800;
 
               if (isMobile) {
-                return SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(
-                          height: 300,
-                          child: _EnhancedConnectorsAnimation()
-                      ),
-                      _buildSignInCard(),
-                    ],
+                return Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          height: 120,
+                          child: _EnhancedConnectorsAnimation(),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildSignInCard(isMobile: true),
+                      ],
+                    ),
                   ),
                 );
               }
@@ -310,13 +315,13 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildSignInCard() {
+  Widget _buildSignInCard({bool isMobile = false}) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 460),
-      padding: const EdgeInsets.all(40),
+      padding: EdgeInsets.all(isMobile ? 20 : 36),
       decoration: BoxDecoration(
         color: AppTheme.surfaceDark.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
@@ -337,30 +342,28 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
             // ─────────────────────────────────────────────────────────────
             Center(
               child: SizedBox(
-                width: 140,
-                height: 80, // Height = size / 2 to avoid RenderFlex overflow
+                width: isMobile ? 100 : 130,
+                height: isMobile ? 50 : 65,
                 child: InfinityAnimation(
-                  size: 140,
+                  size: isMobile ? 100 : 130,
                   color: AppTheme.primaryRed,
                   duration: const Duration(seconds: 4),
                 ),
               ),
             ),
-            // ─────────────────────────────────────────────────────────────
-
-            const SizedBox(height: 32),
+            SizedBox(height: isMobile ? 12 : 24),
             Text(
               'Welcome Back',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+              style: GoogleFonts.outfit(color: Colors.white, fontSize: isMobile ? 24 : 28, fontWeight: FontWeight.w700, letterSpacing: -0.5),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               'Sign in to continue to QuantSync',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 14),
+              style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: isMobile ? 12 : 14),
             ),
-            const SizedBox(height: 36),
+            SizedBox(height: isMobile ? 16 : 28),
             _buildModernTextField(
               controller: _emailController,
               label: 'Email',
@@ -400,10 +403,10 @@ class _SignInScreenState extends State<SignInScreen> with TickerProviderStateMix
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: isMobile ? 16 : 24),
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: isMobile ? 44 : 50,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _signIn,
                 style: ElevatedButton.styleFrom(

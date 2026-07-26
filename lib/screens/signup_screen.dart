@@ -123,15 +123,20 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
               bool isMobile = constraints.maxWidth < 800;
 
               if (isMobile) {
-                return SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(
-                          height: 300,
-                          child: _EnhancedConnectorsAnimation()
-                      ),
-                      _buildSignupCard(),
-                    ],
+                return Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          height: 110,
+                          child: _EnhancedConnectorsAnimation(),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildSignupCard(isMobile: true),
+                      ],
+                    ),
                   ),
                 );
               }
@@ -317,13 +322,13 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildSignupCard() {
+  Widget _buildSignupCard({bool isMobile = false}) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 460),
-      padding: const EdgeInsets.all(40),
+      padding: EdgeInsets.all(isMobile ? 18 : 36),
       decoration: BoxDecoration(
         color: AppTheme.surfaceDark.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
@@ -344,30 +349,28 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
             // ─────────────────────────────────────────────────────────────
             Center(
               child: SizedBox(
-                width: 140,
-                height: 80, // Height = size / 2 to avoid RenderFlex overflow
+                width: isMobile ? 95 : 130,
+                height: isMobile ? 48 : 65,
                 child: InfinityAnimation(
-                  size: 140,
+                  size: isMobile ? 95 : 130,
                   color: AppTheme.primaryRed,
                   duration: const Duration(seconds: 4),
                 ),
               ),
             ),
-            // ─────────────────────────────────────────────────────────────
-
-            const SizedBox(height: 32),
+            SizedBox(height: isMobile ? 10 : 24),
             Text(
               'Create Account',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+              style: GoogleFonts.outfit(color: Colors.white, fontSize: isMobile ? 22 : 28, fontWeight: FontWeight.w700, letterSpacing: -0.5),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               'Join Q.Ai and start exploring today',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 14),
+              style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: isMobile ? 12 : 14),
             ),
-            const SizedBox(height: 36),
+            SizedBox(height: isMobile ? 14 : 28),
             _buildModernTextField(
               controller: _nameController,
               label: 'Full Name',
@@ -407,10 +410,10 @@ class _SignUpScreenState extends State<SignUpScreen> with TickerProviderStateMix
                 return null;
               },
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: isMobile ? 14 : 24),
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: isMobile ? 42 : 50,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _signUp,
                 style: ElevatedButton.styleFrom(

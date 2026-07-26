@@ -176,9 +176,9 @@ class _CustomAppBarState extends ConsumerState<CustomAppBar>
   /// Calculates the horizontal pill left offset for mobile nav.
   double _horizontalPillLeft(double screenWidth, int count, int index) {
     // Nav bar width = screenWidth - left(12) - right(12) = screenWidth - 24
-    // Each slot width = (screenWidth - 24) / count
-    // Pill is centered within its slot: slot * index + (slot - 44) / 2
-    final slotWidth = (screenWidth - 24) / count;
+    // Total items in horizontal row = count (nav items) + 1 (News button)
+    final totalSlots = count + 1;
+    final slotWidth = (screenWidth - 24) / totalSlots;
     return slotWidth * index + (slotWidth - 44) / 2;
   }
 

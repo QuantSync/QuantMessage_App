@@ -16,15 +16,15 @@ Future<void> showSettingsPopup(BuildContext context) {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Settings',
-    barrierColor: Colors.black.withOpacity(0.5),
+    barrierColor: Colors.black.withOpacity(0.75),
     transitionDuration: const Duration(milliseconds: 350),
     pageBuilder: (context, anim1, anim2) => const _SettingsDialog(),
     transitionBuilder: (context, anim1, anim2, child) {
       final curved = CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic);
       return BackdropFilter(
         filter: ImageFilter.blur(
-          sigmaX: 12 * anim1.value,
-          sigmaY: 12 * anim1.value,
+          sigmaX: 18 * anim1.value,
+          sigmaY: 18 * anim1.value,
         ),
         child: FadeTransition(
           opacity: curved,
