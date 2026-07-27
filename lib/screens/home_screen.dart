@@ -256,151 +256,150 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(), // Single screen — no scrolling
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight,
-                        maxHeight: constraints.maxHeight,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(), // Restored smooth scrolling
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 12),
+                      // 1. Header & Subtitle
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // 1. Header & Subtitle
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FadeTransition(
-                                opacity: _titleOpacity,
-                                child: SlideTransition(
-                                  position: _titleSlide,
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: _ShimmerText(
-                                      controller: _shimmerCtrl,
-                                      text: "< Welcome to QUANTMESSAGE >",
-                                      style: GoogleFonts.tinos(
-                                        fontSize: isCompact ? 26 : 38,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                        letterSpacing: 1.0,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              FadeTransition(
-                                opacity: _subtitleOpacity,
-                                child: SlideTransition(
-                                  position: _subtitleSlide,
-                                  child: Text(
-                                    "< Messaging in Modern Era >",
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: isCompact ? 11 : 13,
-                                      color: Colors.white.withOpacity(0.45),
-                                      letterSpacing: 2.5,
-                                      fontWeight: FontWeight.w300,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          // 2. Feature Grid (Compact 2x2 Grid)
                           FadeTransition(
-                            opacity: _gridOpacity,
-                            child: ScaleTransition(
-                              scale: _gridScale,
-                              child: _FeatureGrid(isCompact: isCompact),
+                            opacity: _titleOpacity,
+                            child: SlideTransition(
+                              position: _titleSlide,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: _ShimmerText(
+                                  controller: _shimmerCtrl,
+                                  text: "< Welcome to QUANTMESSAGE >",
+                                  style: GoogleFonts.tinos(
+                                    fontSize: 38,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-
-                          // 3. Action Buttons Section
+                          const SizedBox(height: 6),
                           FadeTransition(
-                            opacity: _btnOpacity,
+                            opacity: _subtitleOpacity,
                             child: SlideTransition(
-                              position: _btnSlide,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _LaunchChatButton(
-                                    btnCtrl: _btnCtrl,
-                                    btnScale: _btnScale,
-                                    onTap: widget.onStartChat,
-                                    label: " < GUEST USER >",
-                                    height: isCompact ? 46 : 52,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  // Responsive auth buttons
-                                  LayoutBuilder(
-                                    builder: (context, authConstraints) {
-                                      final rowWidth = math.min(
-                                        320.0,
-                                        authConstraints.maxWidth > 0
-                                            ? authConstraints.maxWidth
-                                            : 320.0,
-                                      );
-                                      return SizedBox(
-                                        width: rowWidth,
-                                        child: Row(
-                                          children: [
-                                            Expanded(
-                                              child: GoogleButton(
-                                                label: 'Google',
-                                                height: isCompact ? 38 : 42,
-                                                borderRadius: 12,
-                                                onPressed: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    smoothPageRoute(
-                                                        const SignInScreen()),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: GithubButton.dark(
-                                                label: 'GitHub',
-                                                height: isCompact ? 38 : 42,
-                                                borderRadius: 12,
-                                                onPressed: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    smoothPageRoute(
-                                                        const SignInScreen()),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 8),
-                                  AppSettingsButton(
-                                    height: isCompact ? 42 : 48,
-                                    onPressed: () {
-                                      showSettingsPopup(context);
-                                    },
-                                  ),
-                                ],
+                              position: _subtitleSlide,
+                              child: Text(
+                                "< Messaging in Modern Era >",
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 14,
+                                  color: Colors.white.withOpacity(0.45),
+                                  letterSpacing: 2.5,
+                                  fontWeight: FontWeight.w300,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  );
-                },
+
+                      const SizedBox(height: 32),
+
+                      // 2. Feature Grid (Full 4 Card Grid)
+                      FadeTransition(
+                        opacity: _gridOpacity,
+                        child: ScaleTransition(
+                          scale: _gridScale,
+                          child: const _FeatureGrid(isCompact: false),
+                        ),
+                      ),
+
+                      const SizedBox(height: 36),
+
+                      // 3. Action Buttons Section
+                      FadeTransition(
+                        opacity: _btnOpacity,
+                        child: SlideTransition(
+                          position: _btnSlide,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _LaunchChatButton(
+                                btnCtrl: _btnCtrl,
+                                btnScale: _btnScale,
+                                onTap: widget.onStartChat,
+                                label: " < GUEST USER >",
+                                height: 54,
+                              ),
+                              const SizedBox(height: 12),
+                              // Responsive auth buttons
+                              LayoutBuilder(
+                                builder: (context, authConstraints) {
+                                  final rowWidth = math.min(
+                                    340.0,
+                                    authConstraints.maxWidth > 0
+                                        ? authConstraints.maxWidth
+                                        : 340.0,
+                                  );
+                                  return SizedBox(
+                                    width: rowWidth,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: GoogleButton(
+                                            label: 'Google',
+                                            height: 44,
+                                            borderRadius: 14,
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                smoothPageRoute(
+                                                    const SignInScreen()),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: GithubButton.dark(
+                                            label: 'GitHub',
+                                            height: 44,
+                                            borderRadius: 14,
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                smoothPageRoute(
+                                                    const SignInScreen()),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              AppSettingsButton(
+                                height: 50,
+                                width: 230,
+                                onPressed: () {
+                                  showSettingsPopup(context);
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
