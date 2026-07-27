@@ -43,7 +43,7 @@ class QuantSpaceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QuantCore.Ai',
+      title: 'QuantMessage',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,

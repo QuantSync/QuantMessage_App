@@ -1,11 +1,11 @@
 {
-    "name": "q_ai_mob_testt",
-    "short_name": "q_ai_mob_testt",
+    "name": "QuantMessage",
+    "short_name": "QuantMessage",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "description": "QuantMessage — Multi-Agent AI Messaging Hub",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
