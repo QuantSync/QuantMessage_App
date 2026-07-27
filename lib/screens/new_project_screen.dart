@@ -35,11 +35,13 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
   final List<ChatMessage> _messages = [];
   bool _isGenerating = false;
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _messageController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
 
   ProjectModel get _currentProject {
     final list = ref.watch(projectsProvider);
     return list.firstWhere(
-      (p) => p.id == widget.project.id,
+          (p) => p.id == widget.project.id,
       orElse: () => widget.project,
     );
   }
@@ -49,9 +51,11 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
 
     final userMsg = ChatMessage(
       id: const Uuid().v4(),
+      conversationId: widget.project.id,
+      senderId: 'user',
+      createdAt: DateTime.now(),
       text: text,
       isUser: true,
-      timestamp: DateTime.now(),
     );
 
     setState(() {
@@ -80,9 +84,11 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
 
       final aiMsg = ChatMessage(
         id: const Uuid().v4(),
+        conversationId: widget.project.id,
+        senderId: 'agent',
+        createdAt: DateTime.now(),
         text: aiResponseText,
         isUser: false,
-        timestamp: DateTime.now(),
       );
 
       setState(() {
@@ -138,6 +144,14 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
   }
 
   @override
+  void dispose() {
+    _messageController.dispose();
+    _focusNode.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final isDesktop = mediaQuery.size.width > 900;
@@ -155,7 +169,7 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
                 children: [
                   InkWell(
                     onTap: widget.onBackToProjects ??
-                        () => Navigator.of(context).maybePop(),
+                            () => Navigator.of(context).maybePop(),
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -185,36 +199,36 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
             Expanded(
               child: isDesktop
                   ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left Pane: Chat & Query interface
-                        Expanded(
-                          flex: 6,
-                          child: _buildChatPane(proj),
-                        ),
-                        // Right Pane: Project Knowledge Panel (Instructions & Files)
-                        Container(
-                          width: 380,
-                          margin: const EdgeInsets.fromLTRB(0, 0, 24, 24),
-                          child: _buildKnowledgePanel(proj),
-                        ),
-                      ],
-                    )
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left Pane: Chat & Query interface
+                  Expanded(
+                    flex: 6,
+                    child: _buildChatPane(proj),
+                  ),
+                  // Right Pane: Project Knowledge Panel (Instructions & Files)
+                  Container(
+                    width: 380,
+                    margin: const EdgeInsets.fromLTRB(0, 0, 24, 24),
+                    child: _buildKnowledgePanel(proj),
+                  ),
+                ],
+              )
                   : SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: 520,
-                            child: _buildChatPane(proj),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: _buildKnowledgePanel(proj),
-                          ),
-                        ],
-                      ),
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 520,
+                      child: _buildChatPane(proj),
                     ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _buildKnowledgePanel(proj),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -242,7 +256,7 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
               ProjectDetailDropdown(
                 project: proj,
                 onDelete: widget.onBackToProjects ??
-                    () => Navigator.of(context).maybePop(),
+                        () => Navigator.of(context).maybePop(),
               ),
               const SizedBox(width: 4),
               IconButton(
@@ -265,56 +279,61 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
         Expanded(
           child: _messages.isEmpty
               ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.04),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          color: Colors.white.withOpacity(0.4),
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Quant references the same knowledge every time you talk to it in this project.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          color: Colors.white.withOpacity(0.45),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    shape: BoxShape.circle,
                   ),
-                )
-              : ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = _messages[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: ChatAnswerCard(
-                        answerText: msg.text,
-                        isUser: msg.isUser,
-                      ),
-                    );
-                  },
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: Colors.white.withOpacity(0.4),
+                    size: 28,
+                  ),
                 ),
+                const SizedBox(height: 16),
+                Text(
+                  'Quant references the same knowledge every time you talk to it in this project.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white.withOpacity(0.45),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          )
+              : ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final msg = _messages[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: ChatAnswerCard(
+                  message: msg,
+                ),
+              );
+            },
+          ),
         ),
 
         // Input Panel at Bottom
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: MessageBox(
-            onSubmitted: _handleSendMessage,
+            controller: _messageController,
+            focusNode: _focusNode,
+            selectedModelName: 'QuantCore',
             isGenerating: _isGenerating,
+            onSend: (text, attachments) => _handleSendMessage(text),
+            onModelChanged: (model) {},
+            onLogout: () => Navigator.of(context).maybePop(),
+            onHoverChanged: (isHovered) {},
           ),
         ),
       ],
@@ -508,84 +527,84 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
           // Files list or empty placeholder matching Image 4 & 5
           proj.files.isEmpty
               ? Container(
-                  height: 140,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1B1B1B),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.04),
-                    ),
+            height: 140,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B1B1B),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.04),
+              ),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.snippet_folder_outlined,
+                    color: Colors.white.withOpacity(0.3), size: 28),
+                const SizedBox(height: 10),
+                Text(
+                  'Add PDFs, documents, or other text to reference in this project.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white.withOpacity(0.35),
+                    fontSize: 12,
                   ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.snippet_folder_outlined,
-                          color: Colors.white.withOpacity(0.3), size: 28),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Add PDFs, documents, or other text to reference in this project.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          color: Colors.white.withOpacity(0.35),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
+                ),
+              ],
+            ),
+          )
               : Column(
-                  children: proj.files.map((file) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.04),
-                        borderRadius: BorderRadius.circular(10),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.06)),
-                      ),
-                      child: Row(
+            children: proj.files.map((file) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                  Border.all(color: Colors.white.withOpacity(0.06)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      file.isTextContext
+                          ? Icons.text_snippet_outlined
+                          : Icons.insert_drive_file_outlined,
+                      color: const Color(0xFF4A9EFF),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            file.isTextContext
-                                ? Icons.text_snippet_outlined
-                                : Icons.insert_drive_file_outlined,
-                            color: const Color(0xFF4A9EFF),
-                            size: 18,
+                          Text(
+                            file.title,
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  file.title,
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  file.isTextContext ? 'Text Context' : 'File',
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white.withOpacity(0.38),
-                                    fontSize: 10.5,
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            file.isTextContext ? 'Text Context' : 'File',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white.withOpacity(0.38),
+                              fontSize: 10.5,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ],
                 ),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
