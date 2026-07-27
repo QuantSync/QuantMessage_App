@@ -206,7 +206,7 @@ class _PricingScreenState extends State<PricingScreen> {
           'Everything in Pro, plus:',
           'Choose 5x or 20x more usage',
           'Higher output limits',
-          'Early access to advanced models',
+          'Early access to quantcode models',
           'Priority access at high traffic',
         ],
         button: SolidPlanButton(

@@ -119,7 +119,11 @@ class _LeftSidebarState extends State<LeftSidebar>
     } else {
       // Open: rotate arrow, show overlay
       _arrowCtrl.forward();
-      LeftSidebarExtension.show(context);
+      LeftSidebarExtension.show(
+        context,
+        onCustomise: widget.onCustomise,
+        onProjects: widget.onProjects,
+      );
       setState(() => _extensionOpen = true);
 
       // When the overlay closes via backdrop tap, sync arrow back

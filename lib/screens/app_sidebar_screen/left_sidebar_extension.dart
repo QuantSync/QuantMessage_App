@@ -18,11 +18,13 @@ class LeftSidebarExtension {
   static OverlayEntry? _entry;
 
   /// Inserts the extension into the Overlay.
-  static void show(BuildContext context) {
+  static void show(BuildContext context, {VoidCallback? onCustomise, VoidCallback? onProjects}) {
     if (_entry != null) return;
     _entry = OverlayEntry(
       builder: (_) => _SidebarExtensionOverlay(
         onClose: dismiss,
+        onCustomise: onCustomise,
+        onProjects: onProjects,
       ),
     );
     Overlay.of(context).insert(_entry!);
@@ -41,7 +43,13 @@ class LeftSidebarExtension {
 
 class _SidebarExtensionOverlay extends StatefulWidget {
   final VoidCallback onClose;
-  const _SidebarExtensionOverlay({required this.onClose});
+  final VoidCallback? onCustomise;
+  final VoidCallback? onProjects;
+  const _SidebarExtensionOverlay({
+    required this.onClose,
+    this.onCustomise,
+    this.onProjects,
+  });
 
   @override
   State<_SidebarExtensionOverlay> createState() =>
@@ -141,7 +149,11 @@ class _SidebarExtensionOverlayState
               width: LeftSidebarExtension.panelWidth,
               child: SlideTransition(
                 position: _slide,
-                child: _ExtensionPanel(onClose: _close),
+                child: _ExtensionPanel(
+                  onClose: _close,
+                  onCustomise: widget.onCustomise,
+                  onProjects: widget.onProjects,
+                ),
               ),
             ),
           ],
@@ -157,7 +169,13 @@ class _SidebarExtensionOverlayState
 
 class _ExtensionPanel extends StatefulWidget {
   final Future<void> Function() onClose;
-  const _ExtensionPanel({required this.onClose});
+  final VoidCallback? onCustomise;
+  final VoidCallback? onProjects;
+  const _ExtensionPanel({
+    required this.onClose,
+    this.onCustomise,
+    this.onProjects,
+  });
 
   @override
   State<_ExtensionPanel> createState() => _ExtensionPanelState();
@@ -255,7 +273,9 @@ class _ExtensionPanelState extends State<_ExtensionPanel> {
       children: [
         _NavItem(icon: Icons.add, label: 'New chat', onTap: () {}),
         _NavItem(icon: Icons.chat_bubble_outline, label: 'Chats', onTap: () {}),
-        _NavItem(icon: Icons.layers_outlined, label: 'Projects', onTap: () {}),
+        _NavItem(icon: Icons.layers_outlined, label: 'Projects', onTap: () {
+          widget.onProjects?.call();
+        }),
         _NavItem(icon: Icons.category_outlined, label: 'Artifacts', onTap: () {}),
         _NavItem(
           icon: Icons.code,
@@ -263,7 +283,9 @@ class _ExtensionPanelState extends State<_ExtensionPanel> {
           trailing: _UpgradeBadge(),
           onTap: () {},
         ),
-        _NavItem(icon: Icons.work_outline, label: 'Customise', onTap: () {}),
+        _NavItem(icon: Icons.work_outline, label: 'Customise', onTap: () {
+          widget.onCustomise?.call();
+        }),
       ],
     );
   }

@@ -36,6 +36,8 @@ import 'animations/animation_effects/model_selector_card/model_selector_card.dar
 import 'animations/animation_effects/step_status_text.dart';
 import 'animations/animation_effects/coming_soon_card.dart';
 import 'pricing_screen/pricing_screen.dart';
+import 'projects_screen.dart';
+import 'settings_screen.dart';
 import 'app_bar.dart' show smoothPageRoute;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -478,6 +480,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   },
                   onMenuClosed: () {
                     if (mounted) setState(() => _isProfileMenuOpen = false);
+                  },
+                  onCustomise: () {
+                    showSettingsPopup(context);
+                    if (isMobile) {
+                      setState(() => _isMobileSidebarOpen = false);
+                    }
+                  },
+                  onProjects: () {
+                    if (isMobile) {
+                      setState(() => _isMobileSidebarOpen = false);
+                    }
+                    Navigator.push(
+                      context,
+                      smoothPageRoute(const ProjectsScreen()),
+                    );
                   },
                 );
 
