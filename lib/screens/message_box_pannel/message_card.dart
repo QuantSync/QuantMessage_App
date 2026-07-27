@@ -42,8 +42,9 @@ class MessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUser = message.isUser;
-    final maxWidth = MediaQuery.of(context).size.width * 0.78;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 800;
+    final maxWidth = isMobile ? (screenWidth - 24.0) : (screenWidth * 0.78);
 
     return Align(
       alignment: Alignment.centerRight,
@@ -51,7 +52,10 @@ class MessageCard extends StatelessWidget {
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Container(
           margin: EdgeInsets.only(
-              top: 8, bottom: 8, right: MediaQuery.of(context).size.width * 0.15),
+            top: 8,
+            bottom: 8,
+            right: isMobile ? 4.0 : (screenWidth * 0.15),
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             color: const Color(0xFF1E1E1E), // Darker widget
