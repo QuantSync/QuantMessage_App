@@ -907,11 +907,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Widget _buildSuggestionPills() {
-    return Wrap(
+    return const Wrap(
       spacing: 8,
       runSpacing: 8,
       alignment: WrapAlignment.center,
-      children: const [
+      children: [
         _SuggestionPill(Icons.edit_outlined, "Write"),
         _SuggestionPill(Icons.school_outlined, "Learn"),
         _SuggestionPill(Icons.code, "Code"),
