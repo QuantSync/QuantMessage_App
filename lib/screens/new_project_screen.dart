@@ -19,6 +19,7 @@ import 'message_box_pannel/message_box.dart';
 import 'message_box_pannel/chat_answers.dart';
 import 'animations/animated_buttons/model_selector_button/model_selector_button.dart';
 import 'app_sidebar_screen/left_sidebar.dart';
+import 'artifact_screen.dart';
 import 'app_bar.dart';
 
 class NewProjectScreen extends ConsumerStatefulWidget {
@@ -273,6 +274,12 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
                   },
                   onNewChat: () {
                     Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  onArtifacts: () {
+                    Navigator.push(
+                      context,
+                      smoothPageRoute(const ArtifactScreen()),
+                    );
                   },
                 ),
                 Expanded(

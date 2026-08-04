@@ -14,6 +14,7 @@ import 'new_project_card.dart';
 import 'new_project_screen.dart';
 import 'app_sidebar_screen/left_sidebar.dart';
 import 'app_bar.dart';
+import 'artifact_screen.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   final bool embedded;
@@ -346,6 +347,12 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
     Navigator.of(context).popUntil((route) => route.isFirst);
     },
     onProjects: () {},
+    onArtifacts: () {
+      Navigator.push(
+        context,
+        smoothPageRoute(const ArtifactScreen()),
+      );
+    },
     onNewChat: () {
     Navigator.maybePop(context);
     },

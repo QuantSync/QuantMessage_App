@@ -11,6 +11,7 @@ enum AppTab {
   incognito,
   history,
   settings,
+  artifacts,
 }
 
 extension AppTabX on AppTab {
@@ -33,6 +34,8 @@ extension AppTabX on AppTab {
         return 'History';
       case AppTab.settings:
         return 'Settings';
+      case AppTab.artifacts:
+        return 'Artifacts';
     }
   }
 
@@ -48,6 +51,8 @@ extension AppTabX on AppTab {
         return Icons.history_rounded;
       case AppTab.settings:
         return Icons.settings_rounded;
+      case AppTab.artifacts:
+        return Icons.category_outlined;
     }
   }
 

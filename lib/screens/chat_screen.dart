@@ -20,6 +20,7 @@ import '../core/chat_message.dart';
 import '../core/attachment_model.dart';
 import '../core/config.dart' as app_config;
 import '../providers/attachment_provider.dart';
+import '../providers/chat_provider.dart';
 import '../services/quant_space_api.dart';
 import 'app_sidebar_screen/left_sidebar.dart';
 
@@ -37,6 +38,7 @@ import 'animations/animation_effects/step_status_text.dart';
 import 'animations/animation_effects/coming_soon_card.dart';
 import 'pricing_screen/pricing_screen.dart';
 import 'projects_screen.dart';
+import 'artifact_screen.dart';
 import 'settings_screen.dart';
 import 'app_bar.dart' show smoothPageRoute;
 
@@ -430,6 +432,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       });
     });
 
+    ref.listen(chatInitialQueryProvider, (prev, next) {
+      if (next != null && next.isNotEmpty) {
+        Future.microtask(() {
+          _handleSend(next, []);
+          ref.read(chatInitialQueryProvider.notifier).state = null;
+        });
+      }
+    });
+
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
@@ -494,6 +505,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     Navigator.push(
                       context,
                       smoothPageRoute(const ProjectsScreen()),
+                    );
+                  },
+                  onArtifacts: () {
+                    if (isMobile) {
+                      setState(() => _isMobileSidebarOpen = false);
+                    }
+                    Navigator.push(
+                      context,
+                      smoothPageRoute(const ArtifactScreen()),
                     );
                   },
                 );
