@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'animations/animated_buttons/google_button.dart';
 import 'animations/animated_buttons/github_button.dart';
 import 'animations/animated_buttons/app_settings_button.dart';
+import 'animations/planetary_animation/planetary_animation.dart';
 
 
 import '../providers/attachment_provider.dart';
@@ -162,9 +163,7 @@ class DashboardTab extends ConsumerStatefulWidget {
 class _DashboardTabState extends ConsumerState<DashboardTab>
     with TickerProviderStateMixin {
   late final AnimationController _entranceCtrl;
-  late final AnimationController _pulseCtrl;
   late final AnimationController _shimmerCtrl;
-  late final AnimationController _particleCtrl;
   late final AnimationController _btnCtrl;
   late final Animation<double> _btnScale;
 
@@ -207,9 +206,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
     );
 
     _entranceCtrl.forward();
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 3800))..repeat(reverse: true);
     _shimmerCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800))..repeat();
-    _particleCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 8000))..repeat();
     _btnCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 120), lowerBound: 0.0, upperBound: 1.0);
     _btnScale = Tween<double>(begin: 1.0, end: 0.94).animate(CurvedAnimation(parent: _btnCtrl, curve: Curves.easeInOut));
   }
@@ -217,9 +214,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
   @override
   void dispose() {
     _entranceCtrl.dispose();
-    _pulseCtrl.dispose();
     _shimmerCtrl.dispose();
-    _particleCtrl.dispose();
     _btnCtrl.dispose();
     super.dispose();
   }
@@ -234,24 +229,25 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          AnimatedBuilder(
-            animation: _pulseCtrl,
-            builder: (_, __) {
-              final t = _pulseCtrl.value;
-              return Stack(
-                children: [
-                  Positioned(top: -120 + t * 20, left: -120 + t * 10, child: _buildRadialGlow(Colors.blue.withOpacity(0.08 + t * 0.06), 320 + t * 40)),
-                  Positioned(bottom: -120 + t * 20, right: -120 + t * 10, child: _buildRadialGlow(Colors.purple.withOpacity(0.08 + t * 0.06), 320 + t * 40)),
-                  Positioned(top: MediaQuery.of(context).size.height * 0.4, left: MediaQuery.of(context).size.width * 0.3, child: _buildRadialGlow(Colors.indigo.withOpacity(0.04 + t * 0.03), 180)),
-                ],
-              );
-            },
+          // ── Planetary Background ──────────────────────────────────────
+          const Positioned.fill(
+            child: PlanetaryAnimation(size: 380),
           ),
-          AnimatedBuilder(
-            animation: _particleCtrl,
-            builder: (context, _) => CustomPaint(
-              painter: _ParticlePainter(_particleCtrl.value),
-              size: Size(MediaQuery.of(context).size.width, MediaQuery.of(context).size.height),
+          // ── Dark gradient overlay for contrast ────────────────────────
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xAA000000), // strong dark at top for title
+                    Color(0x55000000), // semi-transparent mid section
+                    Color(0xBB000000), // dark at bottom for buttons
+                  ],
+                  stops: [0.0, 0.45, 1.0],
+                ),
+              ),
             ),
           ),
           SafeArea(
@@ -408,12 +404,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
     );
   }
 
-  Widget _buildRadialGlow(Color color, double size) {
-    return Container(
-      width: size, height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color, Colors.transparent])),
-    );
-  }
 }
 
 class _LaunchChatButton extends StatelessWidget {
@@ -497,9 +487,9 @@ class _FeatureGrid extends StatefulWidget {
 
 class _FeatureGridState extends State<_FeatureGrid> with TickerProviderStateMixin {
   static const _cards = [
-    (Icons.auto_awesome, "AI Driven", "Cognitive reasoning for every message."),
+    (Icons.auto_awesome, "AI Powered", "Cognitive reasoning for every message."),
     (Icons.lock_outline, "Ultra Private", "End-to-end encryption by default."),
-    (Icons.bolt, "Quantum Speed", "Instant delivery across the globe."),
+    (Icons.bolt, "Quant Speed", "Instant delivery across the globe."),
     (Icons.blur_on, "Low Latency", "QuantMessage Welcomes You "),
   ];
   late final List<AnimationController> _ctrls;
@@ -650,27 +640,4 @@ class _GlassCardState extends State<_GlassCard> with SingleTickerProviderStateMi
   }
 }
 
-class _ParticlePainter extends CustomPainter {
-  final double progress;
-  _ParticlePainter(this.progress);
-  static final List<_Particle> _particles = List.generate(28, (i) {
-    final r = math.Random(i * 31 + 7);
-    return _Particle(x: r.nextDouble(), y: r.nextDouble(), size: 0.8 + r.nextDouble() * 1.8, speed: 0.06 + r.nextDouble() * 0.10, phase: r.nextDouble() * math.pi * 2, drift: (r.nextDouble() - 0.5) * 0.015);
-  });
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final p in _particles) {
-      final y = ((p.y - p.speed * progress + 1.0) % 1.0);
-      final x = p.x + math.sin(progress * math.pi * 2 + p.phase) * p.drift;
-      final opacity = (math.sin(progress * math.pi * 2 * 0.4 + p.phase) * 0.5 + 0.5).clamp(0.0, 1.0);
-      canvas.drawCircle(Offset(x * size.width, y * size.height), p.size, Paint()..color = Colors.white.withOpacity(opacity * 0.18)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5));
-    }
-  }
-  @override
-  bool shouldRepaint(_ParticlePainter oldDelegate) => oldDelegate.progress != progress;
-}
 
-class _Particle {
-  final double x, y, size, speed, phase, drift;
-  const _Particle({required this.x, required this.y, required this.size, required this.speed, required this.phase, required this.drift});
-}
