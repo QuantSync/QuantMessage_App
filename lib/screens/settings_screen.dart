@@ -99,7 +99,14 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
   Future<void> _loadUserProfile() async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
 
       final data = await _supabase
           .from('profiles')
