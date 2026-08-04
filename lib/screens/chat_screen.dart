@@ -658,6 +658,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                             SizedBox(height: isMobile ? 8 : 14),
                             _buildAdviceBanner(),
                             SizedBox(height: isMobile ? 4 : 8),
+                            if (_supabase.auth.currentUser == null)
+                              _buildGuestWarningBanner(isMobile),
+                            if (_supabase.auth.currentUser == null)
+                              SizedBox(height: isMobile ? 4 : 6),
                             _buildMessageBox(),
                           ],
                         ),
@@ -672,6 +676,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                           children: [
                             _buildAdviceBanner(),
                             SizedBox(height: isMobile ? 4 : 8),
+                            if (_supabase.auth.currentUser == null)
+                              _buildGuestWarningBanner(isMobile),
+                            if (_supabase.auth.currentUser == null)
+                              SizedBox(height: isMobile ? 4 : 6),
                             _buildMessageBox(),
                           ],
                         ),
@@ -825,6 +833,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           );
         }
       },
+    );
+  }
+
+  Widget _buildGuestWarningBanner(bool isMobile) {
+    return Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.grey[500],
+            size: isMobile ? 12 : 14,
+          ),
+          SizedBox(width: isMobile ? 5 : 6),
+          Text(
+            'Conversations in guest mode are not saved',
+            style: GoogleFonts.outfit(
+              color: Colors.grey[500],
+              fontSize: isMobile ? 10 : 12,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
