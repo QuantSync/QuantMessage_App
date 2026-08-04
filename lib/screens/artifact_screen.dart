@@ -132,8 +132,9 @@ class _ArtifactScreenState extends ConsumerState<ArtifactScreen> {
                   userEmail: _userEmail,
                   userInitials: _userInitials,
                   onSignOut: () async {
+                    final nav = Navigator.of(context);
                     await Supabase.instance.client.auth.signOut();
-                    if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+                    if (mounted) nav.popUntil((route) => route.isFirst);
                   },
                   onProjects: () {
                     Navigator.maybePop(context);
