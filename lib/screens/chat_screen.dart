@@ -41,6 +41,7 @@ import 'projects_screen.dart';
 import 'artifact_screen.dart';
 import 'settings_screen.dart';
 import 'app_bar.dart' show smoothPageRoute;
+import 'animations/planetary_animation/planetary_animation.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ANIMATION HELPER WIDGETS
@@ -779,17 +780,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Widget _buildBlurredBackground() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment(0.0, -0.3),
-          radius: 1.2,
-          colors: [
-            Color(0xFF1F1F1F),
-            AppTheme.backgroundBlack,
-          ],
+    return Stack(
+      children: [
+        // Full-screen planetary animation
+        const Positioned.fill(
+          child: PlanetaryAnimation(size: 420),
         ),
-      ),
+        // Dark overlay: heavier at top/bottom for contrast with chat bubbles and top bar
+        Positioned.fill(
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xCC000000), // Heavy dark at top (toolbar area)
+                  Color(0x77000000), // Semi-transparent mid (chat bubbles area)
+                  Color(0xBB000000), // Dark at bottom (message input area)
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

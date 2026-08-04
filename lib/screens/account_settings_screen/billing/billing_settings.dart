@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../screens/pricing_screen/pricing_screen.dart';
+import '../../app_bar.dart' show smoothPageRoute;
 
 class BillingSettings extends StatelessWidget {
   const BillingSettings({super.key});
@@ -50,7 +52,11 @@ class BillingSettings extends StatelessWidget {
                 ),
               ),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).push(
+                    smoothPageRoute(const PricingScreen()),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
