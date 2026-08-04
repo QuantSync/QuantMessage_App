@@ -309,7 +309,7 @@ class _ProfileSettingsState extends State<ProfileSettings> {
       child: Icon(
         icon,
         size: 16,
-        color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+        color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),//
       ),
     );
   }
