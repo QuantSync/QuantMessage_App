@@ -10,7 +10,9 @@ import '../providers/navigation_provider.dart';
 import 'news_screen.dart';
 
 /// Canonical nav items — must stay aligned with [AppTab] / HomeScreen pages.
+/// [AppTab.artifacts] is intentionally excluded from the nav bar.
 List<NavItem> get appNavItems => AppTab.values
+    .where((tab) => tab != AppTab.artifacts)
     .map((tab) => NavItem(icon: tab.icon, label: tab.label, tab: tab))
     .toList();
 
