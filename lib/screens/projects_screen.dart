@@ -4,11 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../core/app_theme.dart';
 import '../core/project_model.dart';
 import '../providers/project_provider.dart';
+import '../providers/navigation_provider.dart';
 import 'new_project_card.dart';
 import 'new_project_screen.dart';
+import 'app_sidebar_screen/left_sidebar.dart';
+import 'app_bar.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   final bool embedded;
@@ -48,6 +53,19 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
+  String? get _userEmail => Supabase.instance.client.auth.currentUser?.email;
+
+  String? get _userName {
+    final meta = Supabase.instance.client.auth.currentUser?.userMetadata;
+    final fullName = meta?['full_name'] as String?;
+    if (fullName != null && fullName.trim().isNotEmpty) {
+      return fullName.trim();
+    }
+    return null;
+  }
+
+  String get _userInitials => _userName?.substring(0, 1).toUpperCase() ?? 'U';
+
   @override
   Widget build(BuildContext context) {
     final projects = ref.watch(projectsProvider);
@@ -70,16 +88,23 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
           p.description.toLowerCase().contains(query);
     }).toList();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF141414), // Dark background matching Image 2
-      body: SafeArea(
-        child: Column(
-          children: [
+    final mainContent = SafeArea(
+      child: Column(
+        children: [
             // Top Bar: Projects title + Search + Sort + New project button
             Padding(
               padding: const EdgeInsets.fromLTRB(36, 28, 36, 20),
               child: Row(
                 children: [
+                  InkWell(
+                    onTap: () {
+                      Navigator.maybePop(context);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Icon(Icons.arrow_back, color: Colors.white.withOpacity(0.7), size: 24),
+                    ),
+                  ),
                   Text(
                     'Projects',
                     style: GoogleFonts.outfit(
@@ -280,13 +305,72 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
                               ),
                             ),
                           );
-                        },
-                      ),
-                    ),
+                },
+              ),
             ),
-          ],
-        ),
-      ),
+    );
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 600;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF141414),
+      body: isDesktop
+          ? Row(
+              children: [
+                LeftSidebar(
+                  userEmail: _userEmail,
+                  userInitials: _userInitials,
+                  onSignOut: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  onProjects: () {},
+                  onNewChat: () {
+                    Navigator.maybePop(context);
+                  },
+                ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 80),
+                          child: mainContent,
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: CustomAppBar(
+                          onItemSelected: (index) {
+                            ref.read(navigationProvider.notifier).goToIndex(index);
+                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: mainContent,
+                  ),
+                ),
+                CustomAppBar(
+                  onItemSelected: (index) {
+                    ref.read(navigationProvider.notifier).goToIndex(index);
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                ),
+              ],
+            ),
     );
   }
 }

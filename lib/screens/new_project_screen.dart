@@ -5,17 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_theme.dart';
 import '../core/chat_message.dart';
 import '../core/project_model.dart';
 import '../providers/project_provider.dart';
+import '../providers/navigation_provider.dart';
 import 'project_detail_dropdown.dart';
 import 'project_instructions_card.dart';
 import 'add_text_context_card.dart';
 import 'message_box_pannel/message_box.dart';
 import 'message_box_pannel/chat_answers.dart';
 import 'animations/animated_buttons/model_selector_button/model_selector_button.dart';
+import 'app_sidebar_screen/left_sidebar.dart';
+import 'app_bar.dart';
 
 class NewProjectScreen extends ConsumerStatefulWidget {
   final ProjectModel project;
@@ -151,17 +155,28 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
     super.dispose();
   }
 
+  String? get _userEmail => Supabase.instance.client.auth.currentUser?.email;
+
+  String? get _userName {
+    final meta = Supabase.instance.client.auth.currentUser?.userMetadata;
+    final fullName = meta?['full_name'] as String?;
+    if (fullName != null && fullName.trim().isNotEmpty) {
+      return fullName.trim();
+    }
+    return null;
+  }
+
+  String get _userInitials => _userName?.substring(0, 1).toUpperCase() ?? 'U';
+
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final isDesktop = mediaQuery.size.width > 900;
     final proj = _currentProject;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF181818), // Deep dark matching Image 4
-      body: SafeArea(
-        child: Column(
-          children: [
+    final mainContent = SafeArea(
+      child: Column(
+        children: [
             // Top Bar: <- All projects
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -233,6 +248,75 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
           ],
         ),
       ),
+    );
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final showDesktopLayout = screenWidth > 600;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF181818), // Deep dark matching Image 4
+      body: showDesktopLayout
+          ? Row(
+              children: [
+                LeftSidebar(
+                  userEmail: _userEmail,
+                  userInitials: _userInitials,
+                  onSignOut: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  onProjects: () {
+                    if (widget.onBackToProjects != null) {
+                      widget.onBackToProjects!();
+                    } else {
+                      Navigator.maybePop(context);
+                    }
+                  },
+                  onNewChat: () {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 80),
+                          child: mainContent,
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: CustomAppBar(
+                          onItemSelected: (index) {
+                            ref.read(navigationProvider.notifier).goToIndex(index);
+                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: mainContent,
+                  ),
+                ),
+                CustomAppBar(
+                  onItemSelected: (index) {
+                    ref.read(navigationProvider.notifier).goToIndex(index);
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                ),
+              ],
+            ),
     );
   }
 
