@@ -13,6 +13,8 @@ import 'account_settings_screen/account/account_settings.dart';
 import 'account_settings_screen/privacy/privacy_settings.dart';
 import 'account_settings_screen/billing/billing_settings.dart';
 import 'account_settings_screen/capabilities/capabilities_settings.dart';
+import 'account_settings_screen/time_and_focus/time_and_focus_settings.dart';
+import 'account_settings_screen/reflect/reflect_settings.dart';
 import 'account_settings_screen/connectors/connectors_settings.dart';
 import 'account_settings_screen/quantcode/quantcode_settings.dart';
 import 'account_settings_screen/skills/skills_settings.dart';
@@ -79,15 +81,16 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
     _NavItem(icon: Icons.shield_outlined, label: 'Privacy', index: 2),
     _NavItem(icon: Icons.payment_rounded, label: 'Billing', index: 3),
     _NavItem(icon: Icons.auto_awesome_outlined, label: 'Capabilities', index: 4),
-    _NavItem(icon: Icons.bedtime_outlined, label: 'Time and focus', index: 5),
-    _NavItem(icon: Icons.code_rounded, label: 'QuantCode', index: 6),
+    _NavItem(icon: Icons.notifications_none_outlined, label: 'Reflect', index: 5),
+    _NavItem(icon: Icons.bedtime_outlined, label: 'Time and focus', index: 6),
+    _NavItem(icon: Icons.code_rounded, label: 'Claude Code', index: 7),
   ];
 
   final List<_NavItem> _customizeItems = [
-    _NavItem(icon: Icons.extension_outlined, label: 'Skills', index: 7),
-    _NavItem(icon: Icons.cable_outlined, label: 'Connectors', index: 8),
-    _NavItem(icon: Icons.power_outlined, label: 'Plugins', index: 9),
-    _NavItem(icon: Icons.memory_outlined, label: 'Memory', index: 10),
+    _NavItem(icon: Icons.extension_outlined, label: 'Skills', index: 8),
+    _NavItem(icon: Icons.cable_outlined, label: 'Connectors', index: 9),
+    _NavItem(icon: Icons.power_outlined, label: 'Plugins', index: 10),
+    _NavItem(icon: Icons.memory_outlined, label: 'Memory', index: 11),
   ];
 
   @override
@@ -408,37 +411,22 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
       case 4:
         return const CapabilitiesSettings();
       case 5:
-        return _buildTimeAndFocusPlaceholder(); // Placeholder for Time and focus
+        return const ReflectSettings();
       case 6:
-        return const QuantCodeSettings();
+        return const TimeAndFocusSettings();
       case 7:
-        return const SkillsSettings();
+        return const QuantCodeSettings();
       case 8:
-        return const ConnectorsSettings();
+        return const SkillsSettings();
       case 9:
-        return const PluginsSettings();
+        return const ConnectorsSettings();
       case 10:
+        return const PluginsSettings();
+      case 11:
         return const MemorySettings();
       default:
         return const SizedBox.shrink();
     }
-  }
-
-  Widget _buildTimeAndFocusPlaceholder() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Time and focus',
-          style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Configure focus modes and active hours.',
-          style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 13),
-        ),
-      ],
-    );
   }
 }
 

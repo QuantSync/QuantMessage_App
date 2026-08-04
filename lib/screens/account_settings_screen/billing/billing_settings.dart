@@ -1,167 +1,106 @@
 // lib/screens/account_settings_screen/billing/billing_settings.dart
 //
-// Billing section — Subscription plan, usage, payment method.
+// Billing section matching Claude settings reference.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../widgets/settings_click_button.dart';
 
 class BillingSettings extends StatelessWidget {
-  final VoidCallback? onUpgrade;
-
-  const BillingSettings({super.key, this.onUpgrade});
+  const BillingSettings({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SettingsSectionTitle(title: 'Subscription'),
-        const SizedBox(height: 16),
-
-        // Current plan card
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withOpacity(0.08),
-                Colors.white.withOpacity(0.03),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.10)),
+            color: Colors.transparent,
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                child: Icon(Icons.hub_outlined, color: Colors.white.withOpacity(0.9), size: 32),
+              ),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Free Plan',
+                      'Free plan',
                       style: GoogleFonts.outfit(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Upgrade for unlimited access',
+                      'Try Claude',
                       style: GoogleFonts.outfit(
-                        color: Colors.white.withOpacity(0.4),
-                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 13.5,
                       ),
                     ),
                   ],
                 ),
               ),
-              SettingsClickButton(
-                label: 'Upgrade',
-                isPrimary: true,
-                onTap: onUpgrade ?? () {},
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 28),
-        const SettingsSectionTitle(title: 'Usage'),
-        const SizedBox(height: 16),
-
-        _UsageBar(label: 'Messages', used: 42, total: 100),
-        const SizedBox(height: 12),
-        _UsageBar(label: 'File uploads', used: 3, total: 10),
-        const SizedBox(height: 12),
-        _UsageBar(label: 'API calls', used: 0, total: 50),
-
-        const SizedBox(height: 28),
-        const SettingsSectionTitle(title: 'Payment Method'),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.06)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.credit_card_rounded,
-                  color: Colors.white.withOpacity(0.45), size: 22),
-              const SizedBox(width: 12),
-              Expanded(
+              ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
                 child: Text(
-                  'No payment method added',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 13,
-                  ),
+                  'Upgrade plan',
+                  style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
-              SettingsClickButton(label: 'Add', onTap: () {}),
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        _buildFeatureItem('Chat on web, iOS, Android, and on your desktop'),
+        _buildFeatureItem('Generate code and visualize data'),
+        _buildFeatureItem('Write, edit, and create content'),
+        _buildFeatureItem('Ability to search the web'),
+        _buildFeatureItem('Memory across conversations'),
+        _buildFeatureItem('Create files and execute code'),
+        _buildFeatureItem('Unlock more from Claude with desktop extensions'),
+        _buildFeatureItem('Connect Slack and Google Workspace services'),
+        _buildFeatureItem('Integrate any context or tool through connectors with remote MCP'),
+        _buildFeatureItem('Extended thinking for complex work'),
       ],
     );
   }
-}
 
-class _UsageBar extends StatelessWidget {
-  final String label;
-  final int used;
-  final int total;
-
-  const _UsageBar({
-    required this.label,
-    required this.used,
-    required this.total,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final ratio = total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
+  Widget _buildFeatureItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, left: 24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.check, color: Colors.white.withOpacity(0.5), size: 16),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
               style: GoogleFonts.outfit(
-                  color: Colors.white.withOpacity(0.65), fontSize: 13),
-            ),
-            Text(
-              '$used / $total',
-              style: GoogleFonts.outfit(
-                  color: Colors.white.withOpacity(0.4), fontSize: 12),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Container(
-          height: 6,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: ratio,
-            child: Container(
-              decoration: BoxDecoration(
-                color: ratio > 0.8
-                    ? Colors.redAccent
-                    : const Color(0xFF4A9EFF),
-                borderRadius: BorderRadius.circular(3),
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 13.5,
+                height: 1.3,
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
