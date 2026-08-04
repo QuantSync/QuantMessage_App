@@ -247,8 +247,7 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
 
     final screenWidth = MediaQuery.of(context).size.width;
     final showDesktopLayout = screenWidth > 600;
