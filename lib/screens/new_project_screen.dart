@@ -55,7 +55,7 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
     if (text.trim().isEmpty) return;
 
     final userMsg = ChatMessage(
-      id: const Uuid().v4(),
+      id: const Uuid().v4(),//
       conversationId: widget.project.id,
       senderId: 'user',
       createdAt: DateTime.now(),
