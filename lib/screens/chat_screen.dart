@@ -653,7 +653,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
                     // Empty state center content
                     if (_messages.isEmpty)
-                      Positioned.fill(\
+                      Positioned.fill(
                         child: Align(
                           alignment: isMobile
                               ? const Alignment(0.0, -0.2)
