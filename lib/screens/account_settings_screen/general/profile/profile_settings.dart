@@ -8,7 +8,7 @@ import '../../widgets/settings_click_button.dart';
 import '../../widgets/settings_toggle_button.dart';
 import '../../../animations/animated_buttons/theme_switcher_button.dart';
 import '../../../animations/animated_buttons/motion_selector_button.dart';
-import '../widgets/language_selector_card.dart';
+import '../../widgets/language_selector_card.dart';
 
 class ProfileSettings extends StatefulWidget {
   final Map<String, dynamic>? userProfile;

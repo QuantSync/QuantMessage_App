@@ -95,7 +95,7 @@ class _LanguageSelectorCardState extends State<LanguageSelectorCard> with Single
         SizeTransition(
           sizeFactor: _expandAnimation,
           child: Container(
-            margin: const EdgeInsets.top(8),
+            margin: const EdgeInsets.only(top: 8),
             width: 220,
             constraints: const BoxConstraints(maxHeight: 250),
             decoration: BoxDecoration(
