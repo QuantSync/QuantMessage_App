@@ -22,7 +22,7 @@ class ModelLogo extends StatelessWidget {
     if (id.contains('gemini')) {
       painter = GeminiLogoPainter(primaryColor: Colors.blue, useGradient: true);
     } else if (id.contains('claude')) {
-      painter = ClaudeLogoPainter(color: const Color(0xFFD97757));
+      painter = QuantMessageLogoPainter(color: const Color(0xFFD97757));
     } else if (id.contains('gpt') || id.contains('openai')) {
       painter = OpenAILogoPainter(primaryColor: Colors.white);
     } else if (id.contains('llama') || id.contains('quantcore')) {

@@ -1,24 +1,24 @@
 // li/screens/animations/animated_buttons/llm_model_logo/claude_button.dart
 import 'package:flutter/material.dart';
 
-/// Claude Logo/Button Widget - Highly Reusable Component
+/// QuantMessage Logo/Button Widget - Highly Reusable Component
 ///
-/// This widget provides a customizable Claude-branded button with logo,
+/// This widget provides a customizable QuantMessage-branded button with logo,
 /// suitable for integration into any Flutter application.
 ///
 /// Features:
 /// - Multiple size variants (small, medium, large, custom)
 /// - Different button styles (solid, outline, icon-only, minimal)
-/// - Claude branding with proper colors
+/// - QuantMessage branding with proper colors
 /// - Smooth animations and hover effects
 /// - Full customization support
 ///
 /// Example:
 /// ```dart
-/// ClaudeButton(
-///   onPressed: () => print('Claude button pressed'),
-///   size: ClaudeButtonSize.medium,
-///   style: ClaudeButtonStyle.solid,
+/// QuantMessageButton(
+///   onPressed: () => print('QuantMessage button pressed'),
+///   size: QuantMessageButtonSize.medium,
+///   style: QuantMessageButtonStyle.solid,
 /// )
 /// ```
 
@@ -27,7 +27,7 @@ import 'package:flutter/material.dart';
 // ============================================================================
 
 /// Button size variants
-enum ClaudeButtonSize {
+enum QuantMessageButtonSize {
   small,      // 32px
   medium,     // 44px
   large,      // 56px
@@ -36,8 +36,8 @@ enum ClaudeButtonSize {
 }
 
 /// Button style variants
-enum ClaudeButtonStyle {
-  solid,      // Filled with Claude colors
+enum QuantMessageButtonStyle {
+  solid,      // Filled with QuantMessage colors
   outline,    // Border only with transparent background
   minimal,    // No border, just icon/text
   ghost,      // Transparent with hover effect
@@ -48,7 +48,7 @@ enum ClaudeButtonStyle {
 // MAIN WIDGET
 // ============================================================================
 
-class ClaudeButton extends StatefulWidget {
+class QuantMessageButton extends StatefulWidget {
   /// Callback when button is pressed
   final VoidCallback onPressed;
 
@@ -56,10 +56,10 @@ class ClaudeButton extends StatefulWidget {
   final String? label;
 
   /// Button size variant
-  final ClaudeButtonSize size;
+  final QuantMessageButtonSize size;
 
   /// Button style variant
-  final ClaudeButtonStyle style;
+  final QuantMessageButtonStyle style;
 
   /// Custom button height (used when size is custom)
   final double? customHeight;
@@ -109,7 +109,7 @@ class ClaudeButton extends StatefulWidget {
   /// Tooltip text
   final String? tooltip;
 
-  /// Whether to show Claude logo
+  /// Whether to show QuantMessage logo
   final bool showLogo;
 
   /// Logo size multiplier
@@ -124,12 +124,12 @@ class ClaudeButton extends StatefulWidget {
   /// On focus callback
   final VoidCallback? onFocus;
 
-  const ClaudeButton({
+  const QuantMessageButton({
     Key? key,
     required this.onPressed,
     this.label,
-    this.size = ClaudeButtonSize.medium,
-    this.style = ClaudeButtonStyle.solid,
+    this.size = QuantMessageButtonSize.medium,
+    this.style = QuantMessageButtonStyle.solid,
     this.customHeight,
     this.customWidth,
     this.backgroundColor,
@@ -154,10 +154,10 @@ class ClaudeButton extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<ClaudeButton> createState() => _ClaudeButtonState();
+  State<QuantMessageButton> createState() => _QuantMessageButtonState();
 }
 
-class _ClaudeButtonState extends State<ClaudeButton>
+class _QuantMessageButtonState extends State<QuantMessageButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _hoverController;
   late Animation<double> _scaleAnimation;
@@ -238,8 +238,8 @@ class _ClaudeButtonState extends State<ClaudeButton>
                 color: _getBackgroundColor(isDarkMode),
                 border: Border.all(
                   color: _getBorderColor(isDarkMode),
-                  width: widget.style == ClaudeButtonStyle.outline ||
-                      widget.style == ClaudeButtonStyle.minimal
+                  width: widget.style == QuantMessageButtonStyle.outline ||
+                      widget.style == QuantMessageButtonStyle.minimal
                       ? widget.borderWidth
                       : 0,
                 ),
@@ -290,8 +290,8 @@ class _ClaudeButtonState extends State<ClaudeButton>
           fontWeight: FontWeight.w600,
         );
 
-    if (widget.style == ClaudeButtonStyle.iconOnly && widget.showLogo) {
-      return Center(child: _buildClaudeLogo(textColor));
+    if (widget.style == QuantMessageButtonStyle.iconOnly && widget.showLogo) {
+      return Center(child: _buildQuantMessageLogo(textColor));
     }
 
     return Row(
@@ -300,15 +300,15 @@ class _ClaudeButtonState extends State<ClaudeButton>
       children: [
         if (widget.leadingIcon != null)
           Icon(widget.leadingIcon, color: textColor, size: _getIconSize())
-        else if (widget.showLogo && widget.style != ClaudeButtonStyle.iconOnly)
+        else if (widget.showLogo && widget.style != QuantMessageButtonStyle.iconOnly)
           Padding(
             padding: EdgeInsets.only(right: widget.logoSpacing),
-            child: _buildClaudeLogo(textColor),
+            child: _buildQuantMessageLogo(textColor),
           ),
         if (widget.label != null)
           Text(widget.label!, style: textStyle)
-        else if (widget.showLogo && widget.style == ClaudeButtonStyle.iconOnly)
-          _buildClaudeLogo(textColor),
+        else if (widget.showLogo && widget.style == QuantMessageButtonStyle.iconOnly)
+          _buildQuantMessageLogo(textColor),
         if (widget.trailingIcon != null)
           Padding(
             padding: const EdgeInsets.only(left: 8),
@@ -318,11 +318,11 @@ class _ClaudeButtonState extends State<ClaudeButton>
     );
   }
 
-  Widget _buildClaudeLogo(Color color) {
+  Widget _buildQuantMessageLogo(Color color) {
     final size = _getLogoSize();
     return CustomPaint(
       size: Size(size, size),
-      painter: ClaudeLogoPainter(
+      painter: QuantMessageLogoPainter(
         color: color,
       ),
     );
@@ -336,11 +336,11 @@ class _ClaudeButtonState extends State<ClaudeButton>
     if (widget.customHeight != null) return widget.customHeight!;
 
     return switch (widget.size) {
-      ClaudeButtonSize.small => 32,
-      ClaudeButtonSize.medium => 44,
-      ClaudeButtonSize.large => 56,
-      ClaudeButtonSize.extraLarge => 64,
-      ClaudeButtonSize.custom => 44,
+      QuantMessageButtonSize.small => 32,
+      QuantMessageButtonSize.medium => 44,
+      QuantMessageButtonSize.large => 56,
+      QuantMessageButtonSize.extraLarge => 64,
+      QuantMessageButtonSize.custom => 44,
     };
   }
 
@@ -351,31 +351,31 @@ class _ClaudeButtonState extends State<ClaudeButton>
 
   double _getTextSize() {
     return switch (widget.size) {
-      ClaudeButtonSize.small => 12,
-      ClaudeButtonSize.medium => 14,
-      ClaudeButtonSize.large => 16,
-      ClaudeButtonSize.extraLarge => 18,
-      ClaudeButtonSize.custom => 14,
+      QuantMessageButtonSize.small => 12,
+      QuantMessageButtonSize.medium => 14,
+      QuantMessageButtonSize.large => 16,
+      QuantMessageButtonSize.extraLarge => 18,
+      QuantMessageButtonSize.custom => 14,
     };
   }
 
   double _getIconSize() {
     return switch (widget.size) {
-      ClaudeButtonSize.small => 14,
-      ClaudeButtonSize.medium => 16,
-      ClaudeButtonSize.large => 18,
-      ClaudeButtonSize.extraLarge => 20,
-      ClaudeButtonSize.custom => 16,
+      QuantMessageButtonSize.small => 14,
+      QuantMessageButtonSize.medium => 16,
+      QuantMessageButtonSize.large => 18,
+      QuantMessageButtonSize.extraLarge => 20,
+      QuantMessageButtonSize.custom => 16,
     };
   }
 
   EdgeInsets _getPadding() {
     final horizontalPadding = switch (widget.size) {
-      ClaudeButtonSize.small => 12.0,
-      ClaudeButtonSize.medium => 16.0,
-      ClaudeButtonSize.large => 20.0,
-      ClaudeButtonSize.extraLarge => 24.0,
-      ClaudeButtonSize.custom => 16.0,
+      QuantMessageButtonSize.small => 12.0,
+      QuantMessageButtonSize.medium => 16.0,
+      QuantMessageButtonSize.large => 20.0,
+      QuantMessageButtonSize.extraLarge => 24.0,
+      QuantMessageButtonSize.custom => 16.0,
     };
 
     return EdgeInsets.symmetric(horizontal: horizontalPadding);
@@ -391,15 +391,15 @@ class _ClaudeButtonState extends State<ClaudeButton>
     }
 
     return switch (widget.style) {
-      ClaudeButtonStyle.solid => _isHovered
+      QuantMessageButtonStyle.solid => _isHovered
           ? const Color(0xFF9D4EDD) // Lighter purple on hover
-          : const Color(0xFF7B2CBF), // Claude purple
-      ClaudeButtonStyle.outline => Colors.transparent,
-      ClaudeButtonStyle.minimal => Colors.transparent,
-      ClaudeButtonStyle.ghost => _isHovered
+          : const Color(0xFF7B2CBF), // QuantMessage purple
+      QuantMessageButtonStyle.outline => Colors.transparent,
+      QuantMessageButtonStyle.minimal => Colors.transparent,
+      QuantMessageButtonStyle.ghost => _isHovered
           ? Colors.grey.withOpacity(0.1)
           : Colors.transparent,
-      ClaudeButtonStyle.iconOnly => Colors.transparent,
+      QuantMessageButtonStyle.iconOnly => Colors.transparent,
     };
   }
 
@@ -407,11 +407,11 @@ class _ClaudeButtonState extends State<ClaudeButton>
     if (widget.borderColor != null) return widget.borderColor!;
 
     return switch (widget.style) {
-      ClaudeButtonStyle.outline => _isHovered
+      QuantMessageButtonStyle.outline => _isHovered
           ? const Color(0xFF9D4EDD)
           : const Color(0xFF7B2CBF),
-      ClaudeButtonStyle.minimal => Colors.transparent,
-      ClaudeButtonStyle.ghost => Colors.transparent,
+      QuantMessageButtonStyle.minimal => Colors.transparent,
+      QuantMessageButtonStyle.ghost => Colors.transparent,
       _ => Colors.transparent,
     };
   }
@@ -426,16 +426,16 @@ class _ClaudeButtonState extends State<ClaudeButton>
     }
 
     return switch (widget.style) {
-      ClaudeButtonStyle.solid => Colors.white,
-      ClaudeButtonStyle.outline => const Color(0xFF7B2CBF),
-      ClaudeButtonStyle.minimal => const Color(0xFF7B2CBF),
-      ClaudeButtonStyle.ghost => const Color(0xFF7B2CBF),
-      ClaudeButtonStyle.iconOnly => const Color(0xFF7B2CBF),
+      QuantMessageButtonStyle.solid => Colors.white,
+      QuantMessageButtonStyle.outline => const Color(0xFF7B2CBF),
+      QuantMessageButtonStyle.minimal => const Color(0xFF7B2CBF),
+      QuantMessageButtonStyle.ghost => const Color(0xFF7B2CBF),
+      QuantMessageButtonStyle.iconOnly => const Color(0xFF7B2CBF),
     };
   }
 
   List<BoxShadow>? _getBoxShadow(bool isDarkMode) {
-    if (!widget.showShadow || widget.style != ClaudeButtonStyle.solid) {
+    if (!widget.showShadow || widget.style != QuantMessageButtonStyle.solid) {
       return null;
     }
 
@@ -453,10 +453,10 @@ class _ClaudeButtonState extends State<ClaudeButton>
 // CLAUDE LOGO PAINTER
 // ============================================================================
 
-class ClaudeLogoPainter extends CustomPainter {
+class QuantMessageLogoPainter extends CustomPainter {
   final Color color;
 
-  ClaudeLogoPainter({required this.color});
+  QuantMessageLogoPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -467,7 +467,7 @@ class ClaudeLogoPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
 
-    // Draw stylized "C" shape for Claude
+    // Draw stylized "C" shape for QuantMessage
     final centerX = size.width / 2;
     final centerY = size.height / 2;
     final radius = size.width * 0.35;
@@ -498,7 +498,7 @@ class ClaudeLogoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(ClaudeLogoPainter oldDelegate) {
+  bool shouldRepaint(QuantMessageLogoPainter oldDelegate) {
     return oldDelegate.color != color;
   }
 }
@@ -507,49 +507,49 @@ class ClaudeLogoPainter extends CustomPainter {
 // CONVENIENCE CONSTRUCTOR FUNCTIONS
 // ============================================================================
 
-/// Quick constructor for solid Claude button
-class ClaudeSolidButton extends ClaudeButton {
-  ClaudeSolidButton({
+/// Quick constructor for solid QuantMessage button
+class QuantMessageSolidButton extends QuantMessageButton {
+  QuantMessageSolidButton({
     required VoidCallback onPressed,
     String? label,
-    ClaudeButtonSize size = ClaudeButtonSize.medium,
+    QuantMessageButtonSize size = QuantMessageButtonSize.medium,
     Key? key,
   }) : super(
     key: key,
     onPressed: onPressed,
     label: label,
     size: size,
-    style: ClaudeButtonStyle.solid,
+    style: QuantMessageButtonStyle.solid,
   );
 }
 
-/// Quick constructor for outline Claude button
-class ClaudeOutlineButton extends ClaudeButton {
-  ClaudeOutlineButton({
+/// Quick constructor for outline QuantMessage button
+class QuantMessageOutlineButton extends QuantMessageButton {
+  QuantMessageOutlineButton({
     required VoidCallback onPressed,
     String? label,
-    ClaudeButtonSize size = ClaudeButtonSize.medium,
+    QuantMessageButtonSize size = QuantMessageButtonSize.medium,
     Key? key,
   }) : super(
     key: key,
     onPressed: onPressed,
     label: label,
     size: size,
-    style: ClaudeButtonStyle.outline,
+    style: QuantMessageButtonStyle.outline,
   );
 }
 
-/// Quick constructor for icon-only Claude button
-class ClaudeIconButton extends ClaudeButton {
-  ClaudeIconButton({
+/// Quick constructor for icon-only QuantMessage button
+class QuantMessageIconButton extends QuantMessageButton {
+  QuantMessageIconButton({
     required VoidCallback onPressed,
-    ClaudeButtonSize size = ClaudeButtonSize.medium,
+    QuantMessageButtonSize size = QuantMessageButtonSize.medium,
     Key? key,
   }) : super(
     key: key,
     onPressed: onPressed,
     size: size,
-    style: ClaudeButtonStyle.iconOnly,
+    style: QuantMessageButtonStyle.iconOnly,
     showLogo: true,
   );
 }

@@ -83,7 +83,7 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
     _NavItem(icon: Icons.auto_awesome_outlined, label: 'Capabilities', index: 4),
     _NavItem(icon: Icons.notifications_none_outlined, label: 'Reflect', index: 5),
     _NavItem(icon: Icons.bedtime_outlined, label: 'Time and focus', index: 6),
-    _NavItem(icon: Icons.code_rounded, label: 'Claude Code', index: 7),
+    _NavItem(icon: Icons.code_rounded, label: 'QuantMessage Code', index: 7),
   ];
 
   final List<_NavItem> _customizeItems = [

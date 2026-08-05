@@ -1,6 +1,6 @@
 // lib/screens/account_settings_screen/account/account_settings.dart
 //
-// Account section matching Claude settings reference.
+// Account section matching QuantMessage settings reference.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';

@@ -1,6 +1,6 @@
 // lib/screens/account_settings_screen/privacy/privacy_settings.dart
 //
-// Privacy section matching Claude settings reference.
+// Privacy section matching QuantMessage settings reference.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -29,7 +29,7 @@ class _PrivacySettingsState extends State<PrivacySettings> {
           text: TextSpan(
             style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 13, height: 1.5),
             children: [
-              const TextSpan(text: 'Anthropic believes in transparent data practices. Learn how your information is protected when using Anthropic products, and visit our '),
+              const TextSpan(text: 'QuantSync believes in transparent data practices. Learn how your information is protected when using QuantSync products, and visit our '),
               TextSpan(
                 text: 'Privacy Center',
                 style: TextStyle(decoration: TextDecoration.underline, color: Colors.white.withOpacity(0.8)),
@@ -53,14 +53,14 @@ class _PrivacySettingsState extends State<PrivacySettings> {
         const SizedBox(height: 16),
         SettingsToggleButton(
           label: 'Location metadata',
-          subtitle: 'Allow Claude to use coarse location metadata (city/region) to improve product experiences. Learn more.',
+          subtitle: 'Allow QuantMessage to use coarse location metadata (city/region) to improve product experiences. Learn more.',
           value: _locationMetadata,
           onChanged: (val) => setState(() => _locationMetadata = val),
         ),
         const SettingsDivider(),
         SettingsToggleButton(
           label: 'Help improve our AI models',
-          subtitle: 'Allow the use of your chats and coding sessions to train and improve Anthropic AI models. Learn more.',
+          subtitle: 'Allow the use of your chats and coding sessions to train and improve QuantSync AI models. Learn more.',
           value: _improveModels,
           onChanged: (val) => setState(() => _improveModels = val),
         ),

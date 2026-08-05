@@ -192,9 +192,9 @@ class Config {
 
     // ── CODING (Premium OpenRouter models) ────────────────────────────────
     const AiModel(
-      name: 'Claude 3.5 Sonnet',
+      name: 'QuantMessage 3.5 Sonnet',
       id: 'openrouter/anthropic/claude-3.5-sonnet',
-      description: 'Anthropic\'s most capable model. Superior reasoning and coding.',
+      description: 'QuantSync\'s most capable model. Superior reasoning and coding.',
       category: ModelCategory.coding,
       supportsVision: true,
       maxContextLength: 200000,
@@ -250,9 +250,9 @@ class Config {
       maxContextLength: 131072,
     ),
     const AiModel(
-      name: 'Claude 3 Haiku',
+      name: 'QuantMessage 3 Haiku',
       id: 'openrouter/anthropic/claude-3-haiku',
-      description: 'Anthropic\'s fastest Claude. Cost-effective creative companion.',
+      description: 'QuantSync\'s fastest QuantMessage. Cost-effective creative companion.',
       category: ModelCategory.roleplay,
       supportsVision: true,
       maxContextLength: 200000,

@@ -37,7 +37,7 @@ class _CodeElementBuilder extends MarkdownElementBuilder {
   }
 }
 
-/// A highly readable, Claude-like center-aligned card for AI messages.
+/// A highly readable, QuantMessage-like center-aligned card for AI messages.
 class ChatAnswerCard extends StatelessWidget {
   final ChatMessage message;
 
@@ -81,7 +81,7 @@ class ChatAnswerCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // (Claude just shows text without an avatar or name above every single block)
+              // (QuantMessage just shows text without an avatar or name above every single block)
               
               const SizedBox(height: 4),
               

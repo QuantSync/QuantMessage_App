@@ -1,6 +1,6 @@
 // lib/screens/account_settings_screen/billing/billing_settings.dart
 //
-// Billing section matching Claude settings reference.
+// Billing section matching QuantMessage settings reference.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -42,7 +42,7 @@ class BillingSettings extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Try Claude',
+                      'Try QuantMessage',
                       style: GoogleFonts.outfit(
                         color: Colors.white.withOpacity(0.6),
                         fontSize: 13.5,
@@ -79,7 +79,7 @@ class BillingSettings extends StatelessWidget {
         _buildFeatureItem('Ability to search the web'),
         _buildFeatureItem('Memory across conversations'),
         _buildFeatureItem('Create files and execute code'),
-        _buildFeatureItem('Unlock more from Claude with desktop extensions'),
+        _buildFeatureItem('Unlock more from QuantMessage with desktop extensions'),
         _buildFeatureItem('Connect Slack and Google Workspace services'),
         _buildFeatureItem('Integrate any context or tool through connectors with remote MCP'),
         _buildFeatureItem('Extended thinking for complex work'),

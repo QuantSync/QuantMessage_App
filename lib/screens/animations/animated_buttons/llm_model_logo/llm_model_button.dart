@@ -38,7 +38,7 @@ class _LlmModelButtonState extends State<LlmModelButton> {
     if (id.contains('gemini')) {
       painter = GeminiLogoPainter(primaryColor: const Color(0xFF1A73E8), useGradient: true);
     } else if (id.contains('claude')) {
-      painter = ClaudeLogoPainter(color: const Color(0xFFD97757));
+      painter = QuantMessageLogoPainter(color: const Color(0xFFD97757));
     } else if (id.contains('gpt') || id.contains('openai')) {
       painter = OpenAILogoPainter(primaryColor: Colors.black);
     } else if (id.contains('llama') || id.contains('quantcore')) {

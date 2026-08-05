@@ -1,6 +1,6 @@
 // lib/screens/account_settings_screen/quantcode/quantcode_settings.dart
 //
-// QuantCode (Advanced) section. Replaces "Claude Code".
+// QuantCode (Advanced) section. Replaces "QuantMessage Code".
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';

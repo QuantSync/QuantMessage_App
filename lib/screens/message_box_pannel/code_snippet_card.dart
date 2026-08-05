@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// A premium code block styled like Claude's code blocks.
+/// A premium code block styled like QuantMessage's code blocks.
 /// Features: language label, copy button, horizontal scroll, syntax-tinted text.
 class CodeSnippetCard extends StatefulWidget {
   final String code;
@@ -34,7 +34,7 @@ class _CodeSnippetCardState extends State<CodeSnippetCard> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2E), // Slightly blueish-dark (like Claude)
+        color: const Color(0xFF1E1E2E), // Slightly blueish-dark (like QuantMessage)
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFF2E2E42), width: 1),
       ),

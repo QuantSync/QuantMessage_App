@@ -1,6 +1,6 @@
 // lib/screens/account_settings_screen/capabilities/capabilities_settings.dart
 //
-// Capabilities section matching Claude settings reference.
+// Capabilities section matching QuantMessage settings reference.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -52,7 +52,7 @@ class _CapabilitiesSettingsState extends State<CapabilitiesSettings> {
         const SettingsDivider(),
         SettingsToggleButton(
           label: 'Connector search',
-          subtitle: 'Let Claude search the connector directory and surface ones relevant to your conversation.',
+          subtitle: 'Let QuantMessage search the connector directory and surface ones relevant to your conversation.',
           value: _connectorSearch,
           onChanged: (val) => setState(() => _connectorSearch = val),
         ),
@@ -76,14 +76,14 @@ class _CapabilitiesSettingsState extends State<CapabilitiesSettings> {
         const SettingsDivider(),
         SettingsToggleButton(
           label: 'AI-powered artifacts',
-          subtitle: 'Build apps and interactive documents that use Claude inside the artifact.',
+          subtitle: 'Build apps and interactive documents that use QuantMessage inside the artifact.',
           value: _aiArtifacts,
           onChanged: (val) => setState(() => _aiArtifacts = val),
         ),
         const SettingsDivider(),
         SettingsToggleButton(
           label: 'Inline visualizations',
-          subtitle: 'Allow Claude to generate interactive visualizations, charts, and diagrams directly in the conversation.',
+          subtitle: 'Allow QuantMessage to generate interactive visualizations, charts, and diagrams directly in the conversation.',
           value: _inlineViz,
           onChanged: (val) => setState(() => _inlineViz = val),
         ),
@@ -93,7 +93,7 @@ class _CapabilitiesSettingsState extends State<CapabilitiesSettings> {
         const SizedBox(height: 16),
         SettingsToggleButton(
           label: 'Code execution and file creation',
-          subtitle: 'Claude can execute code and create and edit docs, spreadsheets, presentations, PDFs, and data reports. Required for skills.',
+          subtitle: 'QuantMessage can execute code and create and edit docs, spreadsheets, presentations, PDFs, and data reports. Required for skills.',
           value: _codeExec,
           onChanged: (val) => setState(() => _codeExec = val),
         ),
@@ -121,7 +121,7 @@ class _CapabilitiesSettingsState extends State<CapabilitiesSettings> {
                       text: TextSpan(
                         style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.4), fontSize: 12, height: 1.4),
                         children: [
-                          const TextSpan(text: 'Allow Claude to access common package managers to install packages and libraries for data analysis, visualizations, and file processing. '),
+                          const TextSpan(text: 'Allow QuantMessage to access common package managers to install packages and libraries for data analysis, visualizations, and file processing. '),
                           TextSpan(
                             text: 'View package manager domains.',
                             style: TextStyle(decoration: TextDecoration.underline, color: Colors.white.withOpacity(0.6)),

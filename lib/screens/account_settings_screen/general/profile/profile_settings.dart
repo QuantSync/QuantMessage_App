@@ -1,6 +1,6 @@
 // lib/screens/account_settings_screen/general/profile/profile_settings.dart
 //
-// Profile section matching Claude settings reference.
+// Profile section matching QuantMessage settings reference.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -98,7 +98,7 @@ class _ProfileSettingsState extends State<ProfileSettings> {
         ),
         const SettingsDivider(),
         SettingsRow(
-          label: 'What should Claude call you?',
+          label: 'What should QuantMessage call you?',
           trailing: Container(
             width: 200,
             height: 36,
@@ -139,7 +139,7 @@ class _ProfileSettingsState extends State<ProfileSettings> {
         ),
         const SizedBox(height: 32),
         Text(
-          'Instructions for Claude',
+          'Instructions for QuantMessage',
           style: GoogleFonts.outfit(
             color: Colors.white,
             fontSize: 14,
@@ -151,9 +151,9 @@ class _ProfileSettingsState extends State<ProfileSettings> {
           text: TextSpan(
             style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.5), fontSize: 12.5, height: 1.4),
             children: [
-              const TextSpan(text: 'Claude will keep these in mind across chats and Cowork within '),
+              const TextSpan(text: 'QuantMessage will keep these in mind across chats and Cowork within '),
               TextSpan(
-                text: 'Anthropic\'s guidelines',
+                text: 'QuantSync\'s guidelines',
                 style: TextStyle(decoration: TextDecoration.underline, color: Colors.white.withOpacity(0.7)),
               ),
               const TextSpan(text: '. '),
@@ -212,7 +212,7 @@ class _ProfileSettingsState extends State<ProfileSettings> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Anthropic Sans',
+                'QuantSync Sans',
                 style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.8), fontSize: 13),
               ),
               const SizedBox(width: 4),
@@ -291,7 +291,7 @@ class _ProfileSettingsState extends State<ProfileSettings> {
         const SizedBox(height: 16),
         SettingsToggleButton(
           label: 'Response completions',
-          subtitle: 'Get notified when Claude has finished a response. Useful for long-running tasks.',
+          subtitle: 'Get notified when QuantMessage has finished a response. Useful for long-running tasks.',
           value: _responseCompletions,
           onChanged: (val) => setState(() => _responseCompletions = val),
         ),

@@ -1,6 +1,6 @@
 // lib/screens/account_settings_screen/time_and_focus/time_and_focus_settings.dart
 //
-// Time and focus section matching Claude settings reference.
+// Time and focus section matching QuantMessage settings reference.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -38,7 +38,7 @@ class _TimeAndFocusSettingsState extends State<TimeAndFocusSettings> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Get a nudge to take a break from Claude. You can snooze or adjust anytime.',
+                    'Get a nudge to take a break from QuantMessage. You can snooze or adjust anytime.',
                     style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.5), fontSize: 13),
                   ),
                 ],
@@ -63,7 +63,7 @@ class _TimeAndFocusSettingsState extends State<TimeAndFocusSettings> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Set time limits for Claude. You can dismiss or adjust anytime.',
+          'Set time limits for QuantMessage. You can dismiss or adjust anytime.',
           style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.5), fontSize: 13),
         ),
         const SizedBox(height: 16),

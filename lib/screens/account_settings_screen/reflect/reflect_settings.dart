@@ -1,6 +1,6 @@
 // lib/screens/account_settings_screen/reflect/reflect_settings.dart
 //
-// Reflect section matching Claude settings reference.
+// Reflect section matching QuantMessage settings reference.
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -26,7 +26,7 @@ class ReflectSettings extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Based on your conversations in Claude chat.',
+                  'Based on your conversations in QuantMessage chat.',
                   style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 13),
                 ),
               ],
@@ -49,7 +49,7 @@ class ReflectSettings extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'You worked on QuantMessage and QuantSync across frontend, backend, deployment, branding, and documentation — sometimes all in the same session. Flutter widgets, Python multi-agent architecture, GitHub Pages troubleshooting, logo design, README animations, Vercel and Railway deployment configs. Through most of it, you used Claude as a researcher and implementer: ask for a full roadmap, get the code, move to the next piece.',
+          'You worked on QuantMessage and QuantSync across frontend, backend, deployment, branding, and documentation — sometimes all in the same session. Flutter widgets, Python multi-agent architecture, GitHub Pages troubleshooting, logo design, README animations, Vercel and Railway deployment configs. Through most of it, you used QuantMessage as a researcher and implementer: ask for a full roadmap, get the code, move to the next piece.',
           style: GoogleFonts.tiroDevanagariSanskrit(color: Colors.white.withOpacity(0.7), fontSize: 14, height: 1.5),
         ),
         const SizedBox(height: 48),
