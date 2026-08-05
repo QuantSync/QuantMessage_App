@@ -42,13 +42,10 @@ class QuantSpaceApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
       title: 'QuantMessage',
       debugShowCheckedModeBanner: false,
-      themeMode: themeMode,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.dark(),
       home: const SplashScreen(),
       onGenerateRoute: (settings) {
         switch (settings.name) {

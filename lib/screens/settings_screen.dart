@@ -126,16 +126,6 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
         });
         
         // Initialize preferences from DB
-        if (data['theme'] != null) {
-          final savedThemeStr = data['theme'] as String;
-          if (savedThemeStr.contains('light')) {
-            ref.read(themeModeProvider.notifier).state = ThemeMode.light;
-          } else if (savedThemeStr.contains('dark')) {
-            ref.read(themeModeProvider.notifier).state = ThemeMode.dark;
-          } else {
-            ref.read(themeModeProvider.notifier).state = ThemeMode.system;
-          }
-        }
         if (data['motion'] != null) {
           ref.read(motionProvider.notifier).state = data['motion'] as bool;
         }

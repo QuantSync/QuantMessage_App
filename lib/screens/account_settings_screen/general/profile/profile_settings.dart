@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/settings_click_button.dart';
 import '../../widgets/settings_toggle_button.dart';
-import '../../../animations/animated_buttons/theme_switcher_button.dart';
 import '../../../animations/animated_buttons/motion_selector_button.dart';
 import '../../widgets/language_selector_card.dart';
 
@@ -194,8 +193,19 @@ class _ProfileSettingsState extends State<ProfileSettings> {
         const SizedBox(height: 24),
         SettingsRow(
           label: 'Appearance',
-          trailing: ThemeSwitcherButton(
-            onChanged: (mode) => widget.onPreferenceSaved?.call('theme', mode.toString()),
+          trailing: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildAppearanceIcon(Icons.desktop_windows_outlined, false),
+                _buildAppearanceIcon(Icons.wb_sunny_outlined, false),
+                _buildAppearanceIcon(Icons.nightlight_round_outlined, true),
+              ],
+            ),
           ),
         ),
         const SettingsDivider(),
