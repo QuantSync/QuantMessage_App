@@ -222,8 +222,6 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-    final screenHeight = mediaQuery.size.height;
-    final isCompact = screenHeight < 720;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -507,7 +505,9 @@ class _FeatureGridState extends State<_FeatureGrid> with TickerProviderStateMixi
   }
   @override
   void dispose() {
-    for (final c in _ctrls) c.dispose();
+    for (final c in _ctrls) {
+      c.dispose();
+    }
     super.dispose();
   }
   @override
