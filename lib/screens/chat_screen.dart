@@ -365,13 +365,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         effectiveMode = 'quick_answer';
       }
 
-      final fullRes = await _api.getAIResponseFull(
-        promptText,
-        userId,
-        modelId: _selectedModelId,
-        conversationId: _currentConversationId,
-        mode: effectiveMode,
-      );
+      final hasLocalFiles = attachments.any((a) => a.localFile != null);
+      
+      final fullRes = hasLocalFiles
+          ? await _api.sendMultimodalMessage(
+              message: promptText,
+              userId: userId,
+              modelId: _selectedModelId,
+              conversationId: _currentConversationId,
+              mode: effectiveMode,
+              files: attachments.where((a) => a.localFile != null).map((a) => a.localFile!).toList(),
+            )
+          : await _api.getAIResponseFull(
+              promptText,
+              userId,
+              modelId: _selectedModelId,
+              conversationId: _currentConversationId,
+              mode: effectiveMode,
+              attachments: attachments,
+            );
 
       final responseText = fullRes['response'] as String;
       final steps = fullRes['steps'] as List<String>? ?? [];
