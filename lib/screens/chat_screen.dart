@@ -42,6 +42,11 @@ import 'artifact_screen.dart';
 import 'settings_screen.dart';
 import 'app_bar.dart' show smoothPageRoute;
 import 'animations/planetary_animation/planetary_animation.dart';
+import 'animated_dropdown/write_dropdown.dart';
+import 'animated_dropdown/learn_dropdown.dart';
+import 'animated_dropdown/code_dropdown.dart';
+import 'animated_dropdown/life_stuff_dropdown.dart';
+import 'animated_dropdown/something_new_dropdown.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ANIMATION HELPER WIDGETS
@@ -138,6 +143,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   bool _isProfileMenuOpen = false;
   bool _isMobileSidebarOpen = false;
 
+  // State for active suggestion dropdown
+  String? _activeDropdown;
+
+  // Session guard: NameCard shown only once per app session (not per navigation)
+  static bool _hasShownNameCardThisSession = false;
+
   // ── Model Selection synced from shared provider ──
   late String _selectedModelName;
   late String _selectedModelId;
@@ -201,14 +212,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _checkNameOnboarding() async {
+    // If the name card was already shown this session, skip showing it again
+    if (_hasShownNameCardThisSession) {
+      if (mounted) {
+        setState(() => _onboardingChecked = true);
+      }
+      return;
+    }
+
     final user = _supabase.auth.currentUser;
 
     if (user == null) {
       if (mounted) {
+        final shouldShow = _displayName == null;
+        if (shouldShow) _hasShownNameCardThisSession = true;
         setState(() {
-          if (_displayName == null) {
-            _showNameOnboarding = true;
-          }
+          _showNameOnboarding = shouldShow;
           _onboardingChecked = true;
         });
       }
@@ -254,6 +273,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       }
     } catch (_) {}
 
+    // Mark as shown so it won't show again in this session
+    _hasShownNameCardThisSession = true;
     if (mounted) {
       setState(() {
         _displayName = fullName?.trim();
@@ -674,7 +695,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildSuggestionPills(),
+                            _buildSuggestionPills(isMobile: isMobile),
                             SizedBox(height: isMobile ? 8 : 14),
                             _buildAdviceBanner(),
                             SizedBox(height: isMobile ? 4 : 8),
@@ -702,6 +723,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                               SizedBox(height: isMobile ? 4 : 6),
                             _buildMessageBox(),
                           ],
+                        ),
+                      ),
+
+                    // ── Dropdown Overlay ────────────────────────────────────
+                    if (_messages.isEmpty && _activeDropdown != null)
+                      Positioned.fill(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _activeDropdown = null),
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(color: Colors.transparent),
+                        ),
+                      ),
+
+                    if (_messages.isEmpty && _activeDropdown != null)
+                      Positioned(
+                        bottom: (isMobile ? 200 : 220) + keyboardInset,
+                        left: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () {}, // absorb taps on the card itself
+                          child: Center(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              child: _buildActiveDropdown(isMobile),
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -1000,20 +1047,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
   }
 
-  Widget _buildSuggestionPills() {
-    final bool isMobile = MediaQuery.of(context).size.width < 800;
+  Widget _buildSuggestionPills({bool isMobile = false}) {
+    void toggle(String name) {
+      setState(() {
+        _activeDropdown = _activeDropdown == name ? null : name;
+      });
+    }
+
     return Wrap(
       spacing: isMobile ? 4 : 8,
       runSpacing: isMobile ? 4 : 8,
       alignment: WrapAlignment.center,
       children: [
-        _SuggestionPill(Icons.edit_outlined, "Write", isMobile: isMobile),
-        _SuggestionPill(Icons.school_outlined, "Learn", isMobile: isMobile),
-        _SuggestionPill(Icons.code, "Code", isMobile: isMobile),
-        _SuggestionPill(Icons.coffee_outlined, "Life stuff", isMobile: isMobile),
-        _SuggestionPill(Icons.lightbulb_outline, "Something New", isMobile: isMobile),
+        _SuggestionPill(Icons.edit_outlined, "Write", isMobile: isMobile,
+            onTap: () => toggle('write')),
+        _SuggestionPill(Icons.school_outlined, "Learn", isMobile: isMobile,
+            onTap: () => toggle('learn')),
+        _SuggestionPill(Icons.code, "Code", isMobile: isMobile,
+            onTap: () => toggle('code')),
+        _SuggestionPill(Icons.coffee_outlined, "Life stuff", isMobile: isMobile,
+            onTap: () => toggle('life_stuff')),
+        _SuggestionPill(Icons.lightbulb_outline, "Something New", isMobile: isMobile,
+            onTap: () => toggle('something_new')),
       ],
     );
+  }
+
+  Widget? _buildActiveDropdown(bool isMobile) {
+    void close() => setState(() => _activeDropdown = null);
+    void sendQuery(String q) {
+      setState(() => _activeDropdown = null);
+      _handleSend(q, []);
+    }
+
+    switch (_activeDropdown) {
+      case 'write':
+        return WriteDropdown(key: const ValueKey('write'), onClose: close, onQuerySelected: sendQuery, isMobile: isMobile);
+      case 'learn':
+        return LearnDropdown(key: const ValueKey('learn'), onClose: close, onQuerySelected: sendQuery, isMobile: isMobile);
+      case 'code':
+        return CodeDropdown(key: const ValueKey('code'), onClose: close, onQuerySelected: sendQuery, isMobile: isMobile);
+      case 'life_stuff':
+        return LifeStuffDropdown(key: const ValueKey('life_stuff'), onClose: close, onQuerySelected: sendQuery, isMobile: isMobile);
+      case 'something_new':
+        return SomethingNewDropdown(key: const ValueKey('something_new'), onClose: close, onQuerySelected: sendQuery, isMobile: isMobile);
+      default:
+        return null;
+    }
   }
 
   Widget _buildUserButton({required bool isMobile}) {
@@ -1050,7 +1130,8 @@ class _SuggestionPill extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool isMobile;
-  const _SuggestionPill(this.icon, this.label, {this.isMobile = false});
+  final VoidCallback? onTap;
+  const _SuggestionPill(this.icon, this.label, {this.isMobile = false, this.onTap});
   @override
   State<_SuggestionPill> createState() => _SuggestionPillState();
 }
@@ -1063,36 +1144,39 @@ class _SuggestionPillState extends State<_SuggestionPill> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-            horizontal: widget.isMobile ? 10 : 14,
-            vertical: widget.isMobile ? 6 : 8),
-        decoration: BoxDecoration(
-          color: _isHovered
-              ? Colors.white.withOpacity(0.1)
-              : const Color(0xFF2F2F2F),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: _isHovered ? Colors.white54 : Colors.white10,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(widget.icon,
-                color: _isHovered ? Colors.white : Colors.white70,
-                size: widget.isMobile ? 12 : 16),
-            SizedBox(width: widget.isMobile ? 4 : 6),
-            Text(
-              widget.label,
-              style: GoogleFonts.outfit(
-                color: _isHovered ? Colors.white : Colors.white70,
-                fontSize: widget.isMobile ? 10 : 13,
-                fontWeight: FontWeight.w500,
-              ),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(
+              horizontal: widget.isMobile ? 10 : 14,
+              vertical: widget.isMobile ? 6 : 8),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? Colors.white.withOpacity(0.1)
+                : const Color(0xFF2F2F2F),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _isHovered ? Colors.white54 : Colors.white10,
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon,
+                  color: _isHovered ? Colors.white : Colors.white70,
+                  size: widget.isMobile ? 12 : 16),
+              SizedBox(width: widget.isMobile ? 4 : 6),
+              Text(
+                widget.label,
+                style: GoogleFonts.outfit(
+                  color: _isHovered ? Colors.white : Colors.white70,
+                  fontSize: widget.isMobile ? 10 : 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
