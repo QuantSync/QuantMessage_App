@@ -655,7 +655,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     if (_messages.isEmpty)
                       Positioned.fill(
                         child: Align(
-                          alignment: isMobile ? const Alignment(0.0, -0.65) : const Alignment(0.0, -0.45),
+                          alignment: isMobile ? const Alignment(0.0, 0.2) : const Alignment(0.0, -0.45),
                           child: ScaleTransition(
                             scale: _emptyScale,
                             child: FadeTransition(
