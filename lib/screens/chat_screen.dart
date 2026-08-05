@@ -28,7 +28,7 @@ import 'app_sidebar_screen/left_sidebar.dart';
 import 'message_box_pannel/message_box.dart';
 import 'message_box_pannel/message_card.dart';
 import 'message_box_pannel/chat_answers.dart';
-import 'widgets/name_onboarding_card.dart';
+import 'message_box_pannel/name_card.dart';
 import 'widgets/user_greeting.dart';
 import 'animations/animated_buttons/upgrade_plan_button.dart';
 import 'animations/animated_buttons/mode_slider_button.dart';
@@ -206,8 +206,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (user == null) {
       if (mounted) {
         setState(() {
-          _displayName = null;
-          _showNameOnboarding = false;
+          if (_displayName == null) {
+            _showNameOnboarding = true;
+          }
           _onboardingChecked = true;
         });
       }
@@ -318,8 +319,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       setState(() {
         _messages.clear();
         _displayName = null;
-        _showNameOnboarding = false;
-        _onboardingChecked = false;
+        _showNameOnboarding = true;
+        _onboardingChecked = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Signed out successfully')),
@@ -549,6 +550,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                       tooltip: 'Open Sidebar',
                                     ),
                                     const SizedBox(width: 6),
+                                    _buildUserButton(isMobile: true),
+                                    const SizedBox(width: 6),
                                     ModeSliderButton(
                                       currentMode: _currentMode,
                                       onModeChanged: (mode) {
@@ -736,9 +739,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             // First-time name onboarding (blur + glass card)
             if (_onboardingChecked && _showNameOnboarding)
               Positioned.fill(
-                child: NameOnboardingOverlay(
-                  initialName: _displayName,
-                  onSave: _saveDisplayName,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(color: Colors.black.withOpacity(0.45)),
+                    ),
+                    NameCard(
+                      onSave: _saveDisplayName,
+                    ),
+                  ],
                 ),
               ),
 
@@ -974,17 +985,47 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Widget _buildSuggestionPills() {
-    return const Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    final bool isMobile = MediaQuery.of(context).size.width < 800;
+    return Wrap(
+      spacing: isMobile ? 4 : 8,
+      runSpacing: isMobile ? 4 : 8,
       alignment: WrapAlignment.center,
       children: [
-        _SuggestionPill(Icons.edit_outlined, "Write"),
-        _SuggestionPill(Icons.school_outlined, "Learn"),
-        _SuggestionPill(Icons.code, "Code"),
-        _SuggestionPill(Icons.coffee_outlined, "Life stuff"),
-        _SuggestionPill(Icons.lightbulb_outline, "Something New"),
+        _SuggestionPill(Icons.edit_outlined, "Write", isMobile: isMobile),
+        _SuggestionPill(Icons.school_outlined, "Learn", isMobile: isMobile),
+        _SuggestionPill(Icons.code, "Code", isMobile: isMobile),
+        _SuggestionPill(Icons.coffee_outlined, "Life stuff", isMobile: isMobile),
+        _SuggestionPill(Icons.lightbulb_outline, "Something New", isMobile: isMobile),
       ],
+    );
+  }
+
+  Widget _buildUserButton({required bool isMobile}) {
+    final text = isMobile ? "User" : "${_userName ?? 'User'} + Workspace";
+    return GestureDetector(
+      onTap: () {
+        if (mounted) {
+          setState(() {
+            _showNameOnboarding = true;
+          });
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 14, vertical: isMobile ? 6 : 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.outfit(
+            color: Colors.white70,
+            fontSize: isMobile ? 12 : 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -992,7 +1033,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 class _SuggestionPill extends StatefulWidget {
   final IconData icon;
   final String label;
-  const _SuggestionPill(this.icon, this.label);
+  final bool isMobile;
+  const _SuggestionPill(this.icon, this.label, {this.isMobile = false});
   @override
   State<_SuggestionPill> createState() => _SuggestionPillState();
 }
@@ -1007,10 +1049,12 @@ class _SuggestionPillState extends State<_SuggestionPill> {
       cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: EdgeInsets.symmetric(
+            horizontal: widget.isMobile ? 10 : 14,
+            vertical: widget.isMobile ? 6 : 8),
         decoration: BoxDecoration(
           color: _isHovered
-              ? Colors.white.withValues(alpha: 0.1)
+              ? Colors.white.withOpacity(0.1)
               : const Color(0xFF2F2F2F),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
@@ -1021,13 +1065,14 @@ class _SuggestionPillState extends State<_SuggestionPill> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(widget.icon,
-                color: _isHovered ? Colors.white : Colors.white70, size: 16),
-            const SizedBox(width: 6),
+                color: _isHovered ? Colors.white : Colors.white70,
+                size: widget.isMobile ? 12 : 16),
+            SizedBox(width: widget.isMobile ? 4 : 6),
             Text(
               widget.label,
               style: GoogleFonts.outfit(
                 color: _isHovered ? Colors.white : Colors.white70,
-                fontSize: 13,
+                fontSize: widget.isMobile ? 10 : 13,
                 fontWeight: FontWeight.w500,
               ),
             ),

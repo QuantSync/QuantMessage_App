@@ -237,7 +237,7 @@ class UserGreeting extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '< Hey "${userName ?? 'there'}" >',
+                      'HEY < ${userName ?? 'There'} >',
                       style: GoogleFonts.outfit(
                         color: const Color(0xFFE8E8E8),
                         fontSize: nameFontSize,
