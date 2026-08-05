@@ -8,11 +8,13 @@ enum AppMode { drive, fly, jet }
 class ModeSliderButton extends StatefulWidget {
   final AppMode currentMode;
   final ValueChanged<AppMode> onModeChanged;
+  final bool isMobile;
 
   const ModeSliderButton({
     super.key,
-    required this.currentMode,//
-    required this.onModeChanged,///
+    required this.currentMode,
+    required this.onModeChanged,
+    this.isMobile = false,
   });
 
   @override
@@ -81,7 +83,7 @@ class _ModeSliderButtonState extends State<ModeSliderButton> {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeInOutBack,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: EdgeInsets.symmetric(horizontal: widget.isMobile ? 8 : 10, vertical: widget.isMobile ? 4 : 6),
                       decoration: BoxDecoration(
                         color: isSelected ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
@@ -94,7 +96,7 @@ class _ModeSliderButtonState extends State<ModeSliderButton> {
                         children: [
                           Icon(
                             _icons[mode],
-                            size: 12,
+                            size: widget.isMobile ? 10 : 12,
                             color: isSelected ? Colors.black87 : Colors.black54,
                           ),
                           const SizedBox(width: 4),
@@ -102,7 +104,7 @@ class _ModeSliderButtonState extends State<ModeSliderButton> {
                             _labels[mode]!,
                             style: GoogleFonts.outfit(
                               color: isSelected ? Colors.black87 : Colors.black54,
-                              fontSize: 11,
+                              fontSize: widget.isMobile ? 10 : 11,
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                               letterSpacing: 0.3,
                             ),

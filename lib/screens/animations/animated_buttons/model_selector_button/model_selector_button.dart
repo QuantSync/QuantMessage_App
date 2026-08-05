@@ -4,10 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 
 class ModelSelectorButton extends StatefulWidget {
   final VoidCallback onPressed;
+  final bool isMobile;
 
   const ModelSelectorButton({
     Key? key,
     required this.onPressed,
+    this.isMobile = false,
   }) : super(key: key);
 
   @override
@@ -76,7 +78,7 @@ class _ModelSelectorButtonState extends State<ModelSelectorButton>
           scale: _scaleAnimation,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: widget.isMobile ? 10 : 16, vertical: widget.isMobile ? 6 : 8),
             decoration: BoxDecoration(
               color: effectiveBgColor,
               borderRadius: BorderRadius.circular(16),
@@ -105,16 +107,16 @@ class _ModelSelectorButtonState extends State<ModelSelectorButton>
                     "Model",
                     style: GoogleFonts.outfit(
                       color: Colors.black87,
-                      fontSize: 14,
+                      fontSize: widget.isMobile ? 12 : 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(
+                  Icon(
                     Icons.keyboard_arrow_down_rounded,
                     color: Colors.black87,
-                    size: 18,
+                    size: widget.isMobile ? 16 : 18,
                   ),
                 ],
               ),

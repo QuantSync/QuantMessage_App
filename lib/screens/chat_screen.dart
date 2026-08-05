@@ -562,18 +562,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                       tooltip: 'Open Sidebar',
                                     ),
                                     const SizedBox(width: 6),
-                                    _buildUserButton(isMobile: true),
-                                    const SizedBox(width: 6),
                                     ModeSliderButton(
                                       currentMode: _currentMode,
                                       onModeChanged: (mode) {
                                         setState(() => _currentMode = mode);
                                       },
+                                      isMobile: true,
                                     ),
                                     const SizedBox(width: 8),
                                     ModelSelectorButton(
                                       onPressed: _openModelSelectorCard,
+                                      isMobile: true,
                                     ),
+                                    const Spacer(),
+                                    _buildUserButton(isMobile: true),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
@@ -604,6 +606,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                               ModelSelectorButton(
                                 onPressed: _openModelSelectorCard,
                               ),
+                              const SizedBox(width: 12),
+                              _buildUserButton(isMobile: false),
                               const Spacer(),
                               UpgradePlanButton(
                                 onPressed: () {
@@ -1013,7 +1017,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Widget _buildUserButton({required bool isMobile}) {
-    final text = isMobile ? "User" : "${_userName ?? 'User'} + Workspace";
+    final text = isMobile ? "User" : "${_displayName ?? 'User'} Workspace";
     return GestureDetector(
       onTap: () {
         if (mounted) {
@@ -1025,16 +1029,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 14, vertical: isMobile ? 6 : 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.green.withOpacity(0.15),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: Colors.green.withOpacity(0.3)),
         ),
         child: Text(
           text,
           style: GoogleFonts.outfit(
-            color: Colors.white70,
+            color: Colors.greenAccent,
             fontSize: isMobile ? 12 : 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
