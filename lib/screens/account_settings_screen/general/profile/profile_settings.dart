@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/settings_click_button.dart';
 import '../../widgets/settings_toggle_button.dart';
+import '../../../animations/animated_buttons/theme_switcher_button.dart';
+import '../../../animations/animated_buttons/motion_selector_button.dart';
+import '../widgets/language_selector_card.dart';
 
 class ProfileSettings extends StatefulWidget {
   final Map<String, dynamic>? userProfile;
@@ -38,13 +41,11 @@ class _ProfileSettingsState extends State<ProfileSettings> {
   @override
   void initState() {
     super.initState();
-    _whatToCallCtrl.text = widget.userProfile?['full_name'] ?? '';
   }
 
   @override
   void dispose() {
     _instructionsCtrl.dispose();
-    _whatToCallCtrl.dispose();
     super.dispose();
   }
 
@@ -109,13 +110,14 @@ class _ProfileSettingsState extends State<ProfileSettings> {
               border: Border.all(color: Colors.white.withOpacity(0.15)),
             ),
             child: TextField(
-              controller: _whatToCallCtrl,
+              controller: widget.nameController,
               style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.8), fontSize: 13),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(vertical: 10),
               ),
+              onSubmitted: widget.onNameSaved,
             ),
           ),
         ),
@@ -190,20 +192,7 @@ class _ProfileSettingsState extends State<ProfileSettings> {
         const SizedBox(height: 24),
         SettingsRow(
           label: 'Appearance',
-          trailing: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildAppearanceIcon(Icons.desktop_windows_outlined, true),
-                _buildAppearanceIcon(Icons.wb_sunny_outlined, false),
-                _buildAppearanceIcon(Icons.nightlight_round_outlined, false),
-              ],
-            ),
-          ),
+          trailing: const ThemeSwitcherButton(),
         ),
         const SettingsDivider(),
         SettingsRow(
@@ -240,11 +229,7 @@ class _ProfileSettingsState extends State<ProfileSettings> {
                   ),
                 ],
               ),
-              SettingsSegmentToggle(
-                options: const ['System', 'Reduced'],
-                selectedIndex: 0,
-                onChanged: (val) {},
-              ),
+              const MotionSelectorButton(),
             ],
           ),
         ),
@@ -253,37 +238,11 @@ class _ProfileSettingsState extends State<ProfileSettings> {
         const SizedBox(height: 16),
         SettingsRow(
           label: 'Language',
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('English', style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.8), fontSize: 13)),
-              const SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down, color: Colors.white.withOpacity(0.5), size: 16),
-            ],
-          ),
-        ),
-        const SettingsDivider(),
-        SettingsRow(
-          label: 'Style',
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Glassy', style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.8), fontSize: 13)),
-              const SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down, color: Colors.white.withOpacity(0.5), size: 16),
-            ],
-          ),
-        ),
-        const SettingsDivider(),
-        SettingsRow(
-          label: 'Speed',
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Normal', style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.8), fontSize: 13)),
-              const SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down, color: Colors.white.withOpacity(0.5), size: 16),
-            ],
+          trailing: LanguageSelectorCard(
+            currentLanguage: 'English',
+            onLanguageChanged: (lang) {
+              // Implementation for changing language
+            },
           ),
         ),
         const SizedBox(height: 32),

@@ -15,6 +15,7 @@ import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/pricing_screen/pricing_screen.dart';
 import 'package:flutter/cupertino.dart';
+import 'providers/theme_provider.dart';
 
 
 Future<void> main() async {
@@ -37,34 +38,18 @@ Future<void> main() async {
   runApp(const ProviderScope(child: QuantSpaceApp()));
 }
 
-class QuantSpaceApp extends StatelessWidget {
+class QuantSpaceApp extends ConsumerWidget {
   const QuantSpaceApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
       title: 'QuantMessage',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: AppTheme.primaryRed,
-        scaffoldBackgroundColor: AppTheme.backgroundBlack,
-        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppTheme.primaryRed,
-          brightness: Brightness.dark,
-          surface: AppTheme.surfaceDark,
-        ),
-        pageTransitionsTheme: PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
-          },
-        ),
-      ),
+      themeMode: themeMode,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       home: const SplashScreen(),
       onGenerateRoute: (settings) {
         switch (settings.name) {
