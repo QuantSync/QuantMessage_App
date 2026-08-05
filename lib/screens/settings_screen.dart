@@ -20,6 +20,7 @@ import 'account_settings_screen/quantcode/quantcode_settings.dart';
 import 'account_settings_screen/skills/skills_settings.dart';
 import 'account_settings_screen/plugins/plugins_settings.dart';
 import 'account_settings_screen/memory/memory_settings.dart';
+import '../providers/theme_provider.dart';
 
 Future<void> showSettingsPopup(BuildContext context) {
   return showGeneralDialog(
@@ -123,10 +124,48 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
           _nameController.text = data['full_name'] ?? '';
           _isLoading = false;
         });
+        
+        // Initialize preferences from DB
+        if (data['theme'] != null) {
+          final savedThemeStr = data['theme'] as String;
+          if (savedThemeStr.contains('light')) {
+            ref.read(themeModeProvider.notifier).state = ThemeMode.light;
+          } else if (savedThemeStr.contains('dark')) {
+            ref.read(themeModeProvider.notifier).state = ThemeMode.dark;
+          } else {
+            ref.read(themeModeProvider.notifier).state = ThemeMode.system;
+          }
+        }
+        if (data['motion'] != null) {
+          ref.read(motionProvider.notifier).state = data['motion'] as bool;
+        }
       }
     } catch (e) {
       debugPrint('Error loading profile: $e');
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updatePreference(String key, dynamic value) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+      
+      await _supabase
+          .from('profiles')
+          .update({key: value})
+          .eq('id', user.id);
+          
+      if (mounted) {
+        setState(() {
+          _userProfile = {
+            ...?_userProfile,
+            key: value,
+          };
+        });
+      }
+    } catch (e) {
+      debugPrint('Update Pref Error: $e');
     }
   }
 
@@ -396,6 +435,7 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
           userProfile: _userProfile,
           nameController: _nameController,
           onNameSaved: _updateFullName,
+          onPreferenceSaved: _updatePreference,
           themeColors: _themeColors,
           selectedColorIndex: _selectedColorIndex,
         );

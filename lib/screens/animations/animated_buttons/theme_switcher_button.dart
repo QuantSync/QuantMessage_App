@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/theme_provider.dart';
 
 class ThemeSwitcherButton extends ConsumerWidget {
-  const ThemeSwitcherButton({super.key});
+  final ValueChanged<ThemeMode>? onChanged;
+  
+  const ThemeSwitcherButton({super.key, this.onChanged});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,7 +70,10 @@ class ThemeSwitcherButton extends ConsumerWidget {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     
     return GestureDetector(
-      onTap: () => ref.read(themeModeProvider.notifier).state = mode,
+      onTap: () {
+        ref.read(themeModeProvider.notifier).state = mode;
+        if (onChanged != null) onChanged!(mode);
+      },
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: 40,

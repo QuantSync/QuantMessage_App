@@ -15,6 +15,7 @@ class ProfileSettings extends StatefulWidget {
   final TextEditingController nameController;
   final VoidCallback? onAvatarTap;
   final ValueChanged<String>? onNameSaved;
+  final Function(String key, dynamic value)? onPreferenceSaved;
   final List<Color> themeColors;
   final int selectedColorIndex;
 
@@ -24,6 +25,7 @@ class ProfileSettings extends StatefulWidget {
     required this.nameController,
     this.onAvatarTap,
     this.onNameSaved,
+    this.onPreferenceSaved,
     this.themeColors = const [],
     this.selectedColorIndex = 0,
   });
@@ -192,7 +194,9 @@ class _ProfileSettingsState extends State<ProfileSettings> {
         const SizedBox(height: 24),
         SettingsRow(
           label: 'Appearance',
-          trailing: const ThemeSwitcherButton(),
+          trailing: ThemeSwitcherButton(
+            onChanged: (mode) => widget.onPreferenceSaved?.call('theme', mode.toString()),
+          ),
         ),
         const SettingsDivider(),
         SettingsRow(
@@ -229,7 +233,9 @@ class _ProfileSettingsState extends State<ProfileSettings> {
                   ),
                 ],
               ),
-              const MotionSelectorButton(),
+              MotionSelectorButton(
+                onChanged: (val) => widget.onPreferenceSaved?.call('motion', val),
+              ),
             ],
           ),
         ),
@@ -239,10 +245,8 @@ class _ProfileSettingsState extends State<ProfileSettings> {
         SettingsRow(
           label: 'Language',
           trailing: LanguageSelectorCard(
-            currentLanguage: 'English',
-            onLanguageChanged: (lang) {
-              // Implementation for changing language
-            },
+            currentLanguage: widget.userProfile?['language'] ?? 'English',
+            onLanguageChanged: (lang) => widget.onPreferenceSaved?.call('language', lang),
           ),
         ),
         const SizedBox(height: 32),

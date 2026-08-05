@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../providers/theme_provider.dart';
 
 class MotionSelectorButton extends ConsumerWidget {
-  const MotionSelectorButton({super.key});
+  final ValueChanged<bool>? onChanged;
+  
+  const MotionSelectorButton({super.key, this.onChanged});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,7 +56,10 @@ class MotionSelectorButton extends ConsumerWidget {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     
     return GestureDetector(
-      onTap: () => ref.read(motionProvider.notifier).state = value,
+      onTap: () {
+        ref.read(motionProvider.notifier).state = value;
+        if (onChanged != null) onChanged!(value);
+      },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 74,
