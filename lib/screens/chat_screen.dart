@@ -653,9 +653,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
                     // Empty state center content
                     if (_messages.isEmpty)
-                      Positioned.fill(
+                      Positioned.fill(\
                         child: Align(
-                          alignment: isMobile ? const Alignment(0.0, 0.2) : const Alignment(0.0, -0.45),
+                          alignment: isMobile
+                              ? const Alignment(0.0, -0.2)
+                              : const Alignment(0.0, -0.45),
                           child: ScaleTransition(
                             scale: _emptyScale,
                             child: FadeTransition(
@@ -665,19 +667,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     UserGreeting(userName: _displayName),
-                                    SizedBox(height: isMobile ? 6 : 12),
-                                    Text(
-                                      'The night owls get the best ideas — what\'s on your mind?',
-                                      style: GoogleFonts.outfit(
-                                        color: Colors.white.withValues(alpha: 0.45),
-                                        fontSize: isMobile ? 12 : 14,
-                                        fontWeight: FontWeight.w400,
-                                        letterSpacing: 0.2,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
                                   ],
                                 ),
                               ),
