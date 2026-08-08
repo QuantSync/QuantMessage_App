@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../in_app_buttons/language_item_button.dart';
 import '../animation_effects/language_support.dart';
@@ -79,8 +78,8 @@ void showLanguageDropup(BuildContext context, RelativeRect position) {
     elevation: 0,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     items: [
-      CustomPopupMenuItem(
-        child: const LanguageDropupMenu(),
+      const CustomPopupMenuItem(
+        child: LanguageDropupMenu(),
       ),
     ],
   );

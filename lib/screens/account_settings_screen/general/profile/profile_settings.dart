@@ -36,7 +36,7 @@ class ProfileSettings extends StatefulWidget {
 class _ProfileSettingsState extends State<ProfileSettings> {
   final TextEditingController _instructionsCtrl = TextEditingController();
   final TextEditingController _whatToCallCtrl = TextEditingController();
-  String _workDescription = 'Other';
+  final String _workDescription = 'Other';
   bool _responseCompletions = true;
 
   @override
@@ -64,8 +64,8 @@ class _ProfileSettingsState extends State<ProfileSettings> {
             child: Container(
               height: 36,
               width: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF6B8065), // Olive green from screenshot
+              decoration: const BoxDecoration(
+                color: Color(0xFF6B8065), // Olive green from screenshot
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -89,10 +89,10 @@ class _ProfileSettingsState extends State<ProfileSettings> {
             child: TextField(
               controller: widget.nameController,
               style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.8), fontSize: 13),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
               ),
               onSubmitted: widget.onNameSaved,
             ),

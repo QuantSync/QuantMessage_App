@@ -13,12 +13,12 @@ class AnimatedDropdown extends StatefulWidget {
   final Color backgroundColor;
 
   const AnimatedDropdown({
-    Key? key,
+    super.key,
     required this.child,
     required this.items,
     this.dropdownWidth = 300,
     this.backgroundColor = const Color(0xFF2D2D2D), // Dark theme matching the image
-  }) : super(key: key);
+  });
 
   @override
   State<AnimatedDropdown> createState() => _AnimatedDropdownState();
@@ -198,10 +198,9 @@ class _DropdownItemWidget extends StatefulWidget {
   final VoidCallback onItemTapped;
 
   const _DropdownItemWidget({
-    Key? key,
     required this.item,
     required this.onItemTapped,
-  }) : super(key: key);
+  });
 
   @override
   State<_DropdownItemWidget> createState() => _DropdownItemWidgetState();

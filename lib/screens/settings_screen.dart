@@ -66,7 +66,7 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
   bool _isLoading = true;
   
   // Theme state
-  int _selectedColorIndex = 0;
+  final int _selectedColorIndex = 0;
   final List<Color> _themeColors = [
     AppTheme.primaryRed,
     Colors.blueAccent,
@@ -77,21 +77,21 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
   ];
 
   final List<_NavItem> _settingsItems = [
-    _NavItem(icon: Icons.settings_outlined, label: 'General', index: 0),
-    _NavItem(icon: Icons.person_outline_rounded, label: 'Account', index: 1),
-    _NavItem(icon: Icons.shield_outlined, label: 'Privacy', index: 2),
-    _NavItem(icon: Icons.payment_rounded, label: 'Billing', index: 3),
-    _NavItem(icon: Icons.auto_awesome_outlined, label: 'Capabilities', index: 4),
-    _NavItem(icon: Icons.notifications_none_outlined, label: 'Reflect', index: 5),
-    _NavItem(icon: Icons.bedtime_outlined, label: 'Time and focus', index: 6),
-    _NavItem(icon: Icons.code_rounded, label: 'QuantMessage Code', index: 7),
+    const _NavItem(icon: Icons.settings_outlined, label: 'General', index: 0),
+    const _NavItem(icon: Icons.person_outline_rounded, label: 'Account', index: 1),
+    const _NavItem(icon: Icons.shield_outlined, label: 'Privacy', index: 2),
+    const _NavItem(icon: Icons.payment_rounded, label: 'Billing', index: 3),
+    const _NavItem(icon: Icons.auto_awesome_outlined, label: 'Capabilities', index: 4),
+    const _NavItem(icon: Icons.notifications_none_outlined, label: 'Reflect', index: 5),
+    const _NavItem(icon: Icons.bedtime_outlined, label: 'Time and focus', index: 6),
+    const _NavItem(icon: Icons.code_rounded, label: 'QuantMessage Code', index: 7),
   ];
 
   final List<_NavItem> _customizeItems = [
-    _NavItem(icon: Icons.extension_outlined, label: 'Skills', index: 8),
-    _NavItem(icon: Icons.cable_outlined, label: 'Connectors', index: 9),
-    _NavItem(icon: Icons.power_outlined, label: 'Plugins', index: 10),
-    _NavItem(icon: Icons.memory_outlined, label: 'Memory', index: 11),
+    const _NavItem(icon: Icons.extension_outlined, label: 'Skills', index: 8),
+    const _NavItem(icon: Icons.cable_outlined, label: 'Connectors', index: 9),
+    const _NavItem(icon: Icons.power_outlined, label: 'Plugins', index: 10),
+    const _NavItem(icon: Icons.memory_outlined, label: 'Memory', index: 11),
   ];
 
   @override

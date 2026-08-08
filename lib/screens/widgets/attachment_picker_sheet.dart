@@ -6,7 +6,6 @@
 
 import 'dart:convert'; // ← ADDED for base64.decode
 import 'dart:io' show File;
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -483,7 +482,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.info_outline,
+                      const Icon(Icons.info_outline,
                           size: 12, color: Colors.white24),
                       const SizedBox(width: 6),
                       Expanded(

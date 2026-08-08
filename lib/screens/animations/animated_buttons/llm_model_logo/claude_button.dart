@@ -125,7 +125,7 @@ class QuantMessageButton extends StatefulWidget {
   final VoidCallback? onFocus;
 
   const QuantMessageButton({
-    Key? key,
+    super.key,
     required this.onPressed,
     this.label,
     this.size = QuantMessageButtonSize.medium,
@@ -151,7 +151,7 @@ class QuantMessageButton extends StatefulWidget {
     this.logoSpacing = 8.0,
     this.onHover,
     this.onFocus,
-  }) : super(key: key);
+  });
 
   @override
   State<QuantMessageButton> createState() => _QuantMessageButtonState();
@@ -509,46 +509,35 @@ class QuantMessageLogoPainter extends CustomPainter {
 
 /// Quick constructor for solid QuantMessage button
 class QuantMessageSolidButton extends QuantMessageButton {
-  QuantMessageSolidButton({
-    required VoidCallback onPressed,
-    String? label,
-    QuantMessageButtonSize size = QuantMessageButtonSize.medium,
-    Key? key,
+  const QuantMessageSolidButton({
+    required super.onPressed,
+    super.label,
+    super.size,
+    super.key,
   }) : super(
-    key: key,
-    onPressed: onPressed,
-    label: label,
-    size: size,
     style: QuantMessageButtonStyle.solid,
   );
 }
 
 /// Quick constructor for outline QuantMessage button
 class QuantMessageOutlineButton extends QuantMessageButton {
-  QuantMessageOutlineButton({
-    required VoidCallback onPressed,
-    String? label,
-    QuantMessageButtonSize size = QuantMessageButtonSize.medium,
-    Key? key,
+  const QuantMessageOutlineButton({
+    required super.onPressed,
+    super.label,
+    super.size,
+    super.key,
   }) : super(
-    key: key,
-    onPressed: onPressed,
-    label: label,
-    size: size,
     style: QuantMessageButtonStyle.outline,
   );
 }
 
 /// Quick constructor for icon-only QuantMessage button
 class QuantMessageIconButton extends QuantMessageButton {
-  QuantMessageIconButton({
-    required VoidCallback onPressed,
-    QuantMessageButtonSize size = QuantMessageButtonSize.medium,
-    Key? key,
+  const QuantMessageIconButton({
+    required super.onPressed,
+    super.size,
+    super.key,
   }) : super(
-    key: key,
-    onPressed: onPressed,
-    size: size,
     style: QuantMessageButtonStyle.iconOnly,
     showLogo: true,
   );

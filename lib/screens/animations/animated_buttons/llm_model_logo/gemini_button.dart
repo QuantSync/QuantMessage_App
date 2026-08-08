@@ -257,7 +257,7 @@ class GeminiLogoPainter extends CustomPainter {
   }) {
     final Path path = Path();
     const int numPoints = 4; // Four-pointed star
-    final double angleStep = (2 * math.pi) / (numPoints * 2);
+    const double angleStep = (2 * math.pi) / (numPoints * 2);
 
     // Start at the top point
     path.moveTo(

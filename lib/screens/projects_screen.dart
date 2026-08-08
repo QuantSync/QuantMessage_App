@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/app_theme.dart';
 import '../core/project_model.dart';
 import '../providers/project_provider.dart';
 import '../providers/navigation_provider.dart';
@@ -28,7 +27,7 @@ class ProjectsScreen extends ConsumerStatefulWidget {
 
 class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _sortBy = 'Last updated';
+  final String _sortBy = 'Last updated';
   ProjectModel? _activeProjectInView;
 
   @override

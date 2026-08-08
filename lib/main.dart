@@ -14,7 +14,6 @@ import 'screens/signin_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/pricing_screen/pricing_screen.dart';
-import 'providers/theme_provider.dart';
 
 
 Future<void> main() async {

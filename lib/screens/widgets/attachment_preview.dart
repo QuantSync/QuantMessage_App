@@ -3,7 +3,6 @@
 //   Attachment preview strip shown inside the MessageBox input area.
 // ------------------------------------------------------------
 
-import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../core/attachment_model.dart';

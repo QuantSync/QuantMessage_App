@@ -585,7 +585,7 @@ class _IncognitoScreenState extends State<IncognitoScreen>
   }
 
   Widget _buildSuggestionPills() {
-    return Wrap(
+    return const Wrap(
       spacing: 8,
       runSpacing: 8,
       alignment: WrapAlignment.center,
@@ -691,13 +691,13 @@ class FadeInAnimation extends StatefulWidget {
   final VoidCallback? onComplete;
 
   const FadeInAnimation({
-    Key? key,
+    super.key,
     required this.child,
     this.duration = const Duration(milliseconds: 500),
     this.delay,
     this.curve = Curves.easeIn,
     this.onComplete,
-  }) : super(key: key);
+  });
 
   @override
   State<FadeInAnimation> createState() => _FadeInAnimationState();

@@ -1,11 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class NameCard extends StatefulWidget {
   final Function(String) onSave;
   
-  const NameCard({Key? key, required this.onSave}) : super(key: key);
+  const NameCard({super.key, required this.onSave});
 
   @override
   State<NameCard> createState() => _NameCardState();

@@ -1,6 +1,5 @@
 // lib/core/project_model.dart
 
-import 'package:flutter/foundation.dart';
 
 class ProjectFileContext {
   final String id;

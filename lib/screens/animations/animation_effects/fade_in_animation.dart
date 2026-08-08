@@ -7,12 +7,12 @@ class FadeInAnimation extends StatefulWidget {
   final Curve curve;
 
   const FadeInAnimation({
-    Key? key,
+    super.key,
     required this.child,
     this.duration = const Duration(milliseconds: 500),
     this.delay,
     this.curve = Curves.easeIn,
-  }) : super(key: key);
+  });
 
   @override
   _FadeInAnimationState createState() => _FadeInAnimationState();

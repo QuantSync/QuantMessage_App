@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 /// ============================================================
 /// ConnectorsAnimation - Quantum Hub Variant (Square/1:1)
@@ -125,9 +124,9 @@ class _ConnectorsAnimationState extends State<ConnectorsAnimation> with SingleTi
             border: Border.all(color: const Color(0xFF22C55E).withOpacity(0.5)),
             boxShadow: [BoxShadow(color: const Color(0xFF22C55E).withOpacity(0.4), blurRadius: 20, spreadRadius: 2)],
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.play_arrow_rounded, color: Color(0xFF4ADE80), size: 18),
-            const SizedBox(width: 6),
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.play_arrow_rounded, color: Color(0xFF4ADE80), size: 18),
+            SizedBox(width: 6),
             Text('INITIATE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.0)),
           ]),
         ),

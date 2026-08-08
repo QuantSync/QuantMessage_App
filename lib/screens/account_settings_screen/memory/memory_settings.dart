@@ -3,7 +3,6 @@
 // Memory section under Customize.
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../widgets/settings_click_button.dart';
 import '../widgets/settings_toggle_button.dart';
 

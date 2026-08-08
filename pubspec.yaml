@@ -92,6 +92,8 @@ dependencies:
   google_sign_in_web: ^0.12.4
   flutter_facebook_auth_web: ^6.1.0
 
+  markdown: any
+  http_parser: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

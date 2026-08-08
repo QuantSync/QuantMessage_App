@@ -23,7 +23,7 @@ class LeftSidebar extends StatefulWidget {
   final VoidCallback? onMenuClosed;
 
   const LeftSidebar({
-    Key? key,
+    super.key,
     this.onNewChat,
     this.onProjects,
     this.onArtifacts,
@@ -36,7 +36,7 @@ class LeftSidebar extends StatefulWidget {
     this.onSignOut,
     this.onMenuOpened,
     this.onMenuClosed,
-  }) : super(key: key);
+  });
 
   @override
   State<LeftSidebar> createState() => _LeftSidebarState();
@@ -342,7 +342,6 @@ class _SidebarIconButton extends StatefulWidget {
   final bool         showNotificationDot;
 
   const _SidebarIconButton({
-    Key? key,
     this.icon,
     this.customChild,
     required this.onTap,
@@ -351,8 +350,7 @@ class _SidebarIconButton extends StatefulWidget {
     this.size = 20.0,
     this.showNotificationDot = false,
   })  : assert(icon != null || customChild != null,
-  'Provide either icon or customChild'),
-        super(key: key);
+  'Provide either icon or customChild');
 
   @override
   State<_SidebarIconButton> createState() => _SidebarIconButtonState();

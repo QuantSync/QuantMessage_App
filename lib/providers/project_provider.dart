@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/project_model.dart';
 
-final _uuid = const Uuid();
+const _uuid = Uuid();
 
 class ProjectNotifier extends StateNotifier<List<ProjectModel>> {
   ProjectNotifier() : super([]) {

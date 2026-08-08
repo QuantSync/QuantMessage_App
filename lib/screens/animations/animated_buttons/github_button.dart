@@ -14,7 +14,7 @@ class GithubButton extends StatefulWidget {
   final VoidCallback? onPressed;
 
   const GithubButton({
-    Key? key,
+    super.key,
     this.variant = GithubButtonVariant.light,
     this.label = 'GitHub',
     this.width,
@@ -22,7 +22,7 @@ class GithubButton extends StatefulWidget {
     this.borderRadius = 18,
     this.glowColor,
     this.onPressed,
-  }) : super(key: key);
+  });
 
   const GithubButton.light({
     Key? key,

@@ -2,7 +2,6 @@
 // QuanTrade — Animated Widgets & Painters
 // All reusable animated components for the QuanTrade Coming Soon page.
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -23,8 +22,9 @@ class QtAnimatedBackground extends StatelessWidget {
       animation: ctrl,
       builder: (_, __) {
         final t = ctrl.value;
-        return Stack(
-          children: [
+        return RepaintBoundary(
+          child: Stack(
+            children: [
             // Top-left teal orb
             Positioned(
               top: -80 + t * 30,
@@ -55,6 +55,7 @@ class QtAnimatedBackground extends StatelessWidget {
               ),
             ),
           ],
+          ),
         );
       },
     );
@@ -122,11 +123,13 @@ class QtTickerTape extends StatelessWidget {
         ),
       ),
       child: ClipRect(
-        child: AnimatedBuilder(
-          animation: ctrl,
-          builder: (_, __) => CustomPaint(
-            painter: _TickerPainter(t: ctrl.value),
-            size: Size(MediaQuery.of(context).size.width, 36),
+        child: RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: ctrl,
+            builder: (_, __) => CustomPaint(
+              painter: _TickerPainter(t: ctrl.value),
+              size: Size(MediaQuery.of(context).size.width, 36),
+            ),
           ),
         ),
       ),
@@ -155,8 +158,8 @@ class _TickerPainter extends CustomPainter {
   }
 
   void _drawItem(Canvas canvas, Size size, _TickerData td, double x) {
-    final upColor   = const Color(0xFF00D4AA);
-    final downColor = const Color(0xFFFF5F6D);
+    const upColor   = Color(0xFF00D4AA);
+    const downColor = Color(0xFFFF5F6D);
     final color     = td.up ? upColor : downColor;
     final centerY   = size.height / 2;
 
@@ -266,11 +269,11 @@ class _QtTerminalPanelState extends State<QtTerminalPanel>
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
             child: Row(
               children: [
-                _WinDot(color: const Color(0xFFFF5F57)),
+                const _WinDot(color: Color(0xFFFF5F57)),
                 const SizedBox(width: 5),
-                _WinDot(color: const Color(0xFFFFBD2E)),
+                const _WinDot(color: Color(0xFFFFBD2E)),
                 const SizedBox(width: 5),
-                _WinDot(color: const Color(0xFF28C840)),
+                const _WinDot(color: Color(0xFF28C840)),
                 const Spacer(),
                 Text(
                   'quantrade · terminal',

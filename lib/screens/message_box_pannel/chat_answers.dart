@@ -147,7 +147,7 @@ class ChatAnswerCard extends StatelessWidget {
                     color: const Color(0xFF2ECC71),
                     fontSize: 13.5,
                   ),
-                  codeblockDecoration: BoxDecoration(
+                  codeblockDecoration: const BoxDecoration(
                     color: Colors.transparent, // Handled by our CodeSnippetCard
                   ),
                   // Blockquotes

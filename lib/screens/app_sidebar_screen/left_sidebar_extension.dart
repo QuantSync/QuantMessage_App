@@ -584,9 +584,9 @@ class _InfinityMLogoPainter extends CustomPainter {
     // 5. Comet-dot cluster sitting just under the centre dip, matching the
     //    small particle cluster in the reference glow-mark.
     final List<_LogoDot> dots = [
-      _LogoDot(Offset(50, 49), 3.4, 0.95),
-      _LogoDot(Offset(54, 52), 2.4, 0.75),
-      _LogoDot(Offset(57, 50), 1.7, 0.55),
+      const _LogoDot(Offset(50, 49), 3.4, 0.95),
+      const _LogoDot(Offset(54, 52), 2.4, 0.75),
+      const _LogoDot(Offset(57, 50), 1.7, 0.55),
     ];
     for (final dot in dots) {
       final Offset centre = Offset(dot.pos.dx * sx, dot.pos.dy * sy);

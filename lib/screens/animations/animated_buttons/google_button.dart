@@ -11,14 +11,14 @@ class GoogleButton extends StatefulWidget {
   final VoidCallback? onPressed;
 
   const GoogleButton({
-    Key? key,
+    super.key,
     this.label = 'Continue with Google',
     this.width,
     this.height = 52,
     this.borderRadius = 16,
     this.textColor = const Color(0xFF3C4043),
     this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   State<GoogleButton> createState() => _GoogleButtonState();

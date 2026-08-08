@@ -45,12 +45,12 @@ class DottedLoadingAnimationAlt extends StatefulWidget {
   final Duration duration;
 
   const DottedLoadingAnimationAlt({
-    Key? key,
+    super.key,
     this.size = 60.0,
     this.dotCount = 8,
     this.color = const Color(0xFF2ECC71), // green
     this.duration = const Duration(milliseconds: 1400),
-  }) : super(key: key);
+  });
 
   @override
   State<DottedLoadingAnimationAlt> createState() =>

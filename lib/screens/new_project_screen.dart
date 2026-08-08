@@ -7,7 +7,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../core/app_theme.dart';
 import '../core/chat_message.dart';
 import '../core/project_model.dart';
 import '../providers/project_provider.dart';
@@ -17,7 +16,6 @@ import 'project_instructions_card.dart';
 import 'add_text_context_card.dart';
 import 'message_box_pannel/message_box.dart';
 import 'message_box_pannel/chat_answers.dart';
-import 'animations/animated_buttons/model_selector_button/model_selector_button.dart';
 import 'app_sidebar_screen/left_sidebar.dart';
 import 'artifact_screen.dart';
 import 'app_bar.dart';
@@ -585,7 +583,7 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
                     value: 'device',
                     child: Row(
                       children: [
-                        Icon(Icons.folder_open_rounded,
+                        const Icon(Icons.folder_open_rounded,
                             color: Colors.white70, size: 18),
                         const SizedBox(width: 10),
                         Text(
@@ -601,7 +599,7 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
                     value: 'text',
                     child: Row(
                       children: [
-                        Icon(Icons.post_add_rounded,
+                        const Icon(Icons.post_add_rounded,
                             color: Colors.white70, size: 18),
                         const SizedBox(width: 10),
                         Text(

@@ -16,7 +16,6 @@ import 'package:path/path.dart' as p;
 import 'package:supabase_flutter/supabase_flutter.dart' hide MultipartFile;
 
 //  make sure karna ki ye files aapke project me exity karti hooo
-import '../core/chat_message.dart';
 import '../core/attachment_model.dart';
 import 'quant_space_api.dart';
 

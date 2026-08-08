@@ -44,7 +44,7 @@ class ProjectDetailDropdown extends ConsumerWidget {
           value: 'edit',
           child: Row(
             children: [
-              Icon(Icons.edit_outlined, color: Colors.white70, size: 18),
+              const Icon(Icons.edit_outlined, color: Colors.white70, size: 18),
               const SizedBox(width: 12),
               Text(
                 'Edit details',
@@ -58,7 +58,7 @@ class ProjectDetailDropdown extends ConsumerWidget {
           value: 'delete',
           child: Row(
             children: [
-              Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+              const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
               const SizedBox(width: 12),
               Text(
                 'Delete project',

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'dart:math' as math;
@@ -24,7 +23,7 @@ class AppTheme {
 
   static ThemeData dark() {
     final baseTextTheme = ThemeData.dark().textTheme;
-    final pageTransitions = PageTransitionsTheme(
+    const pageTransitions = PageTransitionsTheme(
       builders: {
         TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
         TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -38,15 +37,13 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       pageTransitionsTheme: pageTransitions,
-      colorScheme: ColorScheme.dark(
+      colorScheme: const ColorScheme.dark(
         primary: primaryWhite,
         secondary: primaryWhite,
         surface: surfaceDark,
-        background: backgroundBlack,
         onPrimary: Colors.black,
         onSecondary: Colors.black,
         onSurface: textPrimary,
-        onBackground: textPrimary,
       ),
       scaffoldBackgroundColor: backgroundBlack,
       appBarTheme: AppBarTheme(

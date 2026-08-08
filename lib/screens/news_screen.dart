@@ -117,7 +117,7 @@ class _NewsScreenState extends State<NewsScreen> with TickerProviderStateMixin {
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                QtCandleLogo(size: 20),
+                const QtCandleLogo(size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'QuanTrade',
@@ -332,19 +332,19 @@ class _FeatureSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final hPad = mobile ? 14.0 : 22.0;
     final mainCard   = _MainFeatureCard(mobile: mobile);
-    final smallCard1 = _SmallFeatureCard(
+    const smallCard1 = _SmallFeatureCard(
       title: 'Portfolio Analytics',
       body: 'Track positions, P&L, and risk metrics across all your portfolios in one unified dashboard.',
       icon: Icons.pie_chart_outline_rounded,
-      accentColor: const Color(0xFF3B82F6),
+      accentColor: Color(0xFF3B82F6),
       buttonLabel: 'Notify Me',
       delayMs: 400,
     );
-    final smallCard2 = _SmallFeatureCard(
+    const smallCard2 = _SmallFeatureCard(
       title: 'Market Signals · Pro',
       body: 'Real-time AI signals covering equities, crypto, commodities, and forex markets.',
       icon: Icons.bolt_rounded,
-      accentColor: const Color(0xFFF59E0B),
+      accentColor: Color(0xFFF59E0B),
       buttonLabel: 'Upgrade',
       isPro: true,
       delayMs: 520,
@@ -365,11 +365,11 @@ class _FeatureSection extends StatelessWidget {
               children: [
                 Expanded(flex: 54, child: mainCard),
                 const SizedBox(width: 12),
-                Expanded(
+                const Expanded(
                   flex: 46,
                   child: Column(children: [
                     smallCard1,
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     smallCard2,
                   ]),
                 ),
@@ -458,10 +458,10 @@ class _MainFeatureCard extends StatelessWidget {
                   const SizedBox(height: 10),
 
                   // Platform chips — 2 per row on mobile
-                  Wrap(
+                  const Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: const [
+                    children: [
                       QtPlatformChip(
                           icon: Icons.terminal_rounded, label: 'Terminal'),
                       QtPlatformChip(

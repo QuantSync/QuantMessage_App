@@ -14,13 +14,13 @@ class ExtendedInfoButton extends StatefulWidget {
   final Duration animationDuration;
 
   const ExtendedInfoButton({
-    Key? key,
+    super.key,
     required this.child,
     required this.label,
     this.cardWidth = 200,
     this.cardHeight = 80,
     this.animationDuration = const Duration(milliseconds: 250),
-  }) : super(key: key);
+  });
 
   @override
   State<ExtendedInfoButton> createState() => _ExtendedInfoButtonState();
@@ -32,7 +32,6 @@ class _ExtendedInfoButtonState extends State<ExtendedInfoButton> {
   void _showOverlay() {
     if (_overlayEntry != null) return;
     final overlay = Overlay.of(context);
-    if (overlay == null) return;
     final screenSize = MediaQuery.of(context).size;
     _overlayEntry = OverlayEntry(
       builder: (context) => Stack(

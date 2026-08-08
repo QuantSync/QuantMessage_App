@@ -13,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/attachment_model.dart';
 import '../../core/chat_message.dart';
 import '../widgets/attachment_thumbnail.dart';
 

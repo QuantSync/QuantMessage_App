@@ -244,8 +244,8 @@ class _PricingScreenState extends State<PricingScreen> {
         title: 'Team',
         subtitle: 'Predictable usage per seat',
         badge: '2–150 users',
-        priceBlock: _PriceBlock(
-          rows: const [
+        priceBlock: const _PriceBlock(
+          rows: [
             _PriceRow(
               label: 'Standard seat',
               price: '\$20',
@@ -281,8 +281,8 @@ class _PricingScreenState extends State<PricingScreen> {
         title: 'Enterprise',
         subtitle: 'Flexible pooled usage',
         badge: '20+ users',
-        priceBlock: _PriceBlock(
-          rows: const [
+        priceBlock: const _PriceBlock(
+          rows: [
             _PriceRow(
               label: 'Seat price + usage at API rates',
               price: '',

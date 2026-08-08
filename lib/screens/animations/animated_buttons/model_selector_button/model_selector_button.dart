@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -7,10 +6,10 @@ class ModelSelectorButton extends StatefulWidget {
   final bool isMobile;
 
   const ModelSelectorButton({
-    Key? key,
+    super.key,
     required this.onPressed,
     this.isMobile = false,
-  }) : super(key: key);
+  });
 
   @override
   State<ModelSelectorButton> createState() => _ModelSelectorButtonState();

@@ -167,7 +167,7 @@ class MiniToggleSwitch extends StatelessWidget {
       child: FittedBox(
         child: Switch(
           value: value,
-          activeColor: const Color(0xFF4A9EFF),
+          activeThumbColor: const Color(0xFF4A9EFF),
           activeTrackColor: const Color(0xFF4A9EFF).withOpacity(0.4),
           inactiveThumbColor: Colors.white70,
           inactiveTrackColor: const Color(0xFF3A3A3A),
