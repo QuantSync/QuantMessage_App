@@ -15,6 +15,7 @@ import 'new_project_screen.dart';
 import 'app_sidebar_screen/left_sidebar.dart';
 import 'app_bar.dart';
 import 'artifact_screen.dart';
+import 'settings_screen.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   final bool embedded;
@@ -355,6 +356,9 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen> {
     },
     onNewChat: () {
     Navigator.maybePop(context);
+    },
+    onCustomise: () {
+      showSettingsPopup(context);
     },
     ),
     Expanded(

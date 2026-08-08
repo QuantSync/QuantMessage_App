@@ -21,6 +21,7 @@ import 'animations/animated_buttons/model_selector_button/model_selector_button.
 import 'app_sidebar_screen/left_sidebar.dart';
 import 'artifact_screen.dart';
 import 'app_bar.dart';
+import 'settings_screen.dart';
 
 class NewProjectScreen extends ConsumerStatefulWidget {
   final ProjectModel project;
@@ -280,6 +281,9 @@ class _NewProjectScreenState extends ConsumerState<NewProjectScreen> {
                       context,
                       smoothPageRoute(const ArtifactScreen()),
                     );
+                  },
+                  onCustomise: () {
+                    showSettingsPopup(context);
                   },
                 ),
                 Expanded(

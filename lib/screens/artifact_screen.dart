@@ -7,6 +7,7 @@ import '../providers/chat_provider.dart';
 import '../providers/navigation_provider.dart';
 import 'app_sidebar_screen/left_sidebar.dart';
 import 'app_bar.dart';
+import 'settings_screen.dart';
 
 class ArtifactScreen extends ConsumerStatefulWidget {
   const ArtifactScreen({super.key});
@@ -142,6 +143,9 @@ class _ArtifactScreenState extends ConsumerState<ArtifactScreen> {
                   onArtifacts: () {}, // Already here
                   onNewChat: () {
                     Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  onCustomise: () {
+                    showSettingsPopup(context);
                   },
                 ),
                 Expanded(
