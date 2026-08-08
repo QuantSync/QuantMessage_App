@@ -1,15 +1,15 @@
 // lib/screens/news_screen.dart
-// QuantMessage — News Screen (Coming soon placeholder)
+// QuanTrade — Coming Soon · Powered by QuantSync
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../core/app_theme.dart';//
+import 'news_screen/quantrade_animation.dart';
 
-// ---------------------------------------------------------------------------
-// NewsScreen
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+//  NewsScreen  ←  repurposed as QuanTrade "Coming Soon" landing page
+// ─────────────────────────────────────────────────────────────────────────────
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -18,48 +18,77 @@ class NewsScreen extends StatefulWidget {
   State<NewsScreen> createState() => _NewsScreenState();
 }
 
-class _NewsScreenState extends State<NewsScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _fadeCtrl;
-  late final Animation<double> _fadeAnim;
-  late final Animation<Offset> _slideAnim;
+class _NewsScreenState extends State<NewsScreen> with TickerProviderStateMixin {
+  // ── entrance ──────────────────────────────────────────────────────────────
+  late final AnimationController _entranceCtrl;
+  late final Animation<double>   _fadeAnim;
+  late final Animation<Offset>   _slideAnim;
+
+  // ── slow orb drift ────────────────────────────────────────────────────────
+  late final AnimationController _orbCtrl;
+
+  // ── ticker tape ───────────────────────────────────────────────────────────
+  late final AnimationController _tickerCtrl;
 
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(
+
+    _entranceCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 800),
     );
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fadeAnim = CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOut);
     _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.04),
+      begin: const Offset(0, 0.055),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut));
-    _fadeCtrl.forward();
+    ).animate(
+        CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOutCubic));
+
+    _orbCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 14),
+    )..repeat(reverse: true);
+
+    _tickerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat();
+
+    _entranceCtrl.forward();
   }
 
   @override
   void dispose() {
-    _fadeCtrl.dispose();
+    _entranceCtrl.dispose();
+    _orbCtrl.dispose();
+    _tickerCtrl.dispose();
     super.dispose();
   }
 
+  // ── BUILD ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final mobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
-      backgroundColor: AppTheme.backgroundBlack,
+      backgroundColor: const Color(0xFF080808),
       extendBodyBehindAppBar: true,
-      appBar: _buildNewsAppBar(context),
+      appBar: _buildAppBar(context),
       body: Stack(
         children: [
-          const Positioned.fill(child: _NewsBackground()),
+          // Animated floating orbs
+          Positioned.fill(
+            child: QtAnimatedBackground(ctrl: _orbCtrl),
+          ),
+          // Page content
           SafeArea(
             child: FadeTransition(
               opacity: _fadeAnim,
               child: SlideTransition(
                 position: _slideAnim,
-                child: const _NewsContent(),
+                child: _buildScrollBody(mobile),
               ),
             ),
           ),
@@ -68,63 +97,47 @@ class _NewsScreenState extends State<NewsScreen>
     );
   }
 
-  PreferredSizeWidget _buildNewsAppBar(BuildContext context) {
+  // ── APP BAR ───────────────────────────────────────────────────────────────
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(64),
-      child: ClipRRect(
+      preferredSize: const Size.fromHeight(58),
+      child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
           child: AppBar(
-            backgroundColor: Colors.black.withValues(alpha: 0.65),
+            backgroundColor: Colors.black.withOpacity(0.52),
             elevation: 0,
             centerTitle: true,
             leading: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: Colors.white70,
-                size: 18,
-              ),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white60, size: 17),
               onPressed: () => Navigator.of(context).pop(),
             ),
-            title: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: '< ',
-                    style: GoogleFonts.inter(
-                      color: Colors.white.withValues(alpha: 0.55),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 1,
-                    ),
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                QtCandleLogo(size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'QuanTrade',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
                   ),
-                  TextSpan(
-                    text: 'NEWS',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 3,
-                    ),
-                  ),
-                  TextSpan(
-                    text: ' >',
-                    style: GoogleFonts.inter(
-                      color: Colors.white.withValues(alpha: 0.55),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 7),
+                const QtStatusBadge(),
+              ],
             ),
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(1),
+              preferredSize: const Size.fromHeight(0.5),
               child: Divider(
-                height: 1,
+                height: 0.5,
                 thickness: 0.5,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: Colors.white.withOpacity(0.07),
               ),
             ),
           ),
@@ -132,255 +145,440 @@ class _NewsScreenState extends State<NewsScreen>
       ),
     );
   }
-}
 
-// ---------------------------------------------------------------------------
-// Content
-// ---------------------------------------------------------------------------
+  // ── SCROLL BODY ───────────────────────────────────────────────────────────
 
-class _NewsContent extends StatelessWidget {
-  const _NewsContent();
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildScrollBody(bool mobile) {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        const SliverPadding(padding: EdgeInsets.only(top: 16)),
+        SliverToBoxAdapter(child: SizedBox(height: mobile ? 24 : 32)),
 
-        // Section header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              children: [
-                Container(
-                  width: 3,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2ECC71),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'LATEST UPDATES',
-                  style: GoogleFonts.jetBrainsMono(
-                    color: Colors.white38,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 2.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        // Hero
+        SliverToBoxAdapter(child: _HeroSection(mobile: mobile)),
 
-        // Placeholder shimmer cards
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => _NewsPlaceholderCard(index: index),
-            childCount: 4,
-          ),
-        ),
+        SliverToBoxAdapter(child: SizedBox(height: mobile ? 22 : 30)),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        const SliverToBoxAdapter(child: _ComingSoonBanner()),
-        const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        // Ticker tape
+        SliverToBoxAdapter(child: QtTickerTape(ctrl: _tickerCtrl)),
+
+        SliverToBoxAdapter(child: SizedBox(height: mobile ? 24 : 32)),
+
+        // Feature cards
+        SliverToBoxAdapter(child: _FeatureSection(mobile: mobile)),
+
+        SliverToBoxAdapter(child: SizedBox(height: mobile ? 24 : 32)),
+
+        // CTA banner
+        SliverToBoxAdapter(child: _CtaBanner(mobile: mobile)),
+
+        SliverToBoxAdapter(child: SizedBox(height: mobile ? 24 : 32)),
+
+        // Footer
+        const SliverToBoxAdapter(child: _Footer()),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 56)),
       ],
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Shimmer placeholder card
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+//  Hero Section
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _NewsPlaceholderCard extends StatefulWidget {
-  final int index;
-  const _NewsPlaceholderCard({required this.index});
+class _HeroSection extends StatelessWidget {
+  final bool mobile;
+  const _HeroSection({required this.mobile});
 
   @override
-  State<_NewsPlaceholderCard> createState() => _NewsPlaceholderCardState();
+  Widget build(BuildContext context) {
+    final hPad = mobile ? 20.0 : 32.0;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // "COMING SOON · QUANTSYNC" pill badge
+          QtStaggeredEntrance(
+            delayMs: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00D4AA).withOpacity(0.09),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF00D4AA).withOpacity(0.26),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Pulsing green dot
+                  _GreenDot(),
+                  const SizedBox(width: 7),
+                  Text(
+                    'COMING SOON  ·  QUANTSYNC',
+                    style: GoogleFonts.jetBrainsMono(
+                      color: const Color(0xFF00D4AA),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SizedBox(height: mobile ? 18 : 22),
+
+          // Main headline
+          QtStaggeredEntrance(
+            delayMs: 120,
+            child: Text(
+              'Do more with QuanTrade,\neverywhere you trade',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: mobile ? 25 : 34,
+                fontWeight: FontWeight.w800,
+                height: 1.17,
+                letterSpacing: -0.6,
+              ),
+            ),
+          ),
+
+          SizedBox(height: mobile ? 12 : 16),
+
+          // Sub-headline
+          QtStaggeredEntrance(
+            delayMs: 240,
+            child: Text(
+              'AI-powered market intelligence, real-time signals\nand portfolio analytics — built for serious traders.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                color: Colors.white.withOpacity(0.46),
+                fontSize: mobile ? 13 : 15,
+                height: 1.65,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _NewsPlaceholderCardState extends State<_NewsPlaceholderCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _shimmerCtrl;
+// Pulsing green dot widget
+class _GreenDot extends StatefulWidget {
+  @override
+  State<_GreenDot> createState() => _GreenDotState();
+}
 
-  static const List<double> _widths = [0.72, 0.55, 0.65, 0.48];
-  static const List<String> _tags = ['AI', 'Tech', 'Research', 'Updates'];
-  static const List<Color> _tagColors = [
-    Color(0xFF2ECC71),
-    Color(0xFF3B82F6),
-    Color(0xFF8B5CF6),
-    Color(0xFFF59E0B),
-  ];
+class _GreenDotState extends State<_GreenDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _pulse;
 
   @override
   void initState() {
     super.initState();
-    _shimmerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.5, end: 1.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
-    _shimmerCtrl.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final tag = _tags[widget.index % _tags.length];
-    final tagColor = _tagColors[widget.index % _tagColors.length];
-    final lineW = _widths[widget.index % _widths.length];
-
     return AnimatedBuilder(
-      animation: _shimmerCtrl,
-      builder: (ctx, _) {
-        final t = _shimmerCtrl.value;
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF111111),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.06),
-              width: 1,
+      animation: _pulse,
+      builder: (_, __) => Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          color: const Color(0xFF00D4AA).withOpacity(_pulse.value),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF00D4AA).withOpacity(0.5 * _pulse.value),
+              blurRadius: 6,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Feature Section  (main card + 2 smaller cards — Claude Code layout)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FeatureSection extends StatelessWidget {
+  final bool mobile;
+  const _FeatureSection({required this.mobile});
+
+  @override
+  Widget build(BuildContext context) {
+    final hPad = mobile ? 14.0 : 22.0;
+    final mainCard   = _MainFeatureCard(mobile: mobile);
+    final smallCard1 = _SmallFeatureCard(
+      title: 'Portfolio Analytics',
+      body: 'Track positions, P&L, and risk metrics across all your portfolios in one unified dashboard.',
+      icon: Icons.pie_chart_outline_rounded,
+      accentColor: const Color(0xFF3B82F6),
+      buttonLabel: 'Notify Me',
+      delayMs: 400,
+    );
+    final smallCard2 = _SmallFeatureCard(
+      title: 'Market Signals · Pro',
+      body: 'Real-time AI signals covering equities, crypto, commodities, and forex markets.',
+      icon: Icons.bolt_rounded,
+      accentColor: const Color(0xFFF59E0B),
+      buttonLabel: 'Upgrade',
+      isPro: true,
+      delayMs: 520,
+    );
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      child: mobile
+          ? Column(children: [
+              mainCard,
+              const SizedBox(height: 12),
+              smallCard1,
+              const SizedBox(height: 12),
+              smallCard2,
+            ])
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 54, child: mainCard),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 46,
+                  child: Column(children: [
+                    smallCard1,
+                    const SizedBox(height: 12),
+                    smallCard2,
+                  ]),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+// ── Main Feature Card ("QuanTrade Terminal") ──────────────────────────────────
+
+class _MainFeatureCard extends StatelessWidget {
+  final bool mobile;
+  const _MainFeatureCard({required this.mobile});
+
+  @override
+  Widget build(BuildContext context) {
+    return QtStaggeredEntrance(
+      delayMs: 280,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF111111),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.07),
+            width: 1,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF00D4AA).withOpacity(0.04),
+              blurRadius: 48,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top panel: title + description + buttons
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                  mobile ? 18 : 20, 20, mobile ? 18 : 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title row
+                  Row(
+                    children: [
+                      const Icon(Icons.candlestick_chart_rounded,
+                          color: Color(0xFF00D4AA), size: 19),
+                      const SizedBox(width: 8),
+                      Text(
+                        'QuanTrade Terminal',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Analyse, trade, and manage risk from your\nterminal or mobile — all in one place.',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white.withOpacity(0.50),
+                      fontSize: 12.5,
+                      height: 1.55,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Primary button
+                  QtPrimaryButton(
+                    label: 'Get Early Access',
+                    onTap: () {},
+                  ),
+
+                  const SizedBox(height: 14),
+                  Text(
+                    'Or try it in',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white.withOpacity(0.28),
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Platform chips — 2 per row on mobile
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: const [
+                      QtPlatformChip(
+                          icon: Icons.terminal_rounded, label: 'Terminal'),
+                      QtPlatformChip(
+                          icon: Icons.phone_android_rounded, label: 'Mobile'),
+                      QtPlatformChip(
+                          icon: Icons.web_rounded, label: 'Web App'),
+                      QtPlatformChip(
+                          icon: Icons.desktop_windows_rounded,
+                          label: 'Desktop'),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                ],
+              ),
+            ),
+
+            // Terminal mock panel — from animation file
+            const QtTerminalPanel(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Small Feature Card ─────────────────────────────────────────────────────
+
+class _SmallFeatureCard extends StatelessWidget {
+  final String title;
+  final String body;
+  final IconData icon;
+  final Color accentColor;
+  final String buttonLabel;
+  final bool isPro;
+  final int delayMs;
+
+  const _SmallFeatureCard({
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.accentColor,
+    required this.buttonLabel,
+    required this.delayMs,
+    this.isPro = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return QtStaggeredEntrance(
+      delayMs: delayMs,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111111),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.07),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row
+            Row(
+              children: [
+                Icon(icon, color: accentColor, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (isPro)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                        horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: tagColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
+                      color: accentColor.withOpacity(0.11),
+                      borderRadius: BorderRadius.circular(7),
                       border: Border.all(
-                          color: tagColor.withValues(alpha: 0.3), width: 0.8),
+                        color: accentColor.withOpacity(0.30),
+                        width: 0.6,
+                      ),
                     ),
                     child: Text(
-                      tag,
-                      style: GoogleFonts.outfit(
-                        color: tagColor,
-                        fontSize: 10,
+                      'PRO',
+                      style: GoogleFonts.jetBrainsMono(
+                        color: accentColor,
+                        fontSize: 8.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _shimmerBar(context, 0.22, 10, t),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _shimmerBar(context, lineW, 14, t),
-              const SizedBox(height: 6),
-              _shimmerBar(context, lineW * 0.75, 14, t),
-              const SizedBox(height: 10),
-              _shimmerBar(context, 0.88, 10, t),
-              const SizedBox(height: 4),
-              _shimmerBar(context, 0.6, 10, t),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _shimmerBar(
-      BuildContext context, double widthFraction, double height, double t) {
-    final screenW = MediaQuery.of(context).size.width;
-    return Container(
-      width: (screenW - 80) * widthFraction,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        gradient: LinearGradient(
-          begin: Alignment(-1.5 + t * 3.0, 0),
-          end: Alignment(0.5 + t * 3.0, 0),
-          colors: [
-            Colors.white.withValues(alpha: 0.05),
-            Colors.white.withValues(alpha: 0.12),
-            Colors.white.withValues(alpha: 0.05),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Coming soon banner
-// ---------------------------------------------------------------------------
-
-class _ComingSoonBanner extends StatelessWidget {
-  const _ComingSoonBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF2ECC71).withValues(alpha: 0.08),
-              const Color(0xFF06B6D4).withValues(alpha: 0.04),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(0xFF2ECC71).withValues(alpha: 0.18),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.newspaper_rounded,
-              color: Color(0xFF2ECC71),
-              size: 36,
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
-              '< COMING SOON >',
-              style: GoogleFonts.jetBrainsMono(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 3,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Curated AI & tech news will appear here.\nStay tuned for the live feed.',
-              textAlign: TextAlign.center,
+              body,
               style: GoogleFonts.outfit(
-                color: Colors.white38,
-                fontSize: 13,
-                height: 1.6,
+                color: Colors.white.withOpacity(0.46),
+                fontSize: 12.5,
+                height: 1.55,
               ),
+            ),
+            const SizedBox(height: 16),
+            QtSecondaryButton(
+              label: buttonLabel,
+              accentColor: accentColor,
+              onTap: () {},
             ),
           ],
         ),
@@ -389,52 +587,121 @@ class _ComingSoonBanner extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Background glows
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+//  CTA Banner
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _NewsBackground extends StatelessWidget {
-  const _NewsBackground();
+class _CtaBanner extends StatelessWidget {
+  final bool mobile;
+  const _CtaBanner({required this.mobile});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          top: -80,
-          left: -60,
+    final hPad = mobile ? 14.0 : 22.0;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      child: QtStaggeredEntrance(
+        delayMs: 620,
+        child: QtPulseScale(
           child: Container(
-            width: 280,
-            height: 280,
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
+              horizontal: mobile ? 20 : 32,
+              vertical: 30,
+            ),
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
+              gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF2ECC71).withValues(alpha: 0.06),
-                  Colors.transparent,
+                  const Color(0xFF00D4AA).withOpacity(0.09),
+                  const Color(0xFF3B82F6).withOpacity(0.06),
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFF00D4AA).withOpacity(0.20),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.trending_up_rounded,
+                    color: Color(0xFF00D4AA), size: 38),
+                const SizedBox(height: 14),
+                Text(
+                  'QuanTrade is almost here.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: mobile ? 19 : 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Be the first to access AI-powered market insights,\nsignals, and portfolio tools for serious investors.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white.withOpacity(0.42),
+                    fontSize: mobile ? 12.5 : 14,
+                    height: 1.65,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                QtPrimaryButton(
+                  label: 'Join the Waitlist',
+                  onTap: () {},
+                  icon: Icons.arrow_forward_rounded,
+                  fullWidth: mobile,
+                ),
+              ],
             ),
           ),
         ),
-        Positioned(
-          bottom: -60,
-          right: -80,
-          child: Container(
-            width: 240,
-            height: 240,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  const Color(0xFF3B82F6).withValues(alpha: 0.05),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Footer
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Footer extends StatelessWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context) {
+    return QtStaggeredEntrance(
+      delayMs: 740,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Powered by  ',
+            style: GoogleFonts.outfit(
+              color: Colors.white.withOpacity(0.22),
+              fontSize: 11.5,
+            ),
+          ),
+          QtCandleLogo(
+            size: 14,
+            color: Colors.white.withOpacity(0.38),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            'QuantSync',
+            style: GoogleFonts.outfit(
+              color: Colors.white.withOpacity(0.38),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
