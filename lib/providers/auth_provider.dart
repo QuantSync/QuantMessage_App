@@ -6,6 +6,7 @@
 // ----------------------------------------------------------------------------
 
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -57,7 +58,7 @@ class AuthService {
   /// Called right after a successful OAuth sign-in.
   /// Creates or updates the `profiles` row so settings / history link to it.
   /// Returns true if this is a brand-new account (no existing profile row).
-  static Future<bool> upsertProfileOnLogin() async {
+  static Future<bool> upsertProfileOnLogin({String provider = 'github'}) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return false;
 
@@ -90,6 +91,8 @@ class AuthService {
           'email': user.email ?? '',
           'full_name': name,
           'avatar_url': avatarUrl,
+          'auth_provider': provider,  // Track auth method (github/google)
+          'is_guest': false,
           'onboarding_complete': existing?['onboarding_complete'] ?? false,
           'updated_at': DateTime.now().toIso8601String(),
         },
@@ -100,6 +103,7 @@ class AuthService {
       await _supabase.auth.updateUser(
         UserAttributes(data: {
           'full_name': name,
+          'auth_provider': provider,
           // Keep onboarding_complete from existing value; don't overwrite
           // a returning user's completed state.
           if (isNewUser) 'onboarding_complete': false,
@@ -110,6 +114,28 @@ class AuthService {
     }
 
     return isNewUser;
+  }
+
+  /// Creates a guest profile record in the profiles table so that backend
+  /// foreign key constraints are satisfied when guest users send messages.
+  /// Safe to call repeatedly — uses upsert to avoid duplicates.
+  static Future<void> ensureGuestProfile() async {
+    try {
+      await _supabase.from('profiles').upsert(
+        {
+          'id': 'guest_user',
+          'full_name': 'Guest',
+          'auth_provider': 'guest',
+          'is_guest': true,
+          'onboarding_complete': false,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        onConflict: 'id',
+      );
+    } catch (e) {
+      // Non-fatal — guest mode still works even if this fails.
+      debugPrint('[AuthService] ensureGuestProfile error (non-fatal): \$e');
+    }
   }
 
   /// Saves workspace name and chat section name to the profiles table.

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'home_screen.dart';
+import '../providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -56,6 +57,9 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
     // ── Normal first-launch flow below ───────────────────────────────────
+    // Ensure a guest profile row exists in the database so that guest-mode
+    // chats can satisfy the conversations table FK constraint in the backend.
+    AuthService.ensureGuestProfile(); // fire-and-forget, non-fatal
 
     _particleCtrl = AnimationController(
       vsync: this,

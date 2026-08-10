@@ -37,7 +37,8 @@ class _GithubAuthenticationScreenState extends ConsumerState<GithubAuthenticatio
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       if (data.event == AuthChangeEvent.signedIn && mounted) {
         // 1. Upsert profile in Supabase (creates row for new users, updates for returning).
-        await AuthService.upsertProfileOnLogin();
+        // Pass provider so the profiles table knows auth method used.
+        await AuthService.upsertProfileOnLogin(provider: 'github');
 
         if (!mounted) return;
 

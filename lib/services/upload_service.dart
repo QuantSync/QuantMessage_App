@@ -92,12 +92,32 @@ class UploadService {
       if (result['status'] == 'success') {
         onProgress?.call(1.0);
 
+        final mimeType = lookupMimeType(file.path) ?? 'application/octet-stream';
+        final fileSize = await file.length();
+        final fileUrl = result['url'] as String? ?? '';
+        final ownerId = _supabase.auth.currentUser?.id ?? 'guest_user';
+
+        // Record file metadata in the unified files table
+        try {
+          final fileTypeStr = _fileTypeStringFromMime(mimeType);
+          await _supabase.from('files').insert({
+            'owner_id': ownerId,
+            'file_name': p.basename(file.path),
+            'file_type': fileTypeStr,
+            'file_url': fileUrl,
+            'size_bytes': fileSize,
+          });
+        } catch (dbErr) {
+          // Non-fatal — upload still succeeds
+          debugPrint('[UploadService] Failed to record file in DB: \$dbErr');
+        }
+
         return Attachment(
           filename: p.basename(file.path),
-          type: _typeFromMime(lookupMimeType(file.path) ?? 'application/octet-stream'),
-          mimeType: lookupMimeType(file.path) ?? 'application/octet-stream',
-          sizeBytes: await file.length(),
-          url: result['url'],
+          type: _typeFromMime(mimeType),
+          mimeType: mimeType,
+          sizeBytes: fileSize,
+          url: fileUrl,
           status: UploadStatus.success,
           localFile: file,
           progress: 1.0,
@@ -106,8 +126,8 @@ class UploadService {
         throw Exception(result['message'] ?? 'Upload failed');
       }
     } catch (e) {
-      debugPrint('[UploadService] File upload error: $e');
-      throw Exception('Upload failed: $e');
+      debugPrint('[UploadService] File upload error: \$e');
+      throw Exception('Upload failed: \$e');
     }
   }
 
@@ -253,6 +273,20 @@ class UploadService {
     if (mime.startsWith('image/')) return AttachmentType.image;
     if (mime.startsWith('text/')) return AttachmentType.text;
     return AttachmentType.unknown;
+  }
+
+  /// Maps a MIME type to the file_type_enum used in Supabase's `files` table.
+  /// Values must match: 'image' | 'audio' | 'video' | 'document' | 'other'
+  String _fileTypeStringFromMime(String mime) {
+    if (mime.startsWith('image/')) return 'image';
+    if (mime.startsWith('audio/')) return 'audio';
+    if (mime.startsWith('video/')) return 'video';
+    if (mime == 'application/pdf' ||
+        mime.contains('word') ||
+        mime.contains('spreadsheet') ||
+        mime.contains('presentation') ||
+        mime.startsWith('text/')) return 'document';
+    return 'other';
   }
 
   String _guessMime(String filename) {
