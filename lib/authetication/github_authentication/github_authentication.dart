@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Import animations
@@ -9,32 +10,40 @@ import '../../screens/animations/planetary_animation/planetary_animation.dart';
 import '../../screens/animations/animation_effects/typing_animation.dart';
 import '../../screens/home_screen.dart';
 
+// Import auth service
+import '../../providers/auth_provider.dart';
+
 // Import buttons
 import 'signin_github_button.dart';
 import 'signup_github_button.dart';
 
-class GithubAuthenticationScreen extends StatefulWidget {
+class GithubAuthenticationScreen extends ConsumerStatefulWidget {
   const GithubAuthenticationScreen({super.key});
 
   @override
-  State<GithubAuthenticationScreen> createState() => _GithubAuthenticationScreenState();
+  ConsumerState<GithubAuthenticationScreen> createState() => _GithubAuthenticationScreenState();
 }
 
-class _GithubAuthenticationScreenState extends State<GithubAuthenticationScreen> {
+class _GithubAuthenticationScreenState extends ConsumerState<GithubAuthenticationScreen> {
   bool isLogin = true;
   bool _isLoading = false;
 
-  // Listen for the auth session coming back from GitHub OAuth redirect
   late final StreamSubscription<AuthState> _authSub;
 
   @override
   void initState() {
     super.initState();
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      final event = data.event;
-      // Fires when the OAuth callback token is consumed successfully
-      if (event == AuthChangeEvent.signedIn && mounted) {
-        // Pop all auth screens and navigate directly to HomeScreen (chat unlocked)
+
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      if (data.event == AuthChangeEvent.signedIn && mounted) {
+        // 1. Upsert profile — creates the DB row for new users, updates for returning ones.
+        //    This unlocks history saving, settings persistence, and removes guest restrictions.
+        await AuthService.upsertProfileOnLogin();
+
+        if (!mounted) return;
+
+        // 2. Navigate to HomeScreen and clear the entire back-stack.
+        //    HomeScreen._selectTab will see a valid session and unlock all tabs.
         Navigator.of(context).pushAndRemoveUntil(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 400),
@@ -44,7 +53,7 @@ class _GithubAuthenticationScreenState extends State<GithubAuthenticationScreen>
               child: child,
             ),
           ),
-          (route) => false, // Clear the entire back stack — no going back to auth
+          (route) => false,
         );
       }
     });

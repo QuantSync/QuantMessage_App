@@ -14,6 +14,7 @@ import 'animations/planetary_animation/planetary_animation.dart';
 
 
 import '../providers/attachment_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/navigation_provider.dart';
 import 'app_bar.dart';
 import 'chat_screen.dart';
@@ -57,8 +58,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (current == tab && tab != AppTab.settings) return;
 
     if (!bypassAuth && tab.requiresAuth) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) {
+      // Use the reactive auth provider — reflects OAuth login immediately.
+      final isAuthed = ref.read(isAuthenticatedProvider);
+      if (!isAuthed) {
         if (!mounted) return;
         await Navigator.push(context, smoothPageRoute(const SignInScreen()));
         return;

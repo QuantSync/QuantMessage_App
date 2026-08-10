@@ -20,6 +20,7 @@ import '../core/chat_message.dart';
 import '../core/attachment_model.dart';
 import '../core/config.dart' as app_config;
 import '../providers/attachment_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../services/quant_space_api.dart';
 import 'app_sidebar_screen/left_sidebar.dart';
@@ -352,8 +353,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   Future<void> _handleSend(String text, List<Attachment> attachments) async {
     if (text.trim().isEmpty && attachments.isEmpty) return;
 
+    // Always read the latest user from Supabase — reflects OAuth login instantly.
     final user = _supabase.auth.currentUser;
-    final userId = user?.id ?? "guest";
+    final userId = user?.id ?? 'guest';
 
     final userMsg = ChatMessage(
       id: const Uuid().v4(),
@@ -459,6 +461,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Reactively watch auth state — rebuilds when user signs in or out.
+    // This makes the guest banner disappear and history saving activate
+    // the moment OAuth completes, without any restart.
+    final authUser = ref.watch(authUserProvider).value;
+    final bool isAuthenticated = authUser != null;
+
     ref.listen(selectedModelProvider, (prev, next) {
       if (_selectedModelName == next.name) return;
       setState(() {
@@ -691,9 +699,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                             SizedBox(height: isMobile ? 8 : 14),
                             _buildAdviceBanner(),
                             SizedBox(height: isMobile ? 4 : 8),
-                            if (_supabase.auth.currentUser == null)
+                            if (!isAuthenticated)
                               _buildGuestWarningBanner(isMobile),
-                            if (_supabase.auth.currentUser == null)
+                            if (!isAuthenticated)
                               SizedBox(height: isMobile ? 4 : 6),
                             _buildMessageBox(),
                           ],
@@ -709,9 +717,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                           children: [
                             _buildAdviceBanner(),
                             SizedBox(height: isMobile ? 4 : 8),
-                            if (_supabase.auth.currentUser == null)
+                            if (!isAuthenticated)
                               _buildGuestWarningBanner(isMobile),
-                            if (_supabase.auth.currentUser == null)
+                            if (!isAuthenticated)
                               SizedBox(height: isMobile ? 4 : 6),
                             _buildMessageBox(),
                           ],
