@@ -21,6 +21,8 @@ import 'history_screen.dart';
 import 'incognito_screen.dart';
 import 'signin_screen.dart';
 import 'settings_screen.dart';
+import '../authetication/google_authentication/google_authentication.dart';
+import '../authetication/github_authentication/github_authentication.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -353,7 +355,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
                                               Navigator.push(
                                                 context,
                                                 smoothPageRoute(
-                                                    const SignInScreen()),
+                                                    const GoogleAuthenticationScreen()),
                                               );
                                             },
                                           ),
@@ -368,7 +370,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab>
                                               Navigator.push(
                                                 context,
                                                 smoothPageRoute(
-                                                    const SignInScreen()),
+                                                    const GithubAuthenticationScreen()),
                                               );
                                             },
                                           ),
