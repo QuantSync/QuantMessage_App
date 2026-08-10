@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class GithubAuthenticationScreen extends StatefulWidget {
   const GithubAuthenticationScreen({super.key});
@@ -45,8 +47,19 @@ class _GithubAuthenticationScreenState extends State<GithubAuthenticationScreen>
               ),
               const SizedBox(height: 40),
               ElevatedButton(
-                onPressed: () {
-                  // Implement actual GitHub Auth logic here
+                onPressed: () async {
+                  try {
+                    await Supabase.instance.client.auth.signInWithOAuth(
+                      OAuthProvider.github,
+                      redirectTo: kIsWeb ? 'https://quantmessage-app.vercel.app' : null,
+                    );
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error authenticating with GitHub: $e')),
+                      );
+                    }
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF24292E),
