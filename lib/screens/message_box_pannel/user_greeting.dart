@@ -282,7 +282,4 @@ class UserGreeting extends StatelessWidget {
             ),
           ],
         );
-      },
-    );
-  }
-}
+      }
