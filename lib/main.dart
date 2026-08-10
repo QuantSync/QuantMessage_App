@@ -24,6 +24,11 @@ Future<void> main() async {
   await Supabase.initialize(
     url: app_config.Config.supabaseUrl,
     anonKey: app_config.Config.supabaseAnonKey,
+    // Intercepts the OAuth redirect (e.g., ?code=...) and converts it into
+    // a Supabase session instead of letting the browser navigate to localhost.
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.implicit,
+    ),
     debug: true,
   );
 
