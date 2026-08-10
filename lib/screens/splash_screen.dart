@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'home_screen.dart';
 
@@ -32,6 +33,29 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    // ── Session-aware routing ─────────────────────────────────────────────
+    // If the user already has an active session (returning user), skip the
+    // splash and home screens entirely and go straight to HomeScreen.
+    // HomeScreen will open on the chat tab since the session is valid.
+    final existingSession = Supabase.instance.client.auth.currentSession;
+    if (existingSession != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 300),
+            pageBuilder: (_, __, ___) => const HomeScreen(),
+            transitionsBuilder: (_, animation, __, child) => FadeTransition(
+              opacity: CurvedAnimation(parent: animation, curve: Curves.easeIn),
+              child: child,
+            ),
+          ),
+        );
+      });
+      return;
+    }
+    // ── Normal first-launch flow below ───────────────────────────────────
 
     _particleCtrl = AnimationController(
       vsync: this,

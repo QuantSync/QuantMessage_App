@@ -36,14 +36,18 @@ class _GithubAuthenticationScreenState extends ConsumerState<GithubAuthenticatio
 
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       if (data.event == AuthChangeEvent.signedIn && mounted) {
-        // 1. Upsert profile — creates the DB row for new users, updates for returning ones.
-        //    This unlocks history saving, settings persistence, and removes guest restrictions.
+        // 1. Upsert profile in Supabase (creates row for new users, updates for returning).
         await AuthService.upsertProfileOnLogin();
 
         if (!mounted) return;
 
-        // 2. Navigate to HomeScreen and clear the entire back-stack.
-        //    HomeScreen._selectTab will see a valid session and unlock all tabs.
+        // 2. Mark which OAuth provider was used so the greeting card can display it.
+        ref.read(lastAuthProviderProvider.notifier).state = 'github';
+
+        // 3. Signal that this is a fresh login — chat screen will show the greeting card.
+        ref.read(freshLoginProvider.notifier).state = true;
+
+        // 4. Navigate to HomeScreen, clear the entire back-stack.
         Navigator.of(context).pushAndRemoveUntil(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 400),

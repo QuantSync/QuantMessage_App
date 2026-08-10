@@ -150,6 +150,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // Session guard: NameCard shown only once per app session (not per navigation)
   static bool _hasShownNameCardThisSession = false;
 
+  // Auth greeting flow — shown once immediately after fresh OAuth login.
+  // Step 1: AuthGreetingCard (congrats + provider name + arrow button)
+  // Step 2: NameCard (workspace setup)
+  bool _showAuthGreeting = false;
+  bool _showNameCard = false;
+  String _authProviderUsed = 'github';
+
   // ── Model Selection synced from shared provider ──
   late String _selectedModelName;
   late String _selectedModelId;
@@ -179,10 +186,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _emptyCtrl.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkNameOnboarding();
+      // If this is a fresh OAuth login, trigger the greeting card sequence.
+      _checkFreshLogin();
     });
     _authSub = _supabase.auth.onAuthStateChange.listen((_) {
       _checkNameOnboarding();
     });
+  }
+
+  /// Called once after the widget mounts to check if a fresh login just happened.
+  void _checkFreshLogin() {
+    final isFresh = ref.read(freshLoginProvider);
+    if (isFresh) {
+      // Consume the flag immediately so it doesn't fire again on rebuild.
+      ref.read(freshLoginProvider.notifier).state = false;
+      _authProviderUsed = ref.read(lastAuthProviderProvider);
+      setState(() => _showAuthGreeting = true);
+    }
   }
 
   StreamSubscription<AuthState>? _authSub;
@@ -285,7 +305,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     }
   }
 
-  Future<void> _saveDisplayName(String name) async {
+  Future<void> _saveDisplayName(String name, [String workspace = '']) async {
     final user = _supabase.auth.currentUser;
 
     if (user == null) {
@@ -293,6 +313,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         setState(() {
           _displayName = name.trim();
           _showNameOnboarding = false;
+          _showNameCard = false;
         });
       }
       return;
@@ -799,8 +820,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               },
             ),
 
-            // First-time name onboarding (blur + glass card)
-            if (_onboardingChecked && _showNameOnboarding)
+            // ── AUTH GREETING SEQUENCE (Step 1: Congrats card) ──────────────
+            // Shown once immediately after a fresh GitHub/Google login.
+            if (_showAuthGreeting)
+              Positioned.fill(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Blur background
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                      child: Container(color: Colors.black.withOpacity(0.55)),
+                    ),
+                    AuthGreetingCard(
+                      providerName: _authProviderUsed,
+                      onContinue: () {
+                        // Dismiss greeting → open NameCard
+                        setState(() {
+                          _showAuthGreeting = false;
+                          _showNameCard = true;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+            // ── WORKSPACE SETUP (Step 2: NameCard) ──────────────────────────
+            // Triggered by the arrow button in AuthGreetingCard,
+            // OR by the standard onboarding flow for guest users.
+            if (_showNameCard || (_onboardingChecked && _showNameOnboarding))
               Positioned.fill(
                 child: Stack(
                   alignment: Alignment.center,
@@ -810,7 +859,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                       child: Container(color: Colors.black.withOpacity(0.45)),
                     ),
                     NameCard(
-                      onSave: _saveDisplayName,
+                      onSave: (name, workspace) {
+                        _saveDisplayName(name, workspace);
+                      },
                     ),
                   ],
                 ),
